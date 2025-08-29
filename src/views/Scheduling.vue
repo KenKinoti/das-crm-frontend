@@ -126,7 +126,8 @@
 
       <!-- List View -->
       <div v-else-if="currentView === 'list'" class="shifts-grid">
-        <div v-for="shift in filteredShifts" :key="shift.id" class="shift-card">
+        <div v-for="shift in filteredShifts" :key="shift.id" :class="['shift-card', `shift-${shift.status}`]">
+          <!-- Debug info (remove in production) -->
           <div class="shift-header">
             <div class="shift-time">
               <div class="time-main">{{ formatTime(shift.start_time) }} - {{ formatTime(shift.end_time) }}</div>
@@ -177,31 +178,33 @@
           </div>
 
           <div class="shift-actions">
-            <button @click="viewShift(shift)" class="btn-small btn-outline">
+            <button @click="viewShift(shift)" class="btn-small btn-view">
               <i class="fas fa-eye"></i>
               View
             </button>
             <button 
               v-if="shift.status === 'scheduled'" 
               @click="startShift(shift)" 
-              class="btn-small btn-success"
+              class="btn-small btn-start"
+              :disabled="isSubmitting"
             >
               <i class="fas fa-play"></i>
-              Start
+              Start Shift
             </button>
             <button 
               v-if="shift.status === 'in_progress'" 
               @click="completeShift(shift)" 
-              class="btn-small btn-success"
+              class="btn-small btn-complete"
+              :disabled="isSubmitting"
             >
-              <i class="fas fa-check"></i>
-              Complete
+              <i class="fas fa-check-circle"></i>
+              Complete Shift
             </button>
-            <button @click="editShift(shift)" class="btn-small btn-outline">
+            <button @click="editShift(shift)" class="btn-small btn-edit">
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="cancelShift(shift)" class="btn-small btn-danger">
+            <button @click="cancelShift(shift)" class="btn-small btn-cancel">
               <i class="fas fa-times"></i>
               Cancel
             </button>
@@ -312,12 +315,30 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Start Time *</label>
-                <input v-model="newShift.start_time" type="time" required />
+                <input v-model="newShift.start_time" type="time" required @change="calculateEndTimeFromDuration" />
               </div>
               <div class="form-group">
-                <label>End Time *</label>
-                <input v-model="newShift.end_time" type="time" required />
+                <label>Duration (hours)</label>
+                <input 
+                  v-model="newShift.duration_hours" 
+                  type="number" 
+                  step="0.5" 
+                  min="0.5" 
+                  max="24" 
+                  placeholder="4.0" 
+                  @input="calculateEndTimeFromDuration"
+                />
+                <small>Auto-calculates end time</small>
               </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>End Time *</label>
+                <input v-model="newShift.end_time" type="time" required @change="calculateDurationFromTimes" />
+                <small>Or set manually to override duration</small>
+              </div>
+              <div class="form-group"></div>
             </div>
 
             <div class="form-row">
@@ -355,8 +376,8 @@
             </div>
 
             <div class="modal-actions">
-              <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
-              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              <button type="button" @click="closeModal" class="btn btn-cancel">Cancel</button>
+              <button type="submit" class="btn btn-schedule" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
                   Scheduling...
@@ -427,12 +448,30 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Start Time *</label>
-                <input v-model="newShift.start_time" type="time" required />
+                <input v-model="newShift.start_time" type="time" required @change="calculateEndTimeFromDuration" />
               </div>
               <div class="form-group">
-                <label>End Time *</label>
-                <input v-model="newShift.end_time" type="time" required />
+                <label>Duration (hours)</label>
+                <input 
+                  v-model="newShift.duration_hours" 
+                  type="number" 
+                  step="0.5" 
+                  min="0.5" 
+                  max="24" 
+                  placeholder="4.0" 
+                  @input="calculateEndTimeFromDuration"
+                />
+                <small>Auto-calculates end time</small>
               </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>End Time *</label>
+                <input v-model="newShift.end_time" type="time" required @change="calculateDurationFromTimes" />
+                <small>Or set manually to override duration</small>
+              </div>
+              <div class="form-group"></div>
             </div>
 
             <div class="form-row">
@@ -463,8 +502,8 @@
             </div>
 
             <div class="modal-actions">
-              <button type="button" @click="closeEditModal" class="btn btn-secondary">Cancel</button>
-              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              <button type="button" @click="closeEditModal" class="btn btn-cancel">Cancel</button>
+              <button type="submit" class="btn btn-edit" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
                   Updating...
@@ -556,8 +595,8 @@
           </div>
 
           <div class="modal-actions">
-            <button @click="closeViewModal" class="btn btn-secondary">Close</button>
-            <button @click="editShift(selectedShift); closeViewModal()" class="btn btn-outline">
+            <button @click="closeViewModal" class="btn btn-view">Close</button>
+            <button @click="editShift(selectedShift); closeViewModal()" class="btn btn-edit">
               <i class="fas fa-edit"></i>
               Edit
             </button>
@@ -611,11 +650,11 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button @click="closeDeleteModal" class="btn btn-secondary">
+          <button @click="closeDeleteModal" class="btn btn-view">
             <i class="fas fa-times"></i>
             Keep Shift
           </button>
-          <button @click="confirmCancelShift" class="btn btn-danger" :disabled="isSubmitting">
+          <button @click="confirmCancelShift" class="btn btn-delete" :disabled="isSubmitting">
             <span v-if="isSubmitting">
               <i class="fas fa-spinner fa-spin"></i>
               Cancelling...
@@ -623,6 +662,101 @@
             <span v-else>
               <i class="fas fa-ban"></i>
               Cancel Shift
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start Shift Modal -->
+    <div v-if="showStartModal && shiftToStart" class="modal-overlay" @click="closeStartModal">
+      <div class="modal-content start-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Start Shift</h3>
+          <button @click="closeStartModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="shift-start-info">
+            <div class="start-icon">
+              <i class="fas fa-play-circle"></i>
+            </div>
+            <h4>Ready to start this shift?</h4>
+            <div class="shift-summary">
+              <p><strong>Participant:</strong> {{ getParticipantName(shiftToStart.participant_id) }}</p>
+              <p><strong>Staff:</strong> {{ getStaffName(shiftToStart.staff_id) }}</p>
+              <p><strong>Time:</strong> {{ formatTime(shiftToStart.start_time) }} - {{ formatTime(shiftToStart.end_time) }}</p>
+              <p><strong>Service:</strong> {{ shiftToStart.service_type }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeStartModal" class="btn btn-view">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
+          <button @click="confirmStartShift" class="btn btn-start" :disabled="isSubmitting">
+            <span v-if="isSubmitting">
+              <i class="fas fa-spinner fa-spin"></i>
+              Starting...
+            </span>
+            <span v-else>
+              <i class="fas fa-play"></i>
+              Start Shift
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Complete Shift Modal -->
+    <div v-if="showCompleteModal && shiftToComplete" class="modal-overlay" @click="closeCompleteModal">
+      <div class="modal-content complete-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Complete Shift</h3>
+          <button @click="closeCompleteModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="shift-complete-info">
+            <div class="complete-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <h4>Complete this shift?</h4>
+            <div class="shift-summary">
+              <p><strong>Participant:</strong> {{ getParticipantName(shiftToComplete.participant_id) }}</p>
+              <p><strong>Staff:</strong> {{ getStaffName(shiftToComplete.staff_id) }}</p>
+              <p><strong>Time:</strong> {{ formatTime(shiftToComplete.start_time) }} - {{ formatTime(shiftToComplete.end_time) }}</p>
+              <p><strong>Service:</strong> {{ shiftToComplete.service_type }}</p>
+            </div>
+            
+            <div class="form-group">
+              <label for="completion-notes">Completion Notes (Optional)</label>
+              <textarea 
+                id="completion-notes"
+                v-model="completionNotes"
+                rows="3"
+                placeholder="Add any notes about the completed shift..."
+                class="form-textarea"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeCompleteModal" class="btn btn-view">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
+          <button @click="confirmCompleteShift" class="btn btn-complete" :disabled="isSubmitting">
+            <span v-if="isSubmitting">
+              <i class="fas fa-spinner fa-spin"></i>
+              Completing...
+            </span>
+            <span v-else>
+              <i class="fas fa-check-circle"></i>
+              Complete Shift
             </span>
           </button>
         </div>
@@ -652,9 +786,14 @@ export default {
       showEditModal: false,
       showViewModal: false,
       showDeleteModal: false,
+      showStartModal: false,
+      showCompleteModal: false,
       editingShift: null,
       selectedShift: null,
       shiftToDelete: null,
+      shiftToStart: null,
+      shiftToComplete: null,
+      completionNotes: '',
       isSubmitting: false,
       currentDate: new Date(),
       dayHeaders: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -664,6 +803,7 @@ export default {
         date: '',
         start_time: '',
         end_time: '',
+        duration_hours: 4.0,
         service_type: '',
         location: '',
         hourly_rate: 45.00,
@@ -674,8 +814,17 @@ export default {
   },
   computed: {
     ...mapState(useShiftsStore, ['shifts', 'isLoading', 'error']),
-    ...mapState(useParticipantsStore, { participants: 'participants' }),
-    ...mapState(useUsersStore, { staffMembers: 'users' }),
+    ...mapState(useParticipantsStore, { allParticipants: 'participants' }),
+    ...mapState(useUsersStore, { allStaffMembers: 'users' }),
+    
+    // Filter only active participants and staff
+    participants() {
+      return this.allParticipants.filter(p => p.is_active !== false)
+    },
+    
+    staffMembers() {
+      return this.allStaffMembers.filter(s => s.is_active !== false)
+    },
     
     todayShifts() {
       const today = new Date().toDateString()
@@ -858,9 +1007,9 @@ export default {
 
       this.isSubmitting = true
       try {
-        // Create datetime strings in ISO format with timezone
-        const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00Z`
-        const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00Z`
+        // Create datetime strings in ISO format with timezone - backend expects timezone format
+        const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00+00:00`
+        const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00+00:00`
         
         // Validate IDs - they should be UUID strings, don't convert to numbers
         const participantId = this.newShift.participant_id
@@ -1025,24 +1174,72 @@ export default {
     },
 
     async startShift(shift) {
-      const participantName = this.getParticipantName(shift.participant_id)
-      if (!confirm(`Start shift for ${participantName}?`)) {
-        return
-      }
+      this.shiftToStart = shift
+      this.showStartModal = true
+    },
+
+    async confirmStartShift() {
+      if (!this.shiftToStart) return
       
       this.isSubmitting = true
       try {
+        console.log('🚀 Starting shift process for:', this.shiftToStart.id)
+        console.log('📊 Current shift status before:', this.shiftToStart.status)
+        
+        // Optimistically update the UI first
+        const shiftIndex = this.shifts.findIndex(s => s.id === this.shiftToStart.id)
+        console.log('📍 Found shift at index:', shiftIndex)
+        
+        if (shiftIndex !== -1) {
+          console.log('⚡ Updating shift status optimistically...')
+          
+          // Create a completely new shift object to force reactivity
+          const updatedShift = {
+            ...this.shifts[shiftIndex],
+            status: 'in_progress',
+            actual_start_time: new Date().toISOString()
+          }
+          
+          // Replace the entire array to force Vue to detect changes
+          const newShifts = [...this.shifts]
+          newShifts[shiftIndex] = updatedShift
+          this.shifts = newShifts
+          
+          console.log('✅ Local update done. New status:', this.shifts[shiftIndex].status)
+          console.log('🔍 Updated shift object:', this.shifts[shiftIndex])
+        }
+        
+        // Force immediate UI update
+        this.filterShifts()
+        this.$nextTick(() => {
+          this.$forceUpdate()
+        })
+        
         const updateData = {
           status: 'in_progress',
           actual_start_time: new Date().toISOString()
         }
-        await this.updateShift(shift.id, updateData)
+        
+        console.log('🌐 Sending API update:', updateData)
+        const result = await this.updateShift(this.shiftToStart.id, updateData)
+        console.log('✅ API update successful:', result)
+        
+        // Refresh from server to ensure consistency
+        console.log('🔄 Refreshing data from server...')
         await this.fetchShifts()
         this.filterShifts()
-        this.$forceUpdate()
+        
+        // Check if the shift status is correct after refresh
+        const updatedShift = this.shifts.find(s => s.id === this.shiftToStart.id)
+        console.log('📊 Final shift status after refresh:', updatedShift?.status)
+        
+        this.closeStartModal()
         showSuccessNotification('Shift started successfully!')
       } catch (error) {
-        console.error('Error starting shift:', error)
+        console.error('❌ Error starting shift:', error)
+        // Revert optimistic update on error
+        await this.fetchShifts()
+        this.filterShifts()
         showErrorNotification(error, 'Error starting shift. Please try again.')
       } finally {
         this.isSubmitting = false
@@ -1050,27 +1247,61 @@ export default {
     },
 
     async completeShift(shift) {
-      const notes = prompt('Add completion notes (optional):')
-      if (notes === null) {
-        return // User cancelled
-      }
+      this.shiftToComplete = shift
+      this.completionNotes = ''
+      this.showCompleteModal = true
+    },
+
+    async confirmCompleteShift() {
+      if (!this.shiftToComplete) return
       
       this.isSubmitting = true
       try {
+        // Optimistically update the UI first
+        const shiftIndex = this.shifts.findIndex(s => s.id === this.shiftToComplete.id)
+        if (shiftIndex !== -1) {
+          this.shifts[shiftIndex].status = 'completed'
+          this.shifts[shiftIndex].actual_end_time = new Date().toISOString()
+          if (this.completionNotes && this.completionNotes.trim()) {
+            this.shifts[shiftIndex].completion_notes = this.completionNotes.trim()
+          }
+          
+          // Also update filteredShifts if they exist
+          const filteredIndex = this.filteredShifts.findIndex(s => s.id === this.shiftToComplete.id)
+          if (filteredIndex !== -1) {
+            this.filteredShifts[filteredIndex].status = 'completed'
+            this.filteredShifts[filteredIndex].actual_end_time = new Date().toISOString()
+            if (this.completionNotes && this.completionNotes.trim()) {
+              this.filteredShifts[filteredIndex].completion_notes = this.completionNotes.trim()
+            }
+          }
+        }
+        
+        // Force immediate UI update
+        this.filterShifts()
+        this.$forceUpdate()
+        
         const updateData = {
           status: 'completed',
           actual_end_time: new Date().toISOString()
         }
-        if (notes && notes.trim()) {
-          updateData.completion_notes = notes.trim()
+        if (this.completionNotes && this.completionNotes.trim()) {
+          updateData.completion_notes = this.completionNotes.trim()
         }
-        await this.updateShift(shift.id, updateData)
+        
+        console.log('Completing shift with data:', updateData)
+        await this.updateShift(this.shiftToComplete.id, updateData)
+        
+        // Refresh from server to ensure consistency
         await this.fetchShifts()
         this.filterShifts()
-        this.$forceUpdate()
+        this.closeCompleteModal()
         showSuccessNotification('Shift completed successfully!')
       } catch (error) {
         console.error('Error completing shift:', error)
+        // Revert optimistic update on error
+        await this.fetchShifts()
+        this.filterShifts()
         showErrorNotification(error, 'Error completing shift. Please try again.')
       } finally {
         this.isSubmitting = false
@@ -1089,12 +1320,18 @@ export default {
       console.log('Original participant_id:', shift.participant_id, 'type:', typeof shift.participant_id)
       console.log('Original staff_id:', shift.staff_id, 'type:', typeof shift.staff_id)
       
+      // Calculate duration from existing times
+      const startMs = shiftDate.getTime()
+      const endMs = endDate.getTime()
+      const durationHours = parseFloat(((endMs - startMs) / (1000 * 60 * 60)).toFixed(1))
+
       this.newShift = {
         participant_id: shift.participant_id ? shift.participant_id.toString() : '',
         staff_id: shift.staff_id ? shift.staff_id.toString() : '',
         date: shiftDate.toISOString().split('T')[0],
         start_time: startTime,
         end_time: endTime,
+        duration_hours: durationHours,
         service_type: shift.service_type,
         location: shift.location,
         hourly_rate: shift.hourly_rate,
@@ -1111,9 +1348,20 @@ export default {
 
       this.isSubmitting = true
       try {
-        // Validate the shift data before sending
-        const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00Z`
-        const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00Z`
+        // Validate the shift data before sending - backend expects timezone format
+        // Ensure time format includes seconds
+        const startTime = this.newShift.start_time.includes(':') ? 
+          (this.newShift.start_time.split(':').length === 2 ? this.newShift.start_time + ':00' : this.newShift.start_time) : 
+          this.newShift.start_time + ':00:00'
+        const endTime = this.newShift.end_time.includes(':') ? 
+          (this.newShift.end_time.split(':').length === 2 ? this.newShift.end_time + ':00' : this.newShift.end_time) : 
+          this.newShift.end_time + ':00:00'
+          
+        const startDateTime = `${this.newShift.date}T${startTime}Z`
+        const endDateTime = `${this.newShift.date}T${endTime}Z`
+        
+        console.log('Formatted start_time:', startDateTime)
+        console.log('Formatted end_time:', endDateTime)
         
         // Validate IDs - they should be UUID strings, don't convert to numbers
         const participantId = this.newShift.participant_id
@@ -1240,6 +1488,17 @@ export default {
       this.shiftToDelete = null
     },
 
+    closeStartModal() {
+      this.showStartModal = false
+      this.shiftToStart = null
+    },
+
+    closeCompleteModal() {
+      this.showCompleteModal = false
+      this.shiftToComplete = null
+      this.completionNotes = ''
+    },
+
     closeModal() {
       this.showAddModal = false
       this.resetForm()
@@ -1252,6 +1511,7 @@ export default {
         date: '',
         start_time: '',
         end_time: '',
+        duration_hours: 4.0,
         service_type: '',
         location: '',
         hourly_rate: 45.00,
@@ -1307,10 +1567,17 @@ export default {
     },
 
     getParticipantName(participantId) {
+      if (!participantId) return 'Unknown Participant'
+      
       // Handle both string and number comparison
       const participant = this.participants.find(p => p.id == participantId || p.id === participantId)
       if (!participant) {
-        console.log('Participant not found for ID:', participantId, 'Available participants:', this.participants.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+        // Only log once per missing participant to avoid spam
+        if (!this._loggedMissingParticipants) this._loggedMissingParticipants = new Set()
+        if (!this._loggedMissingParticipants.has(participantId)) {
+          console.warn('Participant not found for ID:', participantId, 'Available participants:', this.participants.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+          this._loggedMissingParticipants.add(participantId)
+        }
       }
       return participant ? `${participant.first_name} ${participant.last_name}` : 'Unknown Participant'
     },
@@ -1339,6 +1606,52 @@ export default {
         year: 'numeric',
         month: 'long'
       })
+    },
+
+    calculateEndTimeFromDuration() {
+      if (this.newShift.start_time && this.newShift.duration_hours) {
+        const [hours, minutes] = this.newShift.start_time.split(':').map(Number)
+        const startDate = new Date()
+        startDate.setHours(hours, minutes, 0, 0)
+        
+        const durationMs = this.newShift.duration_hours * 60 * 60 * 1000
+        const endDate = new Date(startDate.getTime() + durationMs)
+        
+        const endHours = String(endDate.getHours()).padStart(2, '0')
+        const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+        this.newShift.end_time = `${endHours}:${endMinutes}`
+      }
+    },
+
+    calculateDurationFromTimes() {
+      if (this.newShift.start_time && this.newShift.end_time) {
+        const [startHours, startMinutes] = this.newShift.start_time.split(':').map(Number)
+        const [endHours, endMinutes] = this.newShift.end_time.split(':').map(Number)
+        
+        const startDate = new Date()
+        startDate.setHours(startHours, startMinutes, 0, 0)
+        
+        const endDate = new Date()
+        endDate.setHours(endHours, endMinutes, 0, 0)
+        
+        // Handle next day scenarios
+        if (endDate <= startDate) {
+          endDate.setDate(endDate.getDate() + 1)
+        }
+        
+        const durationMs = endDate - startDate
+        this.newShift.duration_hours = parseFloat((durationMs / (1000 * 60 * 60)).toFixed(1))
+      }
+    },
+
+    formatStatus(status) {
+      const statusMap = {
+        scheduled: 'Scheduled',
+        in_progress: 'In Progress',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
+      }
+      return statusMap[status] || status
     }
   }
 }
@@ -1523,6 +1836,43 @@ export default {
   transform: translateY(-2px);
 }
 
+/* Dynamic Shift Card Colors */
+.shift-card.shift-in_progress {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.2) 100%) !important;
+  border-color: #10b981 !important;
+  border-width: 3px !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+.shift-card.shift-in_progress:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border-color: #059669;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+}
+
+.shift-card.shift-completed {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border-color: #ef4444;
+  border-width: 2px;
+}
+
+.shift-card.shift-completed:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+  border-color: #dc2626;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.25);
+}
+
+.shift-card.shift-scheduled {
+  background: rgba(255, 255, 255, 1);
+  border-color: #e2e8f0;
+}
+
+.shift-card.shift-cancelled {
+  background: linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(107, 114, 128, 0.05) 100%);
+  border-color: #9ca3af;
+  opacity: 0.7;
+}
+
 .shift-header {
   display: flex;
   justify-content: space-between;
@@ -1661,6 +2011,70 @@ export default {
 
 .btn-danger:hover {
   background: #dc2626;
+  color: white;
+}
+
+/* Enhanced Status Button Styles */
+.btn-start {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-start:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: #9ca3af;
+}
+
+.btn-complete {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-complete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-complete:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: #9ca3af;
+}
+
+/* Enhanced Status Badge Colors */
+.status-badge.scheduled {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.status-badge.in_progress {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.status-badge.completed {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.status-badge.cancelled {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
 }
 
@@ -1843,53 +2257,212 @@ export default {
 
 .modal-content {
   background: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-medium);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  overflow: auto;
+  max-width: 800px;
+  max-height: 95vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 2rem 2rem 1.5rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
 }
 
 .modal-header h3 {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  color: var(--text-dark);
+  color: white;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-header h3::before {
+  content: '\f073';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  opacity: 0.9;
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  color: var(--text-light);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 1.1rem;
+  color: white;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 10px;
+  border-radius: 8px;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
-  color: var(--text-dark);
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
 
 .modal-body {
+  padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
+  background: white;
+}
+
+/* Start/Complete Shift Modal Styles */
+.start-modal, .complete-modal {
+  max-width: 500px;
+}
+
+.shift-start-info, .shift-complete-info {
+  text-align: center;
+}
+
+.start-icon, .complete-icon {
+  margin-bottom: 1rem;
+}
+
+.start-icon i {
+  font-size: 3rem;
+  color: #10b981;
+  animation: pulse 2s infinite;
+}
+
+.complete-icon i {
+  font-size: 3rem;
+  color: #3b82f6;
+  animation: bounce 1s ease-in-out;
+}
+
+.shift-start-info h4, .shift-complete-info h4 {
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.shift-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.shift-summary p {
+  margin: 0.5rem 0;
+  color: var(--text-dark);
+}
+
+.shift-summary strong {
+  color: var(--text-dark);
+  font-weight: 600;
+}
+
+.start-modal .modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
   padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  margin: 0;
+  margin-top: 1.5rem;
+}
+
+.complete-modal .form-group {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.complete-modal .form-textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.complete-modal .form-textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.875rem;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group small {
+  color: #6b7280;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  line-height: 1.5;
 }
 
 .form-group {
@@ -1936,29 +2509,61 @@ export default {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  margin: 0;
+  margin-top: 1.5rem;
 }
 
+/* Premium Button System */
 .btn {
-  padding: 12px 24px;
+  padding: 0.875rem 1.5rem;
   border: none;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+/* Button Sizes */
+.btn-small {
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  min-width: 90px;
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
 }
 
 .btn-primary:disabled {
@@ -1968,12 +2573,145 @@ export default {
 }
 
 .btn-secondary {
-  background: #f1f5f9;
-  color: var(--text-medium);
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
 }
 
-.btn-secondary:hover {
-  background: #e2e8f0;
+.btn-secondary:hover:not(:disabled) {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #3b82f6;
+  color: #3b82f6;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-complete {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.btn-complete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+}
+
+/* New Color Scheme Buttons */
+.btn-view {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.btn-view:hover:not(:disabled) {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.btn-edit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-schedule {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-schedule:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
 }
 
 /* View Modal Styles */

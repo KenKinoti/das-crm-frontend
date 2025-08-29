@@ -100,9 +100,20 @@
               <p class="staff-role">{{ formatRole(member.role) }}</p>
             </div>
             <div class="staff-status">
-              <span :class="['status-badge', member.is_active ? 'active' : 'inactive']">
-                {{ member.is_active ? 'Active' : 'Inactive' }}
-              </span>
+              <div class="status-toggle">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    :checked="member.is_active !== false"
+                    @change="toggleStaffStatus(member)"
+                    :disabled="isSubmitting"
+                  />
+                  <span class="slider"></span>
+                </label>
+                <span :class="['status-badge', member.is_active !== false ? 'active' : 'inactive']">
+                  {{ member.is_active !== false ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
             </div>
           </div>
           <div class="staff-details">
@@ -120,19 +131,19 @@
             </div>
           </div>
           <div class="staff-actions">
-            <button @click="viewStaff(member)" class="btn-small btn-outline">
+            <button @click="viewStaff(member)" class="btn-small btn-view">
               <i class="fas fa-eye"></i>
               View
             </button>
-            <button @click="scheduleStaff(member)" class="btn-small btn-outline">
+            <button @click="scheduleStaff(member)" class="btn-small btn-schedule">
               <i class="fas fa-calendar-plus"></i>
               Schedule
             </button>
-            <button @click="editStaff(member)" class="btn-small btn-outline">
+            <button @click="editStaff(member)" class="btn-small btn-edit">
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="deleteStaff(member)" class="btn-small btn-danger">
+            <button @click="deleteStaff(member)" class="btn-small btn-delete">
               <i class="fas fa-trash"></i>
               Delete
             </button>
@@ -189,7 +200,7 @@
               </div>
             </div>
             <div class="modal-actions">
-              <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
+              <button type="button" @click="closeModal" class="btn btn-cancel">Cancel</button>
               <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
@@ -255,8 +266,8 @@
               </div>
             </div>
             <div class="modal-actions">
-              <button type="button" @click="closeEditModal" class="btn btn-secondary">Cancel</button>
-              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              <button type="button" @click="closeEditModal" class="btn btn-cancel">Cancel</button>
+              <button type="submit" class="btn btn-edit" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
                   Updating...
@@ -300,11 +311,11 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button @click="closeDeleteModal" class="btn btn-secondary">
+          <button @click="closeDeleteModal" class="btn btn-view">
             <i class="fas fa-times"></i>
             Cancel
           </button>
-          <button @click="confirmDeleteStaff" class="btn btn-danger" :disabled="isSubmitting">
+          <button @click="confirmDeleteStaff" class="btn btn-delete" :disabled="isSubmitting">
             <span v-if="isSubmitting">
               <i class="fas fa-spinner fa-spin"></i>
               Removing...
@@ -365,12 +376,136 @@
           </div>
 
           <div class="modal-actions">
-            <button @click="closeViewModal" class="btn btn-secondary">Close</button>
-            <button @click="editStaff(selectedStaffMember); closeViewModal()" class="btn btn-outline">
+            <button @click="closeViewModal" class="btn btn-view">Close</button>
+            <button @click="editStaff(selectedStaffMember); closeViewModal()" class="btn btn-edit">
               <i class="fas fa-edit"></i>
               Edit
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Shift Modal -->
+    <div v-if="showScheduleModal && staffToSchedule" class="modal-overlay" @click="closeScheduleModal">
+      <div class="modal-content schedule-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Schedule Shift for {{ staffToSchedule.first_name }} {{ staffToSchedule.last_name }}</h3>
+          <button @click="closeScheduleModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="createScheduledShift">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Participant *</label>
+                <select v-model="newShift.participant_id" required>
+                  <option value="">Select Participant</option>
+                  <option v-for="participant in participants" :key="participant.id" :value="participant.id">
+                    {{ participant.first_name }} {{ participant.last_name }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Service Type *</label>
+                <select v-model="newShift.service_type" required>
+                  <option value="">Select Service</option>
+                  <option value="Personal Care">Personal Care</option>
+                  <option value="Community Access">Community Access</option>
+                  <option value="Domestic Assistance">Domestic Assistance</option>
+                  <option value="Social Support">Social Support</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Nursing Care">Nursing Care</option>
+                  <option value="Therapy Support">Therapy Support</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Date *</label>
+                <input v-model="newShift.date" type="date" required />
+              </div>
+              <div class="form-group">
+                <label>Location *</label>
+                <select v-model="newShift.location" required>
+                  <option value="">Select Location</option>
+                  <option value="Participant's Home">Participant's Home</option>
+                  <option value="Community">Community</option>
+                  <option value="Office">Office</option>
+                  <option value="Medical Facility">Medical Facility</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Start Time *</label>
+                <input v-model="newShift.start_time" type="time" required @change="calculateEndTimeFromDuration" />
+              </div>
+              <div class="form-group">
+                <label>Duration (hours)</label>
+                <input 
+                  v-model="newShift.duration_hours" 
+                  type="number" 
+                  step="0.5" 
+                  min="0.5" 
+                  max="24" 
+                  placeholder="4.0" 
+                  @input="calculateEndTimeFromDuration"
+                />
+                <small>Auto-calculates end time</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>End Time *</label>
+                <input v-model="newShift.end_time" type="time" required @change="calculateDurationFromTimes" />
+                <small>Or set manually to override duration</small>
+              </div>
+              <div class="form-group"></div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Hourly Rate ($) *</label>
+                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" required placeholder="45.00" />
+              </div>
+              <div class="form-group"></div>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="shift-notes">
+                <i class="fas fa-sticky-note"></i>
+                Notes (Optional)
+              </label>
+              <textarea 
+                id="shift-notes"
+                v-model="newShift.notes" 
+                rows="4" 
+                placeholder="Add any special instructions, requirements, or notes for this shift..."
+                class="notes-textarea"
+              ></textarea>
+              <small class="help-text">These notes will be visible to both the staff member and participant</small>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" @click="closeScheduleModal" class="btn btn-cancel">Cancel</button>
+              <button type="submit" class="btn btn-schedule" :disabled="isSubmitting">
+                <span v-if="isSubmitting">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  Scheduling...
+                </span>
+                <span v-else>
+                  <i class="fas fa-calendar-plus"></i>
+                  Schedule Shift
+                </span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -380,6 +515,8 @@
 <script>
 import { mapState, mapActions } from 'pinia'
 import { useUsersStore } from '../stores/users'
+import { useShiftsStore } from '../stores/shifts'
+import { useParticipantsStore } from '../stores/participants'
 import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
 
 export default {
@@ -394,9 +531,11 @@ export default {
       showEditModal: false,
       showDeleteModal: false,
       showViewModal: false,
+      showScheduleModal: false,
       editingStaff: null,
       staffToDelete: null,
       selectedStaffMember: null,
+      staffToSchedule: null,
       newStaff: {
         first_name: '',
         last_name: '',
@@ -404,11 +543,31 @@ export default {
         phone: '',
         role: '',
         password: 'defaultpassword123' // Will need to be changed
-      }
+      },
+      newShift: {
+        participant_id: '',
+        staff_id: '',
+        date: '',
+        start_time: '',
+        end_time: '',
+        duration_hours: 4.0,
+        service_type: '',
+        hourly_rate: 45.00,
+        location: '',
+        notes: ''
+      },
+      isSubmitting: false
     }
   },
   computed: {
     ...mapState(useUsersStore, { staff: 'users', isLoading: 'isLoading', error: 'error' }),
+    ...mapState(useShiftsStore, ['shifts']),
+    ...mapState(useParticipantsStore, { allParticipants: 'participants' }),
+    
+    // Filter only active participants for scheduling
+    participants() {
+      return this.allParticipants.filter(p => p.is_active !== false)
+    },
     activeStaff() {
       return this.staff.filter(s => s.is_active).length
     },
@@ -418,6 +577,8 @@ export default {
   },
   methods: {
     ...mapActions(useUsersStore, ['fetchUsers', 'createUser', 'updateUser', 'deleteUser']),
+    ...mapActions(useShiftsStore, ['createShift']),
+    ...mapActions(useParticipantsStore, ['fetchParticipants']),
     
     async loadStaff() {
       try {
@@ -540,7 +701,141 @@ export default {
     },
 
     scheduleStaff(member) {
-      alert(`Schedule functionality for ${member.first_name} ${member.last_name} - This would open the scheduling interface`)
+      this.staffToSchedule = member
+      this.newShift.staff_id = member.id
+      this.showScheduleModal = true
+    },
+
+    closeScheduleModal() {
+      this.showScheduleModal = false
+      this.staffToSchedule = null
+      this.resetShiftForm()
+    },
+
+    calculateEndTimeFromDuration() {
+      if (this.newShift.start_time && this.newShift.duration_hours) {
+        const [hours, minutes] = this.newShift.start_time.split(':').map(Number)
+        const startDate = new Date()
+        startDate.setHours(hours, minutes, 0, 0)
+        
+        const durationMs = this.newShift.duration_hours * 60 * 60 * 1000
+        const endDate = new Date(startDate.getTime() + durationMs)
+        
+        const endHours = String(endDate.getHours()).padStart(2, '0')
+        const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+        this.newShift.end_time = `${endHours}:${endMinutes}`
+      }
+    },
+
+    calculateDurationFromTimes() {
+      if (this.newShift.start_time && this.newShift.end_time) {
+        const [startHours, startMinutes] = this.newShift.start_time.split(':').map(Number)
+        const [endHours, endMinutes] = this.newShift.end_time.split(':').map(Number)
+        
+        const startDate = new Date()
+        startDate.setHours(startHours, startMinutes, 0, 0)
+        
+        const endDate = new Date()
+        endDate.setHours(endHours, endMinutes, 0, 0)
+        
+        // Handle next day scenarios
+        if (endDate <= startDate) {
+          endDate.setDate(endDate.getDate() + 1)
+        }
+        
+        const durationMs = endDate - startDate
+        this.newShift.duration_hours = parseFloat((durationMs / (1000 * 60 * 60)).toFixed(1))
+      }
+    },
+
+    resetShiftForm() {
+      this.newShift = {
+        participant_id: '',
+        staff_id: '',
+        date: '',
+        start_time: '',
+        end_time: '',
+        duration_hours: 4.0,
+        service_type: '',
+        hourly_rate: 45.00,
+        location: '',
+        notes: ''
+      }
+    },
+
+    async createScheduledShift() {
+      if (!this.validateShiftForm()) {
+        return
+      }
+
+      this.isSubmitting = true
+      try {
+        const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00+00:00`
+        const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00+00:00`
+
+        const shiftData = {
+          participant_id: this.newShift.participant_id,
+          staff_id: this.newShift.staff_id,
+          start_time: startDateTime,
+          end_time: endDateTime,
+          service_type: this.newShift.service_type,
+          hourly_rate: parseFloat(this.newShift.hourly_rate),
+          location: this.newShift.location,
+          notes: this.newShift.notes.trim() || null,
+          status: 'scheduled'
+        }
+
+        console.log('Creating scheduled shift:', shiftData)
+        await this.createShift(shiftData)
+        this.closeScheduleModal()
+        showSuccessNotification('Shift scheduled successfully!')
+      } catch (error) {
+        console.error('Error scheduling shift:', error)
+        showErrorNotification(error, 'Failed to schedule shift. Please try again.')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
+    validateShiftForm() {
+      if (!this.newShift.participant_id) {
+        showErrorNotification(new Error('Please select a participant'))
+        return false
+      }
+      if (!this.newShift.date) {
+        showErrorNotification(new Error('Please select a date'))
+        return false
+      }
+      if (!this.newShift.start_time) {
+        showErrorNotification(new Error('Please select a start time'))
+        return false
+      }
+      if (!this.newShift.end_time) {
+        showErrorNotification(new Error('Please select an end time'))
+        return false
+      }
+      if (!this.newShift.service_type) {
+        showErrorNotification(new Error('Please select a service type'))
+        return false
+      }
+      if (!this.newShift.hourly_rate || this.newShift.hourly_rate <= 0) {
+        showErrorNotification(new Error('Please enter a valid hourly rate'))
+        return false
+      }
+      if (!this.newShift.location) {
+        showErrorNotification(new Error('Please select a location'))
+        return false
+      }
+      
+      const startTime = new Date(`${this.newShift.date}T${this.newShift.start_time}:00`)
+      const endTime = new Date(`${this.newShift.date}T${this.newShift.end_time}:00`)
+      
+      if (endTime <= startTime) {
+        showErrorNotification(new Error('End time must be after start time'))
+        return false
+      }
+      
+      return true
     },
 
     editStaff(member) {
@@ -660,12 +955,35 @@ export default {
     },
 
 
+    async toggleStaffStatus(staff) {
+      this.isSubmitting = true
+      try {
+        const updateData = {
+          is_active: !staff.is_active
+        }
+        
+        console.log('Toggling staff status:', staff.id, 'to:', updateData.is_active)
+        await this.updateUser(staff.id, updateData)
+        await this.fetchUsers()
+        this.filterStaff()
+        
+        const statusText = updateData.is_active ? 'activated' : 'deactivated'
+        showSuccessNotification(`Staff member ${statusText} successfully!`)
+      } catch (error) {
+        console.error('Error toggling staff status:', error)
+        showErrorNotification(error, 'Error updating staff status. Please try again.')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
     get isSubmitting() {
       return this.isLoading
     }
   },
   async mounted() {
     await this.loadStaff()
+    await this.fetchParticipants()
   }
 }
 </script>
@@ -866,6 +1184,67 @@ export default {
   align-items: flex-end;
 }
 
+.status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary-color, #667eea);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color, #667eea);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+input:disabled + .slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -1062,45 +1441,193 @@ export default {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  margin: 0;
+  margin-top: 1.5rem;
 }
 
+/* Premium Button System */
 .btn {
-  padding: 12px 24px;
+  padding: 0.875rem 1.5rem;
   border: none;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.btn-small {
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  min-width: 90px;
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
 }
 
 .btn-secondary {
-  background: #f1f5f9;
-  color: var(--text-medium);
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
 }
 
-.btn-secondary:hover {
-  background: #e2e8f0;
+.btn-secondary:hover:not(:disabled) {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #3b82f6;
+  color: #3b82f6;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+/* New Color Scheme Buttons */
+.btn-view {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.btn-view:hover:not(:disabled) {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.btn-edit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-schedule {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-schedule:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
 
 /* Loading and Empty states */
 .loading-state,
@@ -1331,5 +1858,185 @@ export default {
 .detail-item .value {
   font-weight: 600;
   color: var(--text-dark);
+}
+
+/* Schedule Modal Styles */
+.schedule-modal {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-modal .modal-header {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px 12px 0 0;
+}
+
+.schedule-modal .modal-header h3 {
+  color: white;
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.schedule-modal .modal-header h3::before {
+  content: '\f073';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  opacity: 0.8;
+}
+
+.schedule-modal .close-btn {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.3s ease;
+}
+
+.schedule-modal .close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.schedule-modal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  background: white;
+}
+
+.schedule-modal .form-group.full-width {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+}
+
+.schedule-modal .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.schedule-modal .form-group label i {
+  color: #10b981;
+  font-size: 0.9rem;
+}
+
+.schedule-modal .notes-textarea {
+  width: 100%;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all 0.3s ease;
+  background: #f9fafb;
+}
+
+.schedule-modal .notes-textarea:focus {
+  outline: none;
+  border-color: #10b981;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.schedule-modal .notes-textarea::placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.schedule-modal .help-text {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schedule-modal .help-text::before {
+  content: '\f05a';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  color: #10b981;
+  font-size: 0.8rem;
+}
+
+.schedule-modal .form-group input,
+.schedule-modal .form-group select {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.schedule-modal .form-group input:focus,
+.schedule-modal .form-group select:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.schedule-modal .form-group small {
+  color: #6b7280;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.schedule-modal .btn-primary {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25) !important;
+}
+
+.schedule-modal .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35) !important;
+}
+
+.schedule-modal .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.15);
+}
+
+.schedule-modal .btn-secondary {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.schedule-modal .btn-secondary:hover {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
 }
 </style>

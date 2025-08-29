@@ -77,9 +77,20 @@
               <p class="participant-ndis">NDIS: {{ participant.ndis_number || 'Not provided' }}</p>
             </div>
             <div class="participant-status">
-              <span :class="['status-badge', participant.is_active ? 'active' : 'inactive']">
-                {{ participant.is_active ? 'Active' : 'Inactive' }}
-              </span>
+              <div class="status-toggle">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    :checked="participant.is_active !== false"
+                    @change="toggleParticipantStatus(participant)"
+                    :disabled="isSubmitting"
+                  />
+                  <span class="slider"></span>
+                </label>
+                <span :class="['status-badge', participant.is_active !== false ? 'active' : 'inactive']">
+                  {{ participant.is_active !== false ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
             </div>
           </div>
           <div class="participant-details">
@@ -97,15 +108,15 @@
             </div>
           </div>
           <div class="participant-actions">
-            <button @click="viewParticipant(participant)" class="btn-small btn-outline">
+            <button @click="viewParticipant(participant)" class="btn-small btn-view">
               <i class="fas fa-eye"></i>
               View
             </button>
-            <button @click="editParticipant(participant)" class="btn-small btn-outline">
+            <button @click="editParticipant(participant)" class="btn-small btn-edit">
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="deleteParticipantHandler(participant)" class="btn-small btn-danger">
+            <button @click="deleteParticipantHandler(participant)" class="btn-small btn-delete">
               <i class="fas fa-trash"></i>
               Delete
             </button>
@@ -184,7 +195,7 @@
               </div>
             </div>
             <div class="modal-actions">
-              <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
+              <button type="button" @click="closeModal" class="btn btn-cancel">Cancel</button>
               <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
@@ -271,8 +282,8 @@
               </div>
             </div>
             <div class="modal-actions">
-              <button type="button" @click="closeEditModal" class="btn btn-secondary">Cancel</button>
-              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              <button type="button" @click="closeEditModal" class="btn btn-cancel">Cancel</button>
+              <button type="submit" class="btn btn-edit" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
                   Updating...
@@ -316,11 +327,11 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button @click="closeDeleteModal" class="btn btn-secondary">
+          <button @click="closeDeleteModal" class="btn btn-view">
             <i class="fas fa-times"></i>
             Cancel
           </button>
-          <button @click="confirmDeleteParticipant" class="btn btn-danger" :disabled="isSubmitting">
+          <button @click="confirmDeleteParticipant" class="btn btn-delete" :disabled="isSubmitting">
             <span v-if="isSubmitting">
               <i class="fas fa-spinner fa-spin"></i>
               Deleting...
@@ -381,8 +392,8 @@
           </div>
 
           <div class="modal-actions">
-            <button @click="closeViewModal" class="btn btn-secondary">Close</button>
-            <button @click="editParticipant(selectedParticipant); closeViewModal()" class="btn btn-outline">
+            <button @click="closeViewModal" class="btn btn-view">Close</button>
+            <button @click="editParticipant(selectedParticipant); closeViewModal()" class="btn btn-edit">
               <i class="fas fa-edit"></i>
               Edit
             </button>
@@ -698,6 +709,28 @@ export default {
     },
 
 
+    async toggleParticipantStatus(participant) {
+      this.isSubmitting = true
+      try {
+        const updateData = {
+          is_active: !participant.is_active
+        }
+        
+        console.log('Toggling participant status:', participant.id, 'to:', updateData.is_active)
+        await this.updateParticipant(participant.id, updateData)
+        await this.fetchParticipants()
+        this.filterParticipants()
+        
+        const statusText = updateData.is_active ? 'activated' : 'deactivated'
+        showSuccessNotification(`Participant ${statusText} successfully!`)
+      } catch (error) {
+        console.error('Error toggling participant status:', error)
+        showErrorNotification(error, 'Error updating participant status. Please try again.')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
     get isSubmitting() {
       return this.isLoading
     }
@@ -905,6 +938,67 @@ export default {
   flex-shrink: 0;
 }
 
+.status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary-color, #667eea);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color, #667eea);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+input:disabled + .slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -1081,41 +1175,184 @@ export default {
   margin-top: 2rem;
 }
 
+/* Premium Button System */
 .btn {
-  padding: 12px 24px;
+  padding: 0.875rem 1.5rem;
   border: none;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.btn-small {
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  min-width: 90px;
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
 }
 
 .btn-secondary {
-  background: #f1f5f9;
-  color: var(--text-medium);
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
 }
 
-.btn-secondary:hover {
-  background: #e2e8f0;
+.btn-secondary:hover:not(:disabled) {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #3b82f6;
+  color: #3b82f6;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+/* New Color Scheme Buttons */
+.btn-view {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.btn-view:hover:not(:disabled) {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.btn-edit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-start:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-schedule {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-schedule:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
 }
 
 @keyframes spin {
