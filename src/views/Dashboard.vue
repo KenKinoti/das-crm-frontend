@@ -213,23 +213,23 @@ export default {
           this.stats.participantGrowth = '+12% from last month'
         }
       } catch (error) {
-        console.log('Using mock participant data')
-        this.stats.totalParticipants = 247
-        this.stats.participantGrowth = '+12% from last month'
+        console.log('Failed to fetch participant stats:', error.message)
+        this.stats.totalParticipants = 0
+        this.stats.participantGrowth = 'Unable to load'
       }
     },
     
     async fetchStaffStats() {
       try {
-        const response = await api.get('/users?role=care_worker&limit=1')
+        const response = await api.get('/users?limit=1')
         if (response.success && response.data.pagination) {
           this.stats.activeStaff = response.data.pagination.total || 0
           this.stats.staffGrowth = '+3 new this week'
         }
       } catch (error) {
-        console.log('Using mock staff data')
-        this.stats.activeStaff = 42
-        this.stats.staffGrowth = '+3 new this week'
+        console.log('Failed to fetch staff stats:', error.message)
+        this.stats.activeStaff = 0
+        this.stats.staffGrowth = 'Unable to load'
       }
     },
     
@@ -251,63 +251,30 @@ export default {
             : 0
         }
       } catch (error) {
-        console.log('Using mock shift data')
-        this.stats.shiftsThisWeek = 186
-        this.stats.shiftCompletion = 98
+        console.log('Failed to fetch shift stats:', error.message)
+        this.stats.shiftsThisWeek = 0
+        this.stats.shiftCompletion = 0
       }
     },
     
     async fetchRevenueStats() {
       try {
         // This would typically come from a billing/revenue endpoint
-        // For now, calculate from completed shifts
-        this.stats.monthlyRevenue = 84320
-        this.stats.revenueGrowth = 8.2
+        // Setting to 0 as we don't have a revenue API endpoint yet
+        this.stats.monthlyRevenue = 0
+        this.stats.revenueGrowth = 0
       } catch (error) {
-        console.log('Using mock revenue data')
-        this.stats.monthlyRevenue = 84320
-        this.stats.revenueGrowth = 8.2
+        console.log('Failed to fetch revenue stats:', error.message)
+        this.stats.monthlyRevenue = 0
+        this.stats.revenueGrowth = 0
       }
     },
     
     async fetchRecentActivity() {
       try {
         // This would come from an activity log endpoint
-        // For now, create mock activities
-        this.recentActivities = [
-          {
-            id: 1,
-            title: 'New participant added: Alice Johnson',
-            subtitle: 'NDIS Number: 4300012345 • Added by John Doe',
-            time: '2 hours ago',
-            icon: 'fas fa-user-plus',
-            color: 'var(--primary-gradient)'
-          },
-          {
-            id: 2,
-            title: 'Shift completed successfully',
-            subtitle: 'Personal Care - Michael Smith with Sarah Wilson',
-            time: '4 hours ago',
-            icon: 'fas fa-calendar-check',
-            color: 'var(--success-gradient)'
-          },
-          {
-            id: 3,
-            title: 'Care plan uploaded',
-            subtitle: 'Updated care plan for Emma Thompson',
-            time: '6 hours ago',
-            icon: 'fas fa-file-upload',
-            color: 'var(--warning-gradient)'
-          },
-          {
-            id: 4,
-            title: 'Invoice generated',
-            subtitle: 'Monthly billing for August 2025 • $12,450',
-            time: '1 day ago',
-            icon: 'fas fa-dollar-sign',
-            color: 'var(--secondary-gradient)'
-          }
-        ]
+        // For now, set empty until we have a real endpoint
+        this.recentActivities = []
       } catch (error) {
         console.log('Could not fetch recent activity')
         this.recentActivities = []
@@ -315,15 +282,16 @@ export default {
     },
     
     setFallbackData() {
+      // No fallback data - show actual data or zeros
       this.stats = {
-        totalParticipants: 247,
-        activeStaff: 42,
-        shiftsThisWeek: 186,
-        monthlyRevenue: 84320,
-        participantGrowth: '+12% from last month',
-        staffGrowth: '+3 new this week',
-        shiftCompletion: 98,
-        revenueGrowth: 8.2
+        totalParticipants: 0,
+        activeStaff: 0,
+        shiftsThisWeek: 0,
+        monthlyRevenue: 0,
+        participantGrowth: 'No data',
+        staffGrowth: 'No data',
+        shiftCompletion: 0,
+        revenueGrowth: 0
       }
     },
     

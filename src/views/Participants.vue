@@ -105,7 +105,7 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="deleteParticipant(participant)" class="btn-small btn-danger">
+            <button @click="deleteParticipantHandler(participant)" class="btn-small btn-danger">
               <i class="fas fa-trash"></i>
               Delete
             </button>
@@ -156,8 +156,32 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Address</label>
-              <input v-model="newParticipant.address" type="text" placeholder="Enter full address" />
+              <label>Street Address</label>
+              <input v-model="newParticipant.address.street" type="text" placeholder="Enter street address" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Suburb</label>
+                <input v-model="newParticipant.address.suburb" type="text" placeholder="Enter suburb" />
+              </div>
+              <div class="form-group">
+                <label>State</label>
+                <select v-model="newParticipant.address.state">
+                  <option value="">Select State</option>
+                  <option value="SA">SA</option>
+                  <option value="NSW">NSW</option>
+                  <option value="VIC">VIC</option>
+                  <option value="QLD">QLD</option>
+                  <option value="WA">WA</option>
+                  <option value="TAS">TAS</option>
+                  <option value="NT">NT</option>
+                  <option value="ACT">ACT</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Postcode</label>
+                <input v-model="newParticipant.address.postcode" type="text" placeholder="Postcode" />
+              </div>
             </div>
             <div class="modal-actions">
               <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
@@ -180,16 +204,16 @@
 </template>
 
 <script>
+import { mapState, mapActions } from 'pinia'
+import { useParticipantsStore } from '../stores/participants'
+
 export default {
   name: 'Participants',
   data() {
     return {
-      participants: [],
       filteredParticipants: [],
       searchQuery: '',
-      isLoading: false,
       showAddModal: false,
-      isSubmitting: false,
       newParticipant: {
         first_name: '',
         last_name: '',
@@ -197,68 +221,41 @@ export default {
         phone: '',
         ndis_number: '',
         date_of_birth: '',
-        address: ''
+        address: {
+          street: '',
+          suburb: '',
+          state: '',
+          postcode: '',
+          country: 'Australia'
+        },
+        medical_information: {
+          conditions: '[]',
+          medications: '[]',
+          allergies: '[]',
+          doctor_name: '',
+          doctor_phone: '',
+          notes: ''
+        },
+        emergency_contacts: []
       }
     }
   },
   computed: {
+    ...mapState(useParticipantsStore, ['participants', 'isLoading', 'error']),
     activeParticipants() {
-      return this.participants.filter(p => p.is_active).length
+      return this.participants.filter(p => p.is_active !== false).length
     }
   },
-  async mounted() {
-    await this.loadParticipants()
-  },
   methods: {
+    ...mapActions(useParticipantsStore, ['fetchParticipants', 'createParticipant', 'deleteParticipant']),
     async loadParticipants() {
-      this.isLoading = true
       try {
-        // Try to load from API first
-        // const response = await api.get('/participants')
-        // For now, use localStorage for persistence
-        const stored = localStorage.getItem('crm_participants')
-        if (stored) {
-          this.participants = JSON.parse(stored)
-        } else {
-          // Initialize with sample data
-          this.participants = [
-            {
-              id: '1',
-              first_name: 'Alice',
-              last_name: 'Johnson',
-              email: 'alice.johnson@email.com',
-              phone: '+61434567890',
-              ndis_number: '4300012345',
-              date_of_birth: '1985-03-15',
-              address: '123 Main St, Adelaide SA 5000',
-              is_active: true,
-              created_at: new Date().toISOString()
-            },
-            {
-              id: '2',
-              first_name: 'Michael',
-              last_name: 'Smith',
-              email: 'michael.smith@email.com',
-              phone: '+61445678901',
-              ndis_number: '4300012346',
-              date_of_birth: '1990-07-22',
-              address: '456 Oak Ave, Adelaide SA 5001',
-              is_active: true,
-              created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-            }
-          ]
-          this.saveParticipants()
-        }
+        await this.fetchParticipants()
         this.filterParticipants()
       } catch (error) {
         console.error('Error loading participants:', error)
-      } finally {
-        this.isLoading = false
+        this.showErrorMessage('Failed to load participants. Please try again.')
       }
-    },
-
-    saveParticipants() {
-      localStorage.setItem('crm_participants', JSON.stringify(this.participants))
     },
 
     filterParticipants() {
@@ -279,28 +276,20 @@ export default {
     },
 
     async addParticipant() {
-      this.isSubmitting = true
       try {
-        const newParticipant = {
-          id: Date.now().toString(),
-          ...this.newParticipant,
-          is_active: true,
-          created_at: new Date().toISOString()
+        // Fix date format - convert YYYY-MM-DD to ISO 8601
+        const participantData = { ...this.newParticipant }
+        if (participantData.date_of_birth) {
+          participantData.date_of_birth = participantData.date_of_birth + 'T00:00:00Z'
         }
         
-        this.participants.unshift(newParticipant)
-        this.saveParticipants()
+        await this.createParticipant(participantData)
         this.filterParticipants()
         this.closeModal()
-        
-        // Show success message
         this.showSuccessMessage('Participant added successfully!')
-        
       } catch (error) {
         console.error('Error adding participant:', error)
-        alert('Error adding participant. Please try again.')
-      } finally {
-        this.isSubmitting = false
+        this.showErrorMessage(error.response?.data?.error?.message || 'Error adding participant. Please try again.')
       }
     },
 
@@ -313,12 +302,16 @@ export default {
       alert(`Edit functionality for ${participant.first_name} ${participant.last_name} - Coming soon!`)
     },
 
-    deleteParticipant(participant) {
+    async deleteParticipantHandler(participant) {
       if (confirm(`Are you sure you want to delete ${participant.first_name} ${participant.last_name}?`)) {
-        this.participants = this.participants.filter(p => p.id !== participant.id)
-        this.saveParticipants()
-        this.filterParticipants()
-        this.showSuccessMessage('Participant deleted successfully!')
+        try {
+          await this.deleteParticipant(participant.id)
+          this.filterParticipants()
+          this.showSuccessMessage('Participant deleted successfully!')
+        } catch (error) {
+          console.error('Error deleting participant:', error)
+          this.showErrorMessage('Error deleting participant. Please try again.')
+        }
       }
     },
 
@@ -335,7 +328,22 @@ export default {
         phone: '',
         ndis_number: '',
         date_of_birth: '',
-        address: ''
+        address: {
+          street: '',
+          suburb: '',
+          state: '',
+          postcode: '',
+          country: 'Australia'
+        },
+        medical_information: {
+          conditions: '[]',
+          medications: '[]',
+          allergies: '[]',
+          doctor_name: '',
+          doctor_phone: '',
+          notes: ''
+        },
+        emergency_contacts: []
       }
     },
 
@@ -365,7 +373,26 @@ export default {
       setTimeout(() => {
         notification.remove()
       }, 3000)
+    },
+
+    showErrorMessage(message) {
+      // Simple error notification
+      const notification = document.createElement('div')
+      notification.className = 'error-notification'
+      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
+      document.body.appendChild(notification)
+      
+      setTimeout(() => {
+        notification.remove()
+      }, 5000)
+    },
+
+    get isSubmitting() {
+      return this.isLoading
     }
+  },
+  async mounted() {
+    await this.loadParticipants()
   }
 }
 </script>
@@ -718,16 +745,19 @@ export default {
   color: var(--text-dark);
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 12px;
   border: 2px solid #e2e8f0;
   border-radius: var(--border-radius-sm);
   transition: border-color 0.3s ease;
   font-size: 1rem;
+  background: white;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -782,12 +812,29 @@ export default {
   100% { transform: rotate(360deg); }
 }
 
-/* Success notification */
+/* Notifications */
 :global(.success-notification) {
   position: fixed;
   top: 20px;
   right: 20px;
   background: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+:global(.error-notification) {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #dc2626;
   color: white;
   padding: 12px 20px;
   border-radius: 8px;

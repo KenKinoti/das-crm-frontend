@@ -98,17 +98,10 @@
             <div class="staff-info">
               <h3>{{ member.first_name }} {{ member.last_name }}</h3>
               <p class="staff-role">{{ formatRole(member.role) }}</p>
-              <p class="staff-employee-id">ID: {{ member.employee_id }}</p>
             </div>
             <div class="staff-status">
               <span :class="['status-badge', member.is_active ? 'active' : 'inactive']">
                 {{ member.is_active ? 'Active' : 'Inactive' }}
-              </span>
-              <span v-if="member.is_available_today" class="availability-badge available">
-                Available Today
-              </span>
-              <span v-else class="availability-badge unavailable">
-                Not Available
               </span>
             </div>
           </div>
@@ -122,12 +115,8 @@
               <span>{{ member.phone || 'No phone provided' }}</span>
             </div>
             <div class="detail-item">
-              <i class="fas fa-id-badge"></i>
-              <span>{{ member.qualifications || 'No qualifications listed' }}</span>
-            </div>
-            <div class="detail-item">
               <i class="fas fa-calendar"></i>
-              <span>Joined {{ formatDate(member.created_at) }}</span>
+              <span>Added {{ formatDate(member.created_at) }}</span>
             </div>
           </div>
           <div class="staff-actions">
@@ -195,33 +184,9 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>Employee ID</label>
-                <input v-model="newStaff.employee_id" type="text" placeholder="Enter employee ID" />
+                <label>Password *</label>
+                <input v-model="newStaff.password" type="password" required placeholder="Default password" />
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Hourly Rate ($)</label>
-                <input v-model="newStaff.hourly_rate" type="number" step="0.01" placeholder="Enter hourly rate" />
-              </div>
-              <div class="form-group">
-                <label>Start Date</label>
-                <input v-model="newStaff.start_date" type="date" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Qualifications</label>
-              <input v-model="newStaff.qualifications" type="text" placeholder="e.g., Cert III Individual Support, First Aid" />
-            </div>
-            <div class="form-group">
-              <label>Address</label>
-              <input v-model="newStaff.address" type="text" placeholder="Enter full address" />
-            </div>
-            <div class="form-group">
-              <label>
-                <input v-model="newStaff.is_available_today" type="checkbox" />
-                Available for work today
-              </label>
             </div>
             <div class="modal-actions">
               <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
@@ -230,7 +195,7 @@
                   <i class="fas fa-spinner fa-spin"></i>
                   Adding...
                 </span>
-                <span v-else">
+                <span v-else>
                   <i class="fas fa-plus"></i>
                   Add Staff Member
                 </span>
@@ -244,115 +209,48 @@
 </template>
 
 <script>
+import { mapState, mapActions } from 'pinia'
+import { useUsersStore } from '../stores/users'
+
 export default {
   name: 'Staff',
   data() {
     return {
-      staff: [],
       filteredStaff: [],
       searchQuery: '',
       roleFilter: '',
       statusFilter: '',
-      isLoading: false,
       showAddModal: false,
-      isSubmitting: false,
       newStaff: {
         first_name: '',
         last_name: '',
         email: '',
         phone: '',
         role: '',
-        employee_id: '',
-        hourly_rate: '',
-        start_date: '',
-        qualifications: '',
-        address: '',
-        is_available_today: true
+        password: 'defaultpassword123' // Will need to be changed
       }
     }
   },
   computed: {
+    ...mapState(useUsersStore, { staff: 'users', isLoading: 'isLoading', error: 'error' }),
     activeStaff() {
       return this.staff.filter(s => s.is_active).length
     },
     availableToday() {
-      return this.staff.filter(s => s.is_available_today && s.is_active).length
+      return this.staff.filter(s => s.role !== 'admin' && s.is_active).length
     }
   },
-  async mounted() {
-    await this.loadStaff()
-  },
   methods: {
+    ...mapActions(useUsersStore, ['fetchUsers', 'createUser', 'deleteUser']),
+    
     async loadStaff() {
-      this.isLoading = true
       try {
-        const stored = localStorage.getItem('crm_staff')
-        if (stored) {
-          this.staff = JSON.parse(stored)
-        } else {
-          // Initialize with sample data
-          this.staff = [
-            {
-              id: '1',
-              first_name: 'Sarah',
-              last_name: 'Wilson',
-              email: 'sarah.wilson@careservices.com',
-              phone: '+61412345678',
-              role: 'care_worker',
-              employee_id: 'CW001',
-              hourly_rate: 45.00,
-              start_date: '2024-01-15',
-              qualifications: 'Cert III Individual Support, First Aid',
-              address: '789 Care St, Adelaide SA 5000',
-              is_active: true,
-              is_available_today: true,
-              created_at: new Date('2024-01-15').toISOString()
-            },
-            {
-              id: '2',
-              first_name: 'John',
-              last_name: 'Doe',
-              email: 'john.doe@careservices.com',
-              phone: '+61423456789',
-              role: 'support_coordinator',
-              employee_id: 'SC001',
-              hourly_rate: 55.00,
-              start_date: '2023-06-01',
-              qualifications: 'Diploma Community Services, Mental Health First Aid',
-              address: '456 Support Ave, Adelaide SA 5001',
-              is_active: true,
-              is_available_today: false,
-              created_at: new Date('2023-06-01').toISOString()
-            },
-            {
-              id: '3',
-              first_name: 'Mary',
-              last_name: 'Johnson',
-              email: 'mary.johnson@careservices.com',
-              phone: '+61434567890',
-              role: 'manager',
-              employee_id: 'MGR001',
-              hourly_rate: 65.00,
-              start_date: '2023-01-01',
-              qualifications: 'Bachelor Social Work, Management Certificate',
-              address: '123 Manager Rd, Adelaide SA 5002',
-              is_active: true,
-              is_available_today: true,
-              created_at: new Date('2023-01-01').toISOString()
-            }
-          ]
-          this.saveStaff()
-        }
+        await this.fetchUsers()
         this.filterStaff()
       } catch (error) {
         console.error('Error loading staff:', error)
-      } finally {
-        this.isLoading = false
+        this.showErrorMessage('Failed to load staff. Please try again.')
       }
-    },
-
-    saveStaff() {
-      localStorage.setItem('crm_staff', JSON.stringify(this.staff))
     },
 
     filterStaff() {
@@ -383,46 +281,19 @@ export default {
     },
 
     async addStaff() {
-      this.isSubmitting = true
       try {
-        const newStaff = {
-          id: Date.now().toString(),
-          ...this.newStaff,
-          hourly_rate: parseFloat(this.newStaff.hourly_rate) || 0,
-          is_active: true,
-          created_at: new Date().toISOString()
-        }
-        
-        // Auto-generate employee ID if not provided
-        if (!newStaff.employee_id) {
-          const rolePrefix = {
-            'care_worker': 'CW',
-            'support_coordinator': 'SC',
-            'manager': 'MGR',
-            'admin': 'ADM'
-          }
-          const prefix = rolePrefix[newStaff.role] || 'STF'
-          const number = (this.staff.length + 1).toString().padStart(3, '0')
-          newStaff.employee_id = `${prefix}${number}`
-        }
-        
-        this.staff.unshift(newStaff)
-        this.saveStaff()
+        await this.createUser(this.newStaff)
         this.filterStaff()
         this.closeModal()
-        
         this.showSuccessMessage('Staff member added successfully!')
-        
       } catch (error) {
         console.error('Error adding staff:', error)
-        alert('Error adding staff member. Please try again.')
-      } finally {
-        this.isSubmitting = false
+        this.showErrorMessage('Error adding staff member. Please try again.')
       }
     },
 
     viewStaff(member) {
-      alert(`👤 ${member.first_name} ${member.last_name}\n📧 ${member.email}\n📞 ${member.phone || 'No phone'}\n💼 ${this.formatRole(member.role)}\n🆔 Employee ID: ${member.employee_id}\n💰 Hourly Rate: $${member.hourly_rate}\n🎓 ${member.qualifications || 'No qualifications listed'}`)
+      alert(`👤 ${member.first_name} ${member.last_name}\n📧 ${member.email}\n📞 ${member.phone || 'No phone'}\n💼 ${this.formatRole(member.role)}`)
     },
 
     scheduleStaff(member) {
@@ -433,12 +304,16 @@ export default {
       alert(`Edit functionality for ${member.first_name} ${member.last_name} - Coming soon!`)
     },
 
-    deleteStaff(member) {
+    async deleteStaff(member) {
       if (confirm(`Are you sure you want to remove ${member.first_name} ${member.last_name} from staff?`)) {
-        this.staff = this.staff.filter(s => s.id !== member.id)
-        this.saveStaff()
-        this.filterStaff()
-        this.showSuccessMessage('Staff member removed successfully!')
+        try {
+          await this.deleteUser(member.id)
+          this.filterStaff()
+          this.showSuccessMessage('Staff member removed successfully!')
+        } catch (error) {
+          console.error('Error deleting staff:', error)
+          this.showErrorMessage('Error removing staff member. Please try again.')
+        }
       }
     },
 
@@ -454,12 +329,7 @@ export default {
         email: '',
         phone: '',
         role: '',
-        employee_id: '',
-        hourly_rate: '',
-        start_date: '',
-        qualifications: '',
-        address: '',
-        is_available_today: true
+        password: 'defaultpassword123'
       }
     },
 
@@ -497,7 +367,25 @@ export default {
       setTimeout(() => {
         notification.remove()
       }, 3000)
+    },
+
+    showErrorMessage(message) {
+      const notification = document.createElement('div')
+      notification.className = 'error-notification'
+      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
+      document.body.appendChild(notification)
+      
+      setTimeout(() => {
+        notification.remove()
+      }, 5000)
+    },
+
+    get isSubmitting() {
+      return this.isLoading
     }
+  },
+  async mounted() {
+    await this.loadStaff()
   }
 }
 </script>
@@ -959,83 +847,99 @@ export default {
 
 .empty-state h3 {
   color: var(--text-dark);
-  margin-bottom: 0.5
-rem;
+  margin-bottom: 0.5rem;
 }
 
 .empty-state p {
- color: var(--text-medium);
- margin-bottom: 2rem;
+  color: var(--text-medium);
+  margin-bottom: 2rem;
 }
 
 @keyframes spin {
- 0% { transform: rotate(0deg); }
- 100% { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-/* Success notification */
+/* Notifications */
 :global(.success-notification) {
- position: fixed;
- top: 20px;
- right: 20px;
- background: #10b981;
- color: white;
- padding: 12px 20px;
- border-radius: 8px;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
- z-index: 10000;
- display: flex;
- align-items: center;
- gap: 8px;
- font-weight: 500;
- animation: slideIn 0.3s ease;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+:global(.error-notification) {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #dc2626;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
 }
 
 @keyframes slideIn {
- from {
-   transform: translateX(100%);
-   opacity: 0;
- }
- to {
-   transform: translateX(0);
-   opacity: 1;
- }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {
- .page-header {
-   flex-direction: column;
-   gap: 1rem;
-   align-items: stretch;
- }
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
 
- .filters-section {
-   flex-direction: column;
-   align-items: stretch;
- }
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
- .search-box {
-   max-width: none;
- }
+  .search-box {
+    max-width: none;
+  }
 
- .filter-controls {
-   flex-direction: column;
- }
+  .filter-controls {
+    flex-direction: column;
+  }
 
- .staff-grid {
-   grid-template-columns: 1fr;
- }
+  .staff-grid {
+    grid-template-columns: 1fr;
+  }
 
- .form-row {
-   grid-template-columns: 1fr;
- }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 
- .modal-actions {
-   flex-direction: column;
- }
+  .modal-actions {
+    flex-direction: column;
+  }
 
- .staff-actions {
-   justify-content: center;
- }
+  .staff-actions {
+    justify-content: center;
+  }
 }
 </style>

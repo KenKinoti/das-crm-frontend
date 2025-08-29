@@ -61,6 +61,46 @@ export const useParticipantsStore = defineStore('participants', {
       } finally {
         this.isLoading = false
       }
+    },
+
+    async updateParticipant(id, participant) {
+      this.isLoading = true
+      this.error = null
+      
+      try {
+        const response = await participantsService.update(id, participant)
+        const index = this.participants.findIndex(p => p.id === id)
+        if (index !== -1) {
+          this.participants[index] = response.data
+        }
+        if (this.currentParticipant?.id === id) {
+          this.currentParticipant = response.data
+        }
+        return response
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to update participant'
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async deleteParticipant(id) {
+      this.isLoading = true
+      this.error = null
+      
+      try {
+        await participantsService.delete(id)
+        this.participants = this.participants.filter(p => p.id !== id)
+        if (this.currentParticipant?.id === id) {
+          this.currentParticipant = null
+        }
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to delete participant'
+        throw error
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 })

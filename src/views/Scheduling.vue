@@ -143,11 +143,11 @@
             <div class="detail-row">
               <div class="detail-item">
                 <i class="fas fa-user"></i>
-                <span><strong>Participant:</strong> {{ shift.participant_name }}</span>
+                <span><strong>Participant:</strong> {{ getParticipantName(shift.participant_id) }}</span>
               </div>
               <div class="detail-item">
                 <i class="fas fa-user-nurse"></i>
-                <span><strong>Staff:</strong> {{ shift.staff_name }}</span>
+                <span><strong>Staff:</strong> {{ getStaffName(shift.staff_id) }}</span>
               </div>
             </div>
             <div class="detail-row">
@@ -338,20 +338,21 @@
 </template>
 
 <script>
+import { mapState, mapActions } from 'pinia'
+import { useShiftsStore } from '../stores/shifts'
+import { useParticipantsStore } from '../stores/participants'
+import { useUsersStore } from '../stores/users'
+
 export default {
   name: 'Scheduling',
   data() {
     return {
-      shifts: [],
       filteredShifts: [],
-      participants: [],
-      staffMembers: [],
       searchQuery: '',
       statusFilter: '',
       dateFilter: '',
       participantFilter: '',
       currentView: 'list',
-      isLoading: false,
       showAddModal: false,
       isSubmitting: false,
       newShift: {
@@ -369,6 +370,10 @@ export default {
     }
   },
   computed: {
+    ...mapState(useShiftsStore, ['shifts', 'isLoading', 'error']),
+    ...mapState(useParticipantsStore, { participants: 'participants' }),
+    ...mapState(useUsersStore, { staffMembers: 'users' }),
+    
     todayShifts() {
       const today = new Date().toDateString()
       return this.shifts.filter(shift => 
@@ -394,80 +399,22 @@ export default {
     await this.loadData()
   },
   methods: {
+    ...mapActions(useShiftsStore, ['fetchShifts', 'createShift', 'updateShift', 'deleteShift']),
+    ...mapActions(useParticipantsStore, ['fetchParticipants']),
+    ...mapActions(useUsersStore, ['fetchUsers']),
+    
     async loadData() {
-      this.isLoading = true
       try {
         await Promise.all([
-          this.loadShifts(),
-          this.loadParticipants(),
-          this.loadStaffMembers()
+          this.fetchShifts(),
+          this.fetchParticipants(),
+          this.fetchUsers()
         ])
+        this.filterShifts()
       } catch (error) {
         console.error('Error loading data:', error)
-      } finally {
-        this.isLoading = false
+        this.showErrorMessage('Failed to load data. Please refresh the page.')
       }
-    },
-
-    async loadShifts() {
-      const stored = localStorage.getItem('crm_shifts')
-      if (stored) {
-        this.shifts = JSON.parse(stored)
-      } else {
-        // Initialize with sample data
-        this.shifts = [
-          {
-            id: '1',
-            participant_id: '1',
-            participant_name: 'Alice Johnson',
-            staff_id: '1',
-            staff_name: 'Sarah Wilson',
-            start_time: new Date().toISOString(),
-            end_time: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-            service_type: 'Personal Care',
-            location: "Participant's Home",
-            status: 'scheduled',
-            hourly_rate: 45.00,
-            notes: 'Morning routine assistance',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            participant_id: '2',
-            participant_name: 'Michael Smith',
-            staff_id: '1',
-            staff_name: 'Sarah Wilson',
-            start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            end_time: new Date(Date.now() + 27 * 60 * 60 * 1000).toISOString(),
-            service_type: 'Community Access',
-            location: 'Community',
-            status: 'scheduled',
-            hourly_rate: 50.00,
-            notes: 'Shopping assistance at local mall',
-            created_at: new Date().toISOString()
-          }
-        ]
-        this.saveShifts()
-      }
-      this.filterShifts()
-    },
-
-    async loadParticipants() {
-      const stored = localStorage.getItem('crm_participants')
-      if (stored) {
-        this.participants = JSON.parse(stored).filter(p => p.is_active)
-      }
-    },
-
-    async loadStaffMembers() {
-      const stored = localStorage.getItem('crm_staff')
-      if (stored) {
-        this.staffMembers = JSON.parse(stored).filter(s => s.is_active)
-      }
-    },
-
-    saveShifts() {
-      localStorage.setItem('crm_shifts', JSON.stringify(this.shifts))
     },
 
     filterShifts() {
@@ -475,12 +422,17 @@ export default {
       
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase()
-        filtered = filtered.filter(shift => 
-          shift.participant_name.toLowerCase().includes(query) ||
-          shift.staff_name.toLowerCase().includes(query) ||
-          shift.service_type.toLowerCase().includes(query) ||
-          shift.location.toLowerCase().includes(query)
-        )
+        filtered = filtered.filter(shift => {
+          const participant = this.participants.find(p => p.id === shift.participant_id)
+          const staff = this.staffMembers.find(s => s.id === shift.staff_id)
+          const participantName = participant ? `${participant.first_name} ${participant.last_name}` : ''
+          const staffName = staff ? `${staff.first_name} ${staff.last_name}` : ''
+          
+          return participantName.toLowerCase().includes(query) ||
+                 staffName.toLowerCase().includes(query) ||
+                 shift.service_type.toLowerCase().includes(query) ||
+                 shift.location.toLowerCase().includes(query)
+        })
       }
       
       if (this.statusFilter) {
@@ -489,9 +441,11 @@ export default {
 
       if (this.participantFilter) {
         const query = this.participantFilter.toLowerCase()
-        filtered = filtered.filter(shift => 
-          shift.participant_name.toLowerCase().includes(query)
-        )
+        filtered = filtered.filter(shift => {
+          const participant = this.participants.find(p => p.id === shift.participant_id)
+          const participantName = participant ? `${participant.first_name} ${participant.last_name}` : ''
+          return participantName.toLowerCase().includes(query)
+        })
       }
       
       if (this.dateFilter) {
@@ -528,40 +482,30 @@ export default {
     async addShift() {
       this.isSubmitting = true
       try {
-        // Find participant and staff names
-        const participant = this.participants.find(p => p.id === this.newShift.participant_id)
-        const staff = this.staffMembers.find(s => s.id === this.newShift.staff_id)
+        // Create datetime strings in ISO format
+        const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00Z`
+        const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00Z`
         
-        // Create datetime strings
-        const startDateTime = new Date(`${this.newShift.date}T${this.newShift.start_time}`).toISOString()
-        const endDateTime = new Date(`${this.newShift.date}T${this.newShift.end_time}`).toISOString()
-        
-        const newShift = {
-          id: Date.now().toString(),
-          participant_id: this.newShift.participant_id,
-          participant_name: `${participant.first_name} ${participant.last_name}`,
-          staff_id: this.newShift.staff_id,
-          staff_name: `${staff.first_name} ${staff.last_name}`,
+        const shiftData = {
+          participant_id: parseInt(this.newShift.participant_id),
+          staff_id: parseInt(this.newShift.staff_id),
           start_time: startDateTime,
           end_time: endDateTime,
           service_type: this.newShift.service_type,
           location: this.newShift.location,
           status: 'scheduled',
           hourly_rate: parseFloat(this.newShift.hourly_rate),
-          notes: this.newShift.notes,
-          created_at: new Date().toISOString()
+          notes: this.newShift.notes || ''
         }
         
-        this.shifts.unshift(newShift)
-        this.saveShifts()
+        await this.createShift(shiftData)
         this.filterShifts()
         this.closeModal()
-        
         this.showSuccessMessage('Shift scheduled successfully!')
         
       } catch (error) {
         console.error('Error scheduling shift:', error)
-        alert('Error scheduling shift. Please try again.')
+        this.showErrorMessage('Error scheduling shift. Please try again.')
       } finally {
         this.isSubmitting = false
       }
@@ -570,31 +514,48 @@ export default {
     viewShift(shift) {
       const duration = this.calculateDuration(shift.start_time, shift.end_time)
       const totalCost = (parseFloat(duration) * shift.hourly_rate).toFixed(2)
+      const participantName = this.getParticipantName(shift.participant_id)
+      const staffName = this.getStaffName(shift.staff_id)
       
-      alert(`📅 ${shift.service_type}\n👤 Participant: ${shift.participant_name}\n👩‍⚕️ Staff: ${shift.staff_name}\n📅 Date: ${this.formatDate(shift.start_time)}\n🕐 Time: ${this.formatTime(shift.start_time)} - ${this.formatTime(shift.end_time)}\n⏱️ Duration: ${duration}\n📍 Location: ${shift.location}\n💰 Rate: $${shift.hourly_rate}/hr\n💵 Total: $${totalCost}\n📝 Status: ${this.formatStatus(shift.status)}${shift.notes ? '\n📋 Notes: ' + shift.notes : ''}`)
+      alert(`📅 ${shift.service_type}\n👤 Participant: ${participantName}\n👩‍⚕️ Staff: ${staffName}\n📅 Date: ${this.formatDate(shift.start_time)}\n🕐 Time: ${this.formatTime(shift.start_time)} - ${this.formatTime(shift.end_time)}\n⏱️ Duration: ${duration}\n📍 Location: ${shift.location}\n💰 Rate: $${shift.hourly_rate}/hr\n💵 Total: $${totalCost}\n📝 Status: ${this.formatStatus(shift.status)}${shift.notes ? '\n📋 Notes: ' + shift.notes : ''}`)
     },
 
-    startShift(shift) {
-      if (confirm(`Start shift for ${shift.participant_name}?`)) {
-        shift.status = 'in_progress'
-        shift.actual_start_time = new Date().toISOString()
-        this.saveShifts()
-        this.filterShifts()
-        this.showSuccessMessage('Shift started successfully!')
+    async startShift(shift) {
+      const participantName = this.getParticipantName(shift.participant_id)
+      if (confirm(`Start shift for ${participantName}?`)) {
+        try {
+          const updateData = {
+            status: 'in_progress',
+            actual_start_time: new Date().toISOString()
+          }
+          await this.updateShift(shift.id, updateData)
+          this.filterShifts()
+          this.showSuccessMessage('Shift started successfully!')
+        } catch (error) {
+          console.error('Error starting shift:', error)
+          this.showErrorMessage('Error starting shift. Please try again.')
+        }
       }
     },
 
-    completeShift(shift) {
+    async completeShift(shift) {
       const notes = prompt('Add completion notes (optional):')
       if (notes !== null) {
-        shift.status = 'completed'
-        shift.actual_end_time = new Date().toISOString()
-        if (notes.trim()) {
-          shift.completion_notes = notes.trim()
+        try {
+          const updateData = {
+            status: 'completed',
+            actual_end_time: new Date().toISOString()
+          }
+          if (notes.trim()) {
+            updateData.completion_notes = notes.trim()
+          }
+          await this.updateShift(shift.id, updateData)
+          this.filterShifts()
+          this.showSuccessMessage('Shift completed successfully!')
+        } catch (error) {
+          console.error('Error completing shift:', error)
+          this.showErrorMessage('Error completing shift. Please try again.')
         }
-        this.saveShifts()
-        this.filterShifts()
-        this.showSuccessMessage('Shift completed successfully!')
       }
     },
 
@@ -602,12 +563,18 @@ export default {
       alert(`Edit functionality for shift with ${shift.participant_name} - Coming soon!`)
     },
 
-    cancelShift(shift) {
-      if (confirm(`Are you sure you want to cancel the shift for ${shift.participant_name}?`)) {
-        shift.status = 'cancelled'
-        this.saveShifts()
-        this.filterShifts()
-        this.showSuccessMessage('Shift cancelled successfully!')
+    async cancelShift(shift) {
+      const participantName = this.getParticipantName(shift.participant_id)
+      if (confirm(`Are you sure you want to cancel the shift for ${participantName}?`)) {
+        try {
+          const updateData = { status: 'cancelled' }
+          await this.updateShift(shift.id, updateData)
+          this.filterShifts()
+          this.showSuccessMessage('Shift cancelled successfully!')
+        } catch (error) {
+          console.error('Error cancelling shift:', error)
+          this.showErrorMessage('Error cancelling shift. Please try again.')
+        }
       }
     },
 
@@ -677,10 +644,31 @@ export default {
       }
     },
 
+    getParticipantName(participantId) {
+      const participant = this.participants.find(p => p.id === participantId)
+      return participant ? `${participant.first_name} ${participant.last_name}` : 'Unknown Participant'
+    },
+    
+    getStaffName(staffId) {
+      const staff = this.staffMembers.find(s => s.id === staffId)
+      return staff ? `${staff.first_name} ${staff.last_name}` : 'Unknown Staff'
+    },
+    
     showSuccessMessage(message) {
       const notification = document.createElement('div')
       notification.className = 'success-notification'
       notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`
+      document.body.appendChild(notification)
+      
+      setTimeout(() => {
+        notification.remove()
+      }, 3000)
+    },
+    
+    showErrorMessage(message) {
+      const notification = document.createElement('div')
+      notification.className = 'error-notification'
+      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
       document.body.appendChild(notification)
       
       setTimeout(() => {
@@ -1224,6 +1212,24 @@ export default {
   top: 20px;
   right: 20px;
   background: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+/* Error notification */
+:global(.error-notification) {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #dc2626;
   color: white;
   padding: 12px 20px;
   border-radius: 8px;
