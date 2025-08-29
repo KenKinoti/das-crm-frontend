@@ -71,10 +71,24 @@ export const useOrganizationStore = defineStore('organization', {
       
       try {
         const response = await organizationService.get()
-        this.organization = response.data
+        // Handle different response structures
+        const orgData = response.data || response
+        this.organization = {
+          ...this.organization,
+          ...orgData,
+          settings: {
+            ...this.organization.settings,
+            ...(orgData.settings || {})
+          }
+        }
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch organization data'
-        throw error
+        console.error('Error fetching organization:', error)
+        this.error = error.response?.data?.message || error.message || 'Failed to fetch organization data'
+        // Set default values if API fails
+        this.organization = {
+          ...this.organization,
+          name: this.organization.name || 'Your Organization'
+        }
       } finally {
         this.isLoading = false
       }
@@ -86,10 +100,20 @@ export const useOrganizationStore = defineStore('organization', {
       
       try {
         const response = await organizationService.update(organizationData)
-        this.organization = response.data
+        // Handle different response structures
+        const updatedData = response.data || response
+        this.organization = {
+          ...this.organization,
+          ...updatedData,
+          settings: {
+            ...this.organization.settings,
+            ...(updatedData.settings || {})
+          }
+        }
         return response
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update organization'
+        console.error('Error updating organization:', error)
+        this.error = error.response?.data?.message || error.message || 'Failed to update organization'
         throw error
       } finally {
         this.isLoading = false

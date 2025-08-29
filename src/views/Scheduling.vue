@@ -209,13 +209,50 @@
         </div>
       </div>
 
-      <!-- Calendar View Placeholder -->
+      <!-- Calendar View -->
       <div v-else class="calendar-view">
-        <div class="calendar-placeholder">
-          <i class="fas fa-calendar-alt"></i>
-          <h3>Calendar View</h3>
-          <p>Calendar view implementation coming soon...</p>
-          <p>For now, switch to List View to manage shifts.</p>
+        <div class="calendar-header">
+          <button @click="previousMonth" class="calendar-nav-btn">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <h3>{{ formatMonthYear(currentDate) }}</h3>
+          <button @click="nextMonth" class="calendar-nav-btn">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        
+        <div class="calendar-grid">
+          <!-- Day headers -->
+          <div class="calendar-header-day" v-for="day in dayHeaders" :key="day">
+            {{ day }}
+          </div>
+          
+          <!-- Calendar days -->
+          <div 
+            v-for="day in calendarDays" 
+            :key="day.date" 
+            :class="['calendar-day', {
+              'other-month': !day.isCurrentMonth,
+              'today': day.isToday,
+              'has-shifts': day.shifts.length > 0
+            }]"
+          >
+            <div class="day-number">{{ day.dayNumber }}</div>
+            <div v-if="day.shifts.length > 0" class="day-shifts">
+              <div 
+                v-for="shift in day.shifts.slice(0, 2)" 
+                :key="shift.id" 
+                :class="['shift-indicator', shift.status]"
+                @click="viewShift(shift)"
+                :title="`${getParticipantName(shift.participant_id)} - ${shift.service_type}`"
+              >
+                {{ formatTime(shift.start_time) }}
+              </div>
+              <div v-if="day.shifts.length > 2" class="more-shifts">
+                +{{ day.shifts.length - 2 }} more
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -334,6 +371,263 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Shift Modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Edit Shift</h3>
+          <button @click="closeEditModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="updateEditedShift">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Participant *</label>
+                <select v-model="newShift.participant_id" required>
+                  <option value="">Select Participant</option>
+                  <option v-for="participant in participants" :key="participant.id" :value="participant.id">
+                    {{ participant.first_name }} {{ participant.last_name }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Staff Member *</label>
+                <select v-model="newShift.staff_id" required>
+                  <option value="">Select Staff</option>
+                  <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
+                    {{ staff.first_name }} {{ staff.last_name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Date *</label>
+                <input v-model="newShift.date" type="date" required />
+              </div>
+              <div class="form-group">
+                <label>Service Type *</label>
+                <select v-model="newShift.service_type" required>
+                  <option value="">Select Service</option>
+                  <option value="Personal Care">Personal Care</option>
+                  <option value="Community Access">Community Access</option>
+                  <option value="Domestic Assistance">Domestic Assistance</option>
+                  <option value="Social Support">Social Support</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Nursing Care">Nursing Care</option>
+                  <option value="Therapy Support">Therapy Support</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Start Time *</label>
+                <input v-model="newShift.start_time" type="time" required />
+              </div>
+              <div class="form-group">
+                <label>End Time *</label>
+                <input v-model="newShift.end_time" type="time" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Hourly Rate ($) *</label>
+                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" required placeholder="45.00" />
+              </div>
+              <div class="form-group">
+                <label>Location *</label>
+                <select v-model="newShift.location" required>
+                  <option value="">Select Location</option>
+                  <option value="Participant's Home">Participant's Home</option>
+                  <option value="Community">Community</option>
+                  <option value="Office">Office</option>
+                  <option value="Medical Facility">Medical Facility</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea 
+                v-model="newShift.notes" 
+                rows="3" 
+                placeholder="Any special instructions or notes for this shift..."
+              ></textarea>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" @click="closeEditModal" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+                <span v-if="isSubmitting">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  Updating...
+                </span>
+                <span v-else>
+                  <i class="fas fa-save"></i>
+                  Update Shift
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Shift Modal -->
+    <div v-if="showViewModal && selectedShift" class="modal-overlay" @click="closeViewModal">
+      <div class="modal-content view-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Shift Details</h3>
+          <button @click="closeViewModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="shift-detail-grid">
+            <div class="detail-section">
+              <h4><i class="fas fa-calendar-alt"></i> Service Information</h4>
+              <div class="detail-item">
+                <span class="label">Service Type:</span>
+                <span class="value">{{ selectedShift.service_type }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Status:</span>
+                <span :class="['status-badge', selectedShift.status]">{{ formatStatus(selectedShift.status) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Location:</span>
+                <span class="value">{{ selectedShift.location }}</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4><i class="fas fa-users"></i> People</h4>
+              <div class="detail-item">
+                <span class="label">Participant:</span>
+                <span class="value">{{ getParticipantName(selectedShift.participant_id) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Staff Member:</span>
+                <span class="value">{{ getStaffName(selectedShift.staff_id) }}</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4><i class="fas fa-clock"></i> Schedule</h4>
+              <div class="detail-item">
+                <span class="label">Date:</span>
+                <span class="value">{{ formatDate(selectedShift.start_time) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Time:</span>
+                <span class="value">{{ formatTime(selectedShift.start_time) }} - {{ formatTime(selectedShift.end_time) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Duration:</span>
+                <span class="value">{{ calculateDuration(selectedShift.start_time, selectedShift.end_time) }}</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4><i class="fas fa-dollar-sign"></i> Payment</h4>
+              <div class="detail-item">
+                <span class="label">Hourly Rate:</span>
+                <span class="value">${{ selectedShift.hourly_rate }}/hr</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Total Cost:</span>
+                <span class="value total-cost">${{ (parseFloat(calculateDuration(selectedShift.start_time, selectedShift.end_time)) * selectedShift.hourly_rate).toFixed(2) }}</span>
+              </div>
+            </div>
+
+            <div v-if="selectedShift.notes" class="detail-section full-width">
+              <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+              <div class="notes-content">
+                {{ selectedShift.notes }}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="closeViewModal" class="btn btn-secondary">Close</button>
+            <button @click="editShift(selectedShift); closeViewModal()" class="btn btn-outline">
+              <i class="fas fa-edit"></i>
+              Edit
+            </button>
+            <button 
+              v-if="selectedShift.status === 'scheduled'" 
+              @click="startShift(selectedShift); closeViewModal()" 
+              class="btn btn-success"
+            >
+              <i class="fas fa-play"></i>
+              Start Shift
+            </button>
+            <button 
+              v-if="selectedShift.status === 'in_progress'" 
+              @click="completeShift(selectedShift); closeViewModal()" 
+              class="btn btn-success"
+            >
+              <i class="fas fa-check"></i>
+              Complete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete/Cancel Confirmation Modal -->
+    <div v-if="showDeleteModal && shiftToDelete" class="modal-overlay" @click="closeDeleteModal">
+      <div class="modal-content delete-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Cancel Shift</h3>
+          <button @click="closeDeleteModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="delete-confirmation">
+            <div class="delete-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h4>Are you sure you want to cancel this shift?</h4>
+            <div class="shift-summary">
+              <p><strong>Participant:</strong> {{ getParticipantName(shiftToDelete.participant_id) }}</p>
+              <p><strong>Staff:</strong> {{ getStaffName(shiftToDelete.staff_id) }}</p>
+              <p><strong>Date:</strong> {{ formatDate(shiftToDelete.start_time) }}</p>
+              <p><strong>Time:</strong> {{ formatTime(shiftToDelete.start_time) }} - {{ formatTime(shiftToDelete.end_time) }}</p>
+              <p><strong>Service:</strong> {{ shiftToDelete.service_type }}</p>
+            </div>
+            <p class="warning-text">
+              <i class="fas fa-info-circle"></i>
+              This action cannot be undone. The shift will be marked as cancelled.
+            </p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeDeleteModal" class="btn btn-secondary">
+            <i class="fas fa-times"></i>
+            Keep Shift
+          </button>
+          <button @click="confirmCancelShift" class="btn btn-danger" :disabled="isSubmitting">
+            <span v-if="isSubmitting">
+              <i class="fas fa-spinner fa-spin"></i>
+              Cancelling...
+            </span>
+            <span v-else>
+              <i class="fas fa-ban"></i>
+              Cancel Shift
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -342,6 +636,7 @@ import { mapState, mapActions } from 'pinia'
 import { useShiftsStore } from '../stores/shifts'
 import { useParticipantsStore } from '../stores/participants'
 import { useUsersStore } from '../stores/users'
+import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
 
 export default {
   name: 'Scheduling',
@@ -354,7 +649,15 @@ export default {
       participantFilter: '',
       currentView: 'list',
       showAddModal: false,
+      showEditModal: false,
+      showViewModal: false,
+      showDeleteModal: false,
+      editingShift: null,
+      selectedShift: null,
+      shiftToDelete: null,
       isSubmitting: false,
+      currentDate: new Date(),
+      dayHeaders: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       newShift: {
         participant_id: '',
         staff_id: '',
@@ -393,6 +696,43 @@ export default {
         shift.status === 'scheduled' && 
         new Date(shift.start_time) < new Date(Date.now() + 24 * 60 * 60 * 1000)
       ).length
+    },
+
+    calendarDays() {
+      const year = this.currentDate.getFullYear()
+      const month = this.currentDate.getMonth()
+      
+      // Get first day of the month
+      const firstDay = new Date(year, month, 1)
+      const lastDay = new Date(year, month + 1, 0)
+      
+      // Get first day of calendar (might be from previous month)
+      const startDate = new Date(firstDay)
+      startDate.setDate(startDate.getDate() - firstDay.getDay())
+      
+      // Get last day of calendar (might be from next month)
+      const endDate = new Date(lastDay)
+      endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()))
+      
+      const days = []
+      const today = new Date()
+      
+      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        const dayShifts = this.shifts.filter(shift => {
+          const shiftDate = new Date(shift.start_time)
+          return shiftDate.toDateString() === date.toDateString()
+        })
+        
+        days.push({
+          date: new Date(date).toISOString(),
+          dayNumber: date.getDate(),
+          isCurrentMonth: date.getMonth() === month,
+          isToday: date.toDateString() === today.toDateString(),
+          shifts: dayShifts
+        })
+      }
+      
+      return days
     }
   },
   async mounted() {
@@ -404,50 +744,82 @@ export default {
     ...mapActions(useUsersStore, ['fetchUsers']),
     
     async loadData() {
+      this.isLoading = true
       try {
-        await Promise.all([
+        console.log('Loading scheduling data...')
+        
+        const [shiftsResult, participantsResult, usersResult] = await Promise.allSettled([
           this.fetchShifts(),
           this.fetchParticipants(),
           this.fetchUsers()
         ])
+        
+        // Check individual results
+        if (shiftsResult.status === 'rejected') {
+          console.error('Failed to load shifts:', shiftsResult.reason)
+        } else {
+          console.log('Loaded shifts:', this.shifts.length)
+        }
+        
+        if (participantsResult.status === 'rejected') {
+          console.error('Failed to load participants:', participantsResult.reason)
+          showErrorNotification(new Error('Failed to load participants. Shift creation will not work properly.'))
+        } else {
+          console.log('Loaded participants:', this.participants.length)
+        }
+        
+        if (usersResult.status === 'rejected') {
+          console.error('Failed to load users/staff:', usersResult.reason)
+          showErrorNotification(new Error('Failed to load staff members. Shift creation will not work properly.'))
+        } else {
+          console.log('Loaded staff members:', this.staffMembers.length)
+        }
+        
         this.filterShifts()
       } catch (error) {
         console.error('Error loading data:', error)
-        this.showErrorMessage('Failed to load data. Please refresh the page.')
+        showErrorNotification(error, 'Failed to load data. Please refresh the page.')
+      } finally {
+        this.isLoading = false
       }
     },
 
     filterShifts() {
       let filtered = [...this.shifts]
       
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase()
+      // Search functionality
+      if (this.searchQuery && this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase().trim()
         filtered = filtered.filter(shift => {
           const participant = this.participants.find(p => p.id === shift.participant_id)
           const staff = this.staffMembers.find(s => s.id === shift.staff_id)
-          const participantName = participant ? `${participant.first_name} ${participant.last_name}` : ''
-          const staffName = staff ? `${staff.first_name} ${staff.last_name}` : ''
+          const participantName = participant ? `${participant.first_name} ${participant.last_name}`.toLowerCase() : ''
+          const staffName = staff ? `${staff.first_name} ${staff.last_name}`.toLowerCase() : ''
           
-          return participantName.toLowerCase().includes(query) ||
-                 staffName.toLowerCase().includes(query) ||
-                 shift.service_type.toLowerCase().includes(query) ||
-                 shift.location.toLowerCase().includes(query)
+          return participantName.includes(query) ||
+                 staffName.includes(query) ||
+                 (shift.service_type && shift.service_type.toLowerCase().includes(query)) ||
+                 (shift.location && shift.location.toLowerCase().includes(query)) ||
+                 (shift.notes && shift.notes.toLowerCase().includes(query))
         })
       }
       
+      // Status filter
       if (this.statusFilter) {
         filtered = filtered.filter(shift => shift.status === this.statusFilter)
       }
 
-      if (this.participantFilter) {
-        const query = this.participantFilter.toLowerCase()
+      // Participant filter
+      if (this.participantFilter && this.participantFilter.trim()) {
+        const query = this.participantFilter.toLowerCase().trim()
         filtered = filtered.filter(shift => {
           const participant = this.participants.find(p => p.id === shift.participant_id)
-          const participantName = participant ? `${participant.first_name} ${participant.last_name}` : ''
-          return participantName.toLowerCase().includes(query)
+          const participantName = participant ? `${participant.first_name} ${participant.last_name}`.toLowerCase() : ''
+          return participantName.includes(query)
         })
       }
       
+      // Date filter
       if (this.dateFilter) {
         const now = new Date()
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -473,109 +845,399 @@ export default {
         })
       }
       
-      // Sort by start time
+      // Sort by start time (ascending)
       filtered.sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
       
       this.filteredShifts = filtered
     },
 
     async addShift() {
+      if (!this.validateShiftForm()) {
+        return
+      }
+
       this.isSubmitting = true
       try {
-        // Create datetime strings in ISO format
+        // Create datetime strings in ISO format with timezone
         const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00Z`
         const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00Z`
         
-        const shiftData = {
-          participant_id: parseInt(this.newShift.participant_id),
-          staff_id: parseInt(this.newShift.staff_id),
-          start_time: startDateTime,
-          end_time: endDateTime,
-          service_type: this.newShift.service_type,
-          location: this.newShift.location,
-          status: 'scheduled',
-          hourly_rate: parseFloat(this.newShift.hourly_rate),
-          notes: this.newShift.notes || ''
+        // Validate IDs - they should be UUID strings, don't convert to numbers
+        const participantId = this.newShift.participant_id
+        const staffId = this.newShift.staff_id
+        
+        // Validate UUIDs (they should be strings)
+        if (!participantId || typeof participantId !== 'string' || participantId.trim() === '') {
+          console.error('Invalid participant ID:', this.newShift.participant_id)
+          throw new Error('Invalid participant selected. Please select a valid participant.')
+        }
+        if (!staffId || typeof staffId !== 'string' || staffId.trim() === '') {
+          console.error('Invalid staff ID:', this.newShift.staff_id)
+          throw new Error('Invalid staff member selected. Please select a valid staff member.')
         }
         
-        await this.createShift(shiftData)
+        // ID format validation - allow both UUIDs and custom formats like 'user_admin'
+        // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        // Custom format: any string that's not empty and doesn't contain special characters
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        const customIdRegex = /^[a-zA-Z0-9_-]+$/
+        
+        if (!uuidRegex.test(participantId) && !customIdRegex.test(participantId)) {
+          console.error('Invalid participant ID format:', participantId)
+          throw new Error('Invalid participant ID format. Please refresh and try again.')
+        }
+        if (!uuidRegex.test(staffId) && !customIdRegex.test(staffId)) {
+          console.error('Invalid staff ID format:', staffId)
+          throw new Error('Invalid staff ID format. Please refresh and try again.')
+        }
+        
+        const hourlyRate = parseFloat(this.newShift.hourly_rate)
+        if (isNaN(hourlyRate) || hourlyRate <= 0) {
+          throw new Error('Invalid hourly rate')
+        }
+        
+        const shiftData = {
+          participant_id: participantId,
+          staff_id: staffId,
+          start_time: startDateTime,
+          end_time: endDateTime,
+          service_type: this.newShift.service_type.trim(),
+          location: this.newShift.location.trim(),
+          status: 'scheduled',
+          hourly_rate: hourlyRate,
+          notes: (this.newShift.notes || '').trim()
+        }
+        
+        console.log('Creating shift with data:', shiftData)
+        console.log('Participants available:', this.participants.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+        console.log('Staff available:', this.staffMembers.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` })))
+        
+        const result = await this.createShift(shiftData)
+        console.log('Shift creation result:', result)
+        
+        // Reload the shifts data to ensure UI is updated
+        await this.fetchShifts()
         this.filterShifts()
+        // Force Vue to re-render the component
+        this.$forceUpdate()
         this.closeModal()
-        this.showSuccessMessage('Shift scheduled successfully!')
+        showSuccessNotification('Shift scheduled successfully!')
         
       } catch (error) {
         console.error('Error scheduling shift:', error)
-        this.showErrorMessage('Error scheduling shift. Please try again.')
+        console.error('Error response:', error.response)
+        console.error('Error status:', error.response?.status)
+        console.error('Error data:', error.response?.data)
+        
+        // More specific error messages based on status
+        if (error.response?.status === 404) {
+          if (error.response.config?.url?.includes('participants')) {
+            showErrorNotification(error, 'Participant not found. Please refresh the page and try again.')
+          } else if (error.response.config?.url?.includes('users')) {
+            showErrorNotification(error, 'Staff member not found. Please refresh the page and try again.')  
+          } else {
+            showErrorNotification(error, 'Resource not found (404). Please check your selection and try again.')
+          }
+        } else {
+          showErrorNotification(error, 'Error scheduling shift. Please try again.')
+        }
       } finally {
         this.isSubmitting = false
       }
     },
 
-    viewShift(shift) {
-      const duration = this.calculateDuration(shift.start_time, shift.end_time)
-      const totalCost = (parseFloat(duration) * shift.hourly_rate).toFixed(2)
-      const participantName = this.getParticipantName(shift.participant_id)
-      const staffName = this.getStaffName(shift.staff_id)
+    validateShiftForm() {
+      console.log('Validating shift form...')
+      console.log('Form data:', this.newShift)
+      console.log('Selected participant_id:', this.newShift.participant_id, 'type:', typeof this.newShift.participant_id)
+      console.log('Selected staff_id:', this.newShift.staff_id, 'type:', typeof this.newShift.staff_id)
       
-      alert(`📅 ${shift.service_type}\n👤 Participant: ${participantName}\n👩‍⚕️ Staff: ${staffName}\n📅 Date: ${this.formatDate(shift.start_time)}\n🕐 Time: ${this.formatTime(shift.start_time)} - ${this.formatTime(shift.end_time)}\n⏱️ Duration: ${duration}\n📍 Location: ${shift.location}\n💰 Rate: $${shift.hourly_rate}/hr\n💵 Total: $${totalCost}\n📝 Status: ${this.formatStatus(shift.status)}${shift.notes ? '\n📋 Notes: ' + shift.notes : ''}`)
+      // Check if data is loaded
+      if (!this.participants || this.participants.length === 0) {
+        showErrorNotification(new Error('No participants available. Please ensure participants are loaded.'))
+        return false
+      }
+      if (!this.staffMembers || this.staffMembers.length === 0) {
+        showErrorNotification(new Error('No staff members available. Please ensure staff data is loaded.'))
+        return false
+      }
+      
+      if (!this.newShift.participant_id || this.newShift.participant_id === '') {
+        showErrorNotification(new Error('Please select a participant'))
+        return false
+      }
+      if (!this.newShift.staff_id || this.newShift.staff_id === '') {
+        showErrorNotification(new Error('Please select a staff member'))
+        return false
+      }
+      
+      // Validate that selected IDs exist in the loaded data
+      const selectedParticipant = this.participants.find(p => p.id == this.newShift.participant_id)
+      if (!selectedParticipant) {
+        showErrorNotification(new Error('Selected participant not found. Please refresh the page and try again.'))
+        return false
+      }
+      
+      const selectedStaff = this.staffMembers.find(s => s.id == this.newShift.staff_id)
+      if (!selectedStaff) {
+        showErrorNotification(new Error('Selected staff member not found. Please refresh the page and try again.'))
+        return false
+      }
+      if (!this.newShift.date) {
+        showErrorNotification(new Error('Please select a date'))
+        return false
+      }
+      if (!this.newShift.start_time) {
+        showErrorNotification(new Error('Please select a start time'))
+        return false
+      }
+      if (!this.newShift.end_time) {
+        showErrorNotification(new Error('Please select an end time'))
+        return false
+      }
+      if (this.newShift.start_time >= this.newShift.end_time) {
+        showErrorNotification(new Error('End time must be after start time'))
+        return false
+      }
+      if (!this.newShift.service_type) {
+        showErrorNotification(new Error('Please select a service type'))
+        return false
+      }
+      if (!this.newShift.location) {
+        showErrorNotification(new Error('Please select a location'))
+        return false
+      }
+      if (!this.newShift.hourly_rate || parseFloat(this.newShift.hourly_rate) <= 0) {
+        showErrorNotification(new Error('Please enter a valid hourly rate'))
+        return false
+      }
+      return true
+    },
+
+    viewShift(shift) {
+      this.selectedShift = shift
+      this.showViewModal = true
+    },
+
+    closeViewModal() {
+      this.showViewModal = false
+      this.selectedShift = null
     },
 
     async startShift(shift) {
       const participantName = this.getParticipantName(shift.participant_id)
-      if (confirm(`Start shift for ${participantName}?`)) {
-        try {
-          const updateData = {
-            status: 'in_progress',
-            actual_start_time: new Date().toISOString()
-          }
-          await this.updateShift(shift.id, updateData)
-          this.filterShifts()
-          this.showSuccessMessage('Shift started successfully!')
-        } catch (error) {
-          console.error('Error starting shift:', error)
-          this.showErrorMessage('Error starting shift. Please try again.')
+      if (!confirm(`Start shift for ${participantName}?`)) {
+        return
+      }
+      
+      this.isSubmitting = true
+      try {
+        const updateData = {
+          status: 'in_progress',
+          actual_start_time: new Date().toISOString()
         }
+        await this.updateShift(shift.id, updateData)
+        await this.fetchShifts()
+        this.filterShifts()
+        this.$forceUpdate()
+        showSuccessNotification('Shift started successfully!')
+      } catch (error) {
+        console.error('Error starting shift:', error)
+        showErrorNotification(error, 'Error starting shift. Please try again.')
+      } finally {
+        this.isSubmitting = false
       }
     },
 
     async completeShift(shift) {
       const notes = prompt('Add completion notes (optional):')
-      if (notes !== null) {
-        try {
-          const updateData = {
-            status: 'completed',
-            actual_end_time: new Date().toISOString()
-          }
-          if (notes.trim()) {
-            updateData.completion_notes = notes.trim()
-          }
-          await this.updateShift(shift.id, updateData)
-          this.filterShifts()
-          this.showSuccessMessage('Shift completed successfully!')
-        } catch (error) {
-          console.error('Error completing shift:', error)
-          this.showErrorMessage('Error completing shift. Please try again.')
+      if (notes === null) {
+        return // User cancelled
+      }
+      
+      this.isSubmitting = true
+      try {
+        const updateData = {
+          status: 'completed',
+          actual_end_time: new Date().toISOString()
         }
+        if (notes && notes.trim()) {
+          updateData.completion_notes = notes.trim()
+        }
+        await this.updateShift(shift.id, updateData)
+        await this.fetchShifts()
+        this.filterShifts()
+        this.$forceUpdate()
+        showSuccessNotification('Shift completed successfully!')
+      } catch (error) {
+        console.error('Error completing shift:', error)
+        showErrorNotification(error, 'Error completing shift. Please try again.')
+      } finally {
+        this.isSubmitting = false
       }
     },
 
     editShift(shift) {
-      alert(`Edit functionality for shift with ${shift.participant_name} - Coming soon!`)
+      // Pre-populate the form with existing shift data
+      const shiftDate = new Date(shift.start_time)
+      const startTime = shiftDate.toTimeString().slice(0, 5)
+      const endDate = new Date(shift.end_time)
+      const endTime = endDate.toTimeString().slice(0, 5)
+      
+      this.editingShift = { ...shift }
+      console.log('Editing shift data:', shift)
+      console.log('Original participant_id:', shift.participant_id, 'type:', typeof shift.participant_id)
+      console.log('Original staff_id:', shift.staff_id, 'type:', typeof shift.staff_id)
+      
+      this.newShift = {
+        participant_id: shift.participant_id ? shift.participant_id.toString() : '',
+        staff_id: shift.staff_id ? shift.staff_id.toString() : '',
+        date: shiftDate.toISOString().split('T')[0],
+        start_time: startTime,
+        end_time: endTime,
+        service_type: shift.service_type,
+        location: shift.location,
+        hourly_rate: shift.hourly_rate,
+        notes: shift.notes || '',
+        send_notifications: false
+      }
+      this.showEditModal = true
     },
 
-    async cancelShift(shift) {
-      const participantName = this.getParticipantName(shift.participant_id)
-      if (confirm(`Are you sure you want to cancel the shift for ${participantName}?`)) {
-        try {
-          const updateData = { status: 'cancelled' }
-          await this.updateShift(shift.id, updateData)
-          this.filterShifts()
-          this.showSuccessMessage('Shift cancelled successfully!')
-        } catch (error) {
-          console.error('Error cancelling shift:', error)
-          this.showErrorMessage('Error cancelling shift. Please try again.')
-        }
+    async updateEditedShift() {
+      if (!this.validateShiftForm()) {
+        return
       }
+
+      this.isSubmitting = true
+      try {
+        // Validate the shift data before sending
+        const startDateTime = `${this.newShift.date}T${this.newShift.start_time}:00Z`
+        const endDateTime = `${this.newShift.date}T${this.newShift.end_time}:00Z`
+        
+        // Validate IDs - they should be UUID strings, don't convert to numbers
+        const participantId = this.newShift.participant_id
+        const staffId = this.newShift.staff_id
+        
+        // Validate UUIDs (they should be strings)
+        if (!participantId || typeof participantId !== 'string' || participantId.trim() === '') {
+          console.error('Invalid participant ID:', this.newShift.participant_id)
+          throw new Error('Invalid participant selected. Please select a valid participant.')
+        }
+        if (!staffId || typeof staffId !== 'string' || staffId.trim() === '') {
+          console.error('Invalid staff ID:', this.newShift.staff_id)
+          throw new Error('Invalid staff member selected. Please select a valid staff member.')
+        }
+        
+        // ID format validation - allow both UUIDs and custom formats like 'user_admin'
+        // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        // Custom format: any string that's not empty and doesn't contain special characters
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        const customIdRegex = /^[a-zA-Z0-9_-]+$/
+        
+        if (!uuidRegex.test(participantId) && !customIdRegex.test(participantId)) {
+          console.error('Invalid participant ID format:', participantId)
+          throw new Error('Invalid participant ID format. Please refresh and try again.')
+        }
+        if (!uuidRegex.test(staffId) && !customIdRegex.test(staffId)) {
+          console.error('Invalid staff ID format:', staffId)
+          throw new Error('Invalid staff ID format. Please refresh and try again.')
+        }
+        
+        const hourlyRate = parseFloat(this.newShift.hourly_rate)
+        if (isNaN(hourlyRate) || hourlyRate <= 0) {
+          throw new Error('Invalid hourly rate')
+        }
+        
+        const shiftData = {
+          participant_id: participantId,
+          staff_id: staffId,
+          start_time: startDateTime,
+          end_time: endDateTime,
+          service_type: this.newShift.service_type.trim(),
+          location: this.newShift.location.trim(),
+          hourly_rate: hourlyRate,
+          notes: (this.newShift.notes || '').trim()
+        }
+        
+        console.log('Updating shift with data:', shiftData)
+        console.log('Editing shift ID:', this.editingShift.id)
+        console.log('Participants available:', this.participants.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+        console.log('Staff available:', this.staffMembers.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` })))
+        
+        const result = await this.updateShift(this.editingShift.id, shiftData)
+        console.log('Shift update result:', result)
+        
+        // Reload the shifts data to ensure UI is updated
+        await this.fetchShifts()
+        this.filterShifts()
+        // Force Vue to re-render the component
+        this.$forceUpdate()
+        this.closeEditModal()
+        showSuccessNotification('Shift updated successfully!')
+        
+      } catch (error) {
+        console.error('Error updating shift:', error)
+        console.error('Error response:', error.response)
+        console.error('Error status:', error.response?.status)
+        console.error('Error data:', error.response?.data)
+        
+        // More specific error messages based on status
+        if (error.response?.status === 404) {
+          if (error.response.config?.url?.includes('shifts')) {
+            showErrorNotification(error, 'Shift not found. It may have been deleted by another user.')
+          } else if (error.response.config?.url?.includes('participants')) {
+            showErrorNotification(error, 'Participant not found. Please refresh the page and try again.')
+          } else if (error.response.config?.url?.includes('users')) {
+            showErrorNotification(error, 'Staff member not found. Please refresh the page and try again.')  
+          } else {
+            showErrorNotification(error, 'Resource not found (404). Please check your selection and try again.')
+          }
+        } else {
+          showErrorNotification(error, 'Error updating shift. Please try again.')
+        }
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
+    closeEditModal() {
+      this.showEditModal = false
+      this.editingShift = null
+      this.resetForm()
+    },
+
+    cancelShift(shift) {
+      this.shiftToDelete = shift
+      this.showDeleteModal = true
+    },
+
+    async confirmCancelShift() {
+      if (!this.shiftToDelete) return
+      
+      this.isSubmitting = true
+      try {
+        const updateData = { 
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString()
+        }
+        await this.updateShift(this.shiftToDelete.id, updateData)
+        await this.fetchShifts()
+        this.filterShifts()
+        this.$forceUpdate()
+        this.closeDeleteModal()
+        showSuccessNotification('Shift cancelled successfully!')
+      } catch (error) {
+        console.error('Error cancelling shift:', error)
+        showErrorNotification(error, 'Error cancelling shift. Please try again.')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
+    closeDeleteModal() {
+      this.showDeleteModal = false
+      this.shiftToDelete = null
     },
 
     closeModal() {
@@ -645,35 +1307,38 @@ export default {
     },
 
     getParticipantName(participantId) {
-      const participant = this.participants.find(p => p.id === participantId)
+      // Handle both string and number comparison
+      const participant = this.participants.find(p => p.id == participantId || p.id === participantId)
+      if (!participant) {
+        console.log('Participant not found for ID:', participantId, 'Available participants:', this.participants.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+      }
       return participant ? `${participant.first_name} ${participant.last_name}` : 'Unknown Participant'
     },
     
     getStaffName(staffId) {
-      const staff = this.staffMembers.find(s => s.id === staffId)
+      // Handle both string and number comparison
+      const staff = this.staffMembers.find(s => s.id == staffId || s.id === staffId)
+      if (!staff) {
+        console.log('Staff not found for ID:', staffId, 'Available staff:', this.staffMembers.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` })))
+      }
       return staff ? `${staff.first_name} ${staff.last_name}` : 'Unknown Staff'
     },
     
-    showSuccessMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'success-notification'
-      notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
+
+    // Calendar methods
+    previousMonth() {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1)
     },
-    
-    showErrorMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'error-notification'
-      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
+
+    nextMonth() {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1)
+    },
+
+    formatMonthYear(date) {
+      return date.toLocaleDateString('en-AU', {
+        year: 'numeric',
+        month: 'long'
+      })
     }
   }
 }
@@ -1000,23 +1665,133 @@ export default {
 }
 
 .calendar-view {
-  text-align: center;
-  padding: 4rem 2rem;
+  padding: 1rem;
 }
 
-.calendar-placeholder {
-  color: var(--text-light);
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
 }
 
-.calendar-placeholder i {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  color: var(--text-light);
-}
-
-.calendar-placeholder h3 {
+.calendar-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
   color: var(--text-dark);
-  margin-bottom: 0.5rem;
+}
+
+.calendar-nav-btn {
+  background: none;
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-header-day {
+  background: var(--primary-color);
+  color: white;
+  padding: 1rem;
+  font-weight: 600;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.calendar-day {
+  background: white;
+  min-height: 120px;
+  padding: 8px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.calendar-day:hover {
+  background: #f8fafc;
+}
+
+.calendar-day.other-month {
+  background: #f1f5f9;
+  color: var(--text-light);
+}
+
+.calendar-day.today {
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px solid var(--primary-color);
+}
+
+.calendar-day.has-shifts {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.day-number {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.day-shifts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shift-indicator {
+  background: var(--primary-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shift-indicator:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.shift-indicator.scheduled {
+  background: #3b82f6;
+}
+
+.shift-indicator.in_progress {
+  background: #f59e0b;
+}
+
+.shift-indicator.completed {
+  background: #10b981;
+}
+
+.shift-indicator.cancelled {
+  background: #dc2626;
+}
+
+.more-shifts {
+  font-size: 0.7rem;
+  color: var(--text-medium);
+  margin-top: 2px;
+  font-style: italic;
 }
 
 /* Loading and Empty states */
@@ -1199,6 +1974,127 @@ export default {
 
 .btn-secondary:hover {
   background: #e2e8f0;
+}
+
+/* View Modal Styles */
+.view-modal {
+  max-width: 800px;
+}
+
+/* Delete Modal Styles */
+.delete-modal {
+  max-width: 500px;
+}
+
+.delete-confirmation {
+  text-align: center;
+}
+
+.delete-icon {
+  font-size: 4rem;
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+
+.delete-confirmation h4 {
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.shift-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.shift-summary p {
+  margin: 0.5rem 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.shift-summary strong {
+  color: var(--text-medium);
+}
+
+.warning-text {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 1rem;
+  color: #92400e;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.shift-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.detail-section {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.detail-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-section .detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-section .detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item .label {
+  font-weight: 500;
+  color: var(--text-medium);
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.detail-item .value.total-cost {
+  font-size: 1.1rem;
+  color: var(--primary-color);
+}
+
+.notes-content {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  color: var(--text-dark);
+  line-height: 1.5;
 }
 
 @keyframes spin {

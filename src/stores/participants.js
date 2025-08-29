@@ -22,11 +22,13 @@ export const useParticipantsStore = defineStore('participants', {
       
       try {
         const response = await participantsService.getAll(params)
-        this.participants = response.data.participants
-        this.pagination = response.data.pagination
+        const responseData = response.data || response
+        this.participants = responseData.participants || responseData || []
+        this.pagination = responseData.pagination || this.pagination
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch participants'
-        throw error
+        console.error('Error fetching participants:', error)
+        this.error = error.response?.data?.message || error.message || 'Failed to fetch participants'
+        this.participants = []
       } finally {
         this.isLoading = false
       }

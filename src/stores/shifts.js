@@ -71,11 +71,15 @@ export const useShiftsStore = defineStore('shifts', {
       
       try {
         const response = await shiftsService.getAll(params)
-        this.shifts = response.data.shifts || response.data
-        this.pagination = response.data.pagination || this.pagination
+        // Handle different response structures
+        const responseData = response.data || response
+        this.shifts = responseData.shifts || responseData || []
+        this.pagination = responseData.pagination || this.pagination
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch shifts'
         console.error('Error fetching shifts:', error)
+        this.error = error.response?.data?.message || error.message || 'Failed to fetch shifts'
+        // Set empty array on error to prevent UI issues
+        this.shifts = []
       } finally {
         this.isLoading = false
       }
@@ -102,11 +106,20 @@ export const useShiftsStore = defineStore('shifts', {
       this.error = null
       
       try {
+        console.log('Store: Creating shift via API...')
+        console.log('Store: Shift data being sent:', shiftData)
         const response = await shiftsService.create(shiftData)
-        this.shifts.unshift(response.data)
-        return response.data
+        console.log('Store: API response received:', response)
+        const newShift = response.data || response
+        this.shifts.unshift(newShift)
+        return newShift
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to create shift'
+        console.error('Store: Error creating shift:', error)
+        console.error('Store: Error config URL:', error.config?.url)
+        console.error('Store: Error response data:', error.response?.data)
+        console.error('Store: Error response status:', error.response?.status)
+        console.error('Store: Error response headers:', error.response?.headers)
+        this.error = error.response?.data?.message || error.message || 'Failed to create shift'
         throw error
       } finally {
         this.isLoading = false
@@ -118,14 +131,24 @@ export const useShiftsStore = defineStore('shifts', {
       this.error = null
       
       try {
+        console.log('Store: Updating shift via API...')
+        console.log('Store: Shift ID:', id)
+        console.log('Store: Update data being sent:', shiftData)
         const response = await shiftsService.update(id, shiftData)
+        console.log('Store: API response received:', response)
+        const updatedShift = response.data || response
         const index = this.shifts.findIndex(shift => shift.id === id)
         if (index !== -1) {
-          this.shifts[index] = response.data
+          this.shifts[index] = { ...this.shifts[index], ...updatedShift }
         }
-        return response.data
+        return updatedShift
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update shift'
+        console.error('Store: Error updating shift:', error)
+        console.error('Store: Error config URL:', error.config?.url)
+        console.error('Store: Error response data:', error.response?.data)
+        console.error('Store: Error response status:', error.response?.status)
+        console.error('Store: Error response headers:', error.response?.headers)
+        this.error = error.response?.data?.message || error.message || 'Failed to update shift'
         throw error
       } finally {
         this.isLoading = false

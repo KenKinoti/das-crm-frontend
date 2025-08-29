@@ -337,6 +337,7 @@
 <script>
 import { mapState, mapActions, mapGetters } from 'pinia'
 import { useOrganizationStore } from '../stores/organization'
+import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
 
 export default {
   name: 'Settings',
@@ -405,7 +406,7 @@ export default {
         await this.loadSystemStats()
       } catch (error) {
         console.error('Error loading settings:', error)
-        this.showErrorMessage('Failed to load settings. Please refresh the page.')
+        showErrorNotification(error, 'Failed to load settings. Please refresh the page.')
       }
     },
     
@@ -465,11 +466,21 @@ export default {
     },
     
     async saveAllSettings() {
+      if (!this.validateSettingsForm()) {
+        return
+      }
+      
       this.isSaving = true
       try {
-        // Update organization information
+        // Validate and prepare organization data
         const organizationData = {
           ...this.organizationForm,
+          name: this.organizationForm.name.trim(),
+          email: this.organizationForm.email.trim(),
+          phone: this.organizationForm.phone.trim(),
+          address: this.organizationForm.address.trim(),
+          website: this.organizationForm.website.trim(),
+          abn: this.organizationForm.abn.trim(),
           settings: {
             ...this.systemForm,
             notifications: this.notificationForm,
@@ -478,24 +489,67 @@ export default {
           }
         }
         
+        console.log('Saving settings with data:', organizationData)
         await this.updateOrganization(organizationData)
-        this.showSuccessMessage('Settings saved successfully!')
+        showSuccessNotification('Settings saved successfully!')
         
       } catch (error) {
         console.error('Error saving settings:', error)
-        this.showErrorMessage('Error saving settings. Please try again.')
+        showErrorNotification(error, 'Error saving settings. Please try again.')
       } finally {
         this.isSaving = false
+      }
+    },
+
+    validateSettingsForm() {
+      if (!this.organizationForm.name || !this.organizationForm.name.trim()) {
+        showErrorNotification(new Error('Organization name is required'))
+        return false
+      }
+      if (this.organizationForm.email && !this.isValidEmail(this.organizationForm.email)) {
+        showErrorNotification(new Error('Please enter a valid email address'))
+        return false
+      }
+      if (this.organizationForm.website && !this.isValidUrl(this.organizationForm.website)) {
+        showErrorNotification(new Error('Please enter a valid website URL'))
+        return false
+      }
+      if (this.billingForm.tax_rate < 0 || this.billingForm.tax_rate > 100) {
+        showErrorNotification(new Error('Tax rate must be between 0 and 100'))
+        return false
+      }
+      if (this.billingForm.payment_terms_days < 1 || this.billingForm.payment_terms_days > 365) {
+        showErrorNotification(new Error('Payment terms must be between 1 and 365 days'))
+        return false
+      }
+      if (this.securityForm.session_timeout < 5 || this.securityForm.session_timeout > 480) {
+        showErrorNotification(new Error('Session timeout must be between 5 and 480 minutes'))
+        return false
+      }
+      return true
+    },
+
+    isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      return emailRegex.test(email.trim())
+    },
+
+    isValidUrl(url) {
+      try {
+        new URL(url)
+        return true
+      } catch {
+        return false
       }
     },
     
     async saveOrganizationInfo() {
       try {
         await this.updateOrganization(this.organizationForm)
-        this.showSuccessMessage('Organization information updated!')
+        showSuccessNotification('Organization information updated!')
       } catch (error) {
         console.error('Error saving organization info:', error)
-        this.showErrorMessage('Error saving organization information.')
+        showErrorNotification(error, 'Error saving organization information.')
       }
     },
     
@@ -521,27 +575,6 @@ export default {
       })
     },
     
-    showSuccessMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'success-notification'
-      notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
-    },
-    
-    showErrorMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'error-notification'
-      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
-    }
   }
 }
 </script>
@@ -667,9 +700,14 @@ export default {
   color: var(--text-light);
 }
 
-.notification-settings,
-.security-settings {
-  space-y: 1rem;
+.notification-settings > *,
+.security-settings > * {
+  margin-bottom: 1rem;
+}
+
+.notification-settings > *:last-child,
+.security-settings > *:last-child {
+  margin-bottom: 0;
 }
 
 .setting-item {
@@ -747,8 +785,12 @@ input:checked + .slider:before {
   transform: translateX(26px);
 }
 
-.data-actions {
-  space-y: 1rem;
+.data-actions > * {
+  margin-bottom: 1rem;
+}
+
+.data-actions > *:last-child {
+  margin-bottom: 0;
 }
 
 .action-item {
@@ -782,8 +824,12 @@ input:checked + .slider:before {
   margin: 0;
 }
 
-.system-info {
-  space-y: 0.75rem;
+.system-info > * {
+  margin-bottom: 0.75rem;
+}
+
+.system-info > *:last-child {
+  margin-bottom: 0;
 }
 
 .info-item {

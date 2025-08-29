@@ -205,12 +205,182 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Staff Modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Edit Staff Member</h3>
+          <button @click="closeEditModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="updateEditedStaff">
+            <div class="form-row">
+              <div class="form-group">
+                <label>First Name *</label>
+                <input v-model="newStaff.first_name" type="text" required placeholder="Enter first name" />
+              </div>
+              <div class="form-group">
+                <label>Last Name *</label>
+                <input v-model="newStaff.last_name" type="text" required placeholder="Enter last name" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input v-model="newStaff.email" type="email" placeholder="Enter email address" />
+              </div>
+              <div class="form-group">
+                <label>Phone</label>
+                <input v-model="newStaff.phone" type="tel" placeholder="Enter phone number" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Role *</label>
+                <select v-model="newStaff.role" required>
+                  <option value="">Select Role</option>
+                  <option value="care_worker">Care Worker</option>
+                  <option value="support_coordinator">Support Coordinator</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>New Password (optional)</label>
+                <input v-model="newStaff.password" type="password" placeholder="Leave blank to keep current password" />
+                <small class="form-help">Only enter a password if you want to change it</small>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" @click="closeEditModal" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+                <span v-if="isSubmitting">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  Updating...
+                </span>
+                <span v-else>
+                  <i class="fas fa-save"></i>
+                  Update Staff Member
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal && staffToDelete" class="modal-overlay" @click="closeDeleteModal">
+      <div class="modal-content delete-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Remove Staff Member</h3>
+          <button @click="closeDeleteModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="delete-confirmation">
+            <div class="delete-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h4>Are you sure you want to remove this staff member?</h4>
+            <div class="staff-summary">
+              <p><strong>Name:</strong> {{ staffToDelete.first_name }} {{ staffToDelete.last_name }}</p>
+              <p><strong>Email:</strong> {{ staffToDelete.email }}</p>
+              <p><strong>Phone:</strong> {{ staffToDelete.phone || 'Not provided' }}</p>
+              <p><strong>Role:</strong> {{ formatRole(staffToDelete.role) }}</p>
+            </div>
+            <p class="warning-text">
+              <i class="fas fa-exclamation-circle"></i>
+              This action cannot be undone. The staff member will be removed from the system and will lose access to their account.
+            </p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeDeleteModal" class="btn btn-secondary">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
+          <button @click="confirmDeleteStaff" class="btn btn-danger" :disabled="isSubmitting">
+            <span v-if="isSubmitting">
+              <i class="fas fa-spinner fa-spin"></i>
+              Removing...
+            </span>
+            <span v-else>
+              <i class="fas fa-user-times"></i>
+              Remove Staff Member
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Staff Modal -->
+    <div v-if="showViewModal && selectedStaffMember" class="modal-overlay" @click="closeViewModal">
+      <div class="modal-content view-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Staff Member Details</h3>
+          <button @click="closeViewModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="staff-detail-grid">
+            <div class="detail-section">
+              <h4><i class="fas fa-user"></i> Personal Information</h4>
+              <div class="detail-item">
+                <span class="label">Name:</span>
+                <span class="value">{{ selectedStaffMember.first_name }} {{ selectedStaffMember.last_name }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Email:</span>
+                <span class="value">{{ selectedStaffMember.email }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Phone:</span>
+                <span class="value">{{ selectedStaffMember.phone || 'Not provided' }}</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4><i class="fas fa-briefcase"></i> Role & Status</h4>
+              <div class="detail-item">
+                <span class="label">Role:</span>
+                <span class="value">{{ formatRole(selectedStaffMember.role) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Status:</span>
+                <span :class="['status-badge', selectedStaffMember.is_active ? 'active' : 'inactive']">
+                  {{ selectedStaffMember.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Added:</span>
+                <span class="value">{{ formatDate(selectedStaffMember.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="closeViewModal" class="btn btn-secondary">Close</button>
+            <button @click="editStaff(selectedStaffMember); closeViewModal()" class="btn btn-outline">
+              <i class="fas fa-edit"></i>
+              Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'pinia'
 import { useUsersStore } from '../stores/users'
+import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
 
 export default {
   name: 'Staff',
@@ -221,6 +391,12 @@ export default {
       roleFilter: '',
       statusFilter: '',
       showAddModal: false,
+      showEditModal: false,
+      showDeleteModal: false,
+      showViewModal: false,
+      editingStaff: null,
+      staffToDelete: null,
+      selectedStaffMember: null,
       newStaff: {
         first_name: '',
         last_name: '',
@@ -241,7 +417,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(useUsersStore, ['fetchUsers', 'createUser', 'deleteUser']),
+    ...mapActions(useUsersStore, ['fetchUsers', 'createUser', 'updateUser', 'deleteUser']),
     
     async loadStaff() {
       try {
@@ -249,51 +425,118 @@ export default {
         this.filterStaff()
       } catch (error) {
         console.error('Error loading staff:', error)
-        this.showErrorMessage('Failed to load staff. Please try again.')
+        showErrorNotification(error, 'Failed to load staff. Please try again.')
       }
     },
 
     filterStaff() {
       let filtered = [...this.staff]
       
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase()
-        filtered = filtered.filter(s => 
-          s.first_name.toLowerCase().includes(query) ||
-          s.last_name.toLowerCase().includes(query) ||
-          s.email.toLowerCase().includes(query) ||
-          s.phone?.includes(query) ||
-          s.employee_id?.toLowerCase().includes(query)
-        )
+      // Search functionality
+      if (this.searchQuery && this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase().trim()
+        filtered = filtered.filter(s => {
+          const fullName = `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase()
+          const roleFormatted = this.formatRole(s.role).toLowerCase()
+          
+          return fullName.includes(query) ||
+                 (s.first_name && s.first_name.toLowerCase().includes(query)) ||
+                 (s.last_name && s.last_name.toLowerCase().includes(query)) ||
+                 (s.email && s.email.toLowerCase().includes(query)) ||
+                 (s.phone && s.phone.includes(query)) ||
+                 (s.employee_id && s.employee_id.toLowerCase().includes(query)) ||
+                 roleFormatted.includes(query)
+        })
       }
       
+      // Role filter
       if (this.roleFilter) {
         filtered = filtered.filter(s => s.role === this.roleFilter)
       }
       
+      // Status filter
       if (this.statusFilter) {
         filtered = filtered.filter(s => 
           this.statusFilter === 'active' ? s.is_active : !s.is_active
         )
       }
       
+      // Sort by last name, then first name
+      filtered.sort((a, b) => {
+        const lastNameComparison = (a.last_name || '').localeCompare(b.last_name || '')
+        if (lastNameComparison !== 0) return lastNameComparison
+        return (a.first_name || '').localeCompare(b.first_name || '')
+      })
+      
       this.filteredStaff = filtered
     },
 
     async addStaff() {
+      if (!this.validateStaffForm()) {
+        return
+      }
+      
       try {
-        await this.createUser(this.newStaff)
+        // Prepare and validate data
+        const staffData = { ...this.newStaff }
+        
+        // Trim string fields
+        staffData.first_name = staffData.first_name.trim()
+        staffData.last_name = staffData.last_name.trim()
+        staffData.email = (staffData.email || '').trim()
+        staffData.phone = (staffData.phone || '').trim()
+        
+        console.log('Creating staff with data:', staffData)
+        await this.createUser(staffData)
         this.filterStaff()
         this.closeModal()
-        this.showSuccessMessage('Staff member added successfully!')
+        showSuccessNotification('Staff member added successfully!')
       } catch (error) {
         console.error('Error adding staff:', error)
-        this.showErrorMessage('Error adding staff member. Please try again.')
+        showErrorNotification(error, 'Error adding staff member. Please try again.')
       }
     },
 
+    validateStaffForm(isEdit = false) {
+      if (!this.newStaff.first_name || !this.newStaff.first_name.trim()) {
+        showErrorNotification(new Error('First name is required'))
+        return false
+      }
+      if (!this.newStaff.last_name || !this.newStaff.last_name.trim()) {
+        showErrorNotification(new Error('Last name is required'))
+        return false
+      }
+      // Email is optional but must be valid if provided
+      if (this.newStaff.email && this.newStaff.email.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(this.newStaff.email.trim())) {
+          showErrorNotification(new Error('Please enter a valid email address'))
+          return false
+        }
+      }
+      if (!this.newStaff.role) {
+        showErrorNotification(new Error('Please select a role'))
+        return false
+      }
+      if (!isEdit && (!this.newStaff.password || this.newStaff.password.trim().length < 6)) {
+        showErrorNotification(new Error('Password must be at least 6 characters long'))
+        return false
+      }
+      if (isEdit && this.newStaff.password && this.newStaff.password.trim().length < 6) {
+        showErrorNotification(new Error('If changing password, it must be at least 6 characters long'))
+        return false
+      }
+      return true
+    },
+
     viewStaff(member) {
-      alert(`👤 ${member.first_name} ${member.last_name}\n📧 ${member.email}\n📞 ${member.phone || 'No phone'}\n💼 ${this.formatRole(member.role)}`)
+      this.selectedStaffMember = member
+      this.showViewModal = true
+    },
+
+    closeViewModal() {
+      this.showViewModal = false
+      this.selectedStaffMember = null
     },
 
     scheduleStaff(member) {
@@ -301,20 +544,78 @@ export default {
     },
 
     editStaff(member) {
-      alert(`Edit functionality for ${member.first_name} ${member.last_name} - Coming soon!`)
+      this.editingStaff = { ...member }
+      // Pre-populate the form
+      this.newStaff = {
+        first_name: member.first_name || '',
+        last_name: member.last_name || '',
+        email: member.email || '',
+        phone: member.phone || '',
+        role: member.role || '',
+        password: '' // Don't pre-populate password for security
+      }
+      this.showEditModal = true
     },
 
-    async deleteStaff(member) {
-      if (confirm(`Are you sure you want to remove ${member.first_name} ${member.last_name} from staff?`)) {
-        try {
-          await this.deleteUser(member.id)
-          this.filterStaff()
-          this.showSuccessMessage('Staff member removed successfully!')
-        } catch (error) {
-          console.error('Error deleting staff:', error)
-          this.showErrorMessage('Error removing staff member. Please try again.')
-        }
+    async updateEditedStaff() {
+      if (!this.validateStaffForm(true)) {
+        return
       }
+      
+      try {
+        // Prepare data for update
+        const staffData = { ...this.newStaff }
+        
+        // Trim string fields
+        staffData.first_name = staffData.first_name.trim()
+        staffData.last_name = staffData.last_name.trim()
+        staffData.email = (staffData.email || '').trim()
+        staffData.phone = (staffData.phone || '').trim()
+        
+        // Only include password if it was changed
+        if (!staffData.password.trim()) {
+          delete staffData.password
+        }
+        
+        console.log('Updating staff with data:', staffData)
+        await this.updateUser(this.editingStaff.id, staffData)
+        this.filterStaff()
+        this.closeEditModal()
+        showSuccessNotification('Staff member updated successfully!')
+      } catch (error) {
+        console.error('Error updating staff:', error)
+        showErrorNotification(error, 'Error updating staff member. Please try again.')
+      }
+    },
+
+    closeEditModal() {
+      this.showEditModal = false
+      this.editingStaff = null
+      this.resetForm()
+    },
+
+    deleteStaff(member) {
+      this.staffToDelete = member
+      this.showDeleteModal = true
+    },
+
+    async confirmDeleteStaff() {
+      if (!this.staffToDelete) return
+      
+      try {
+        await this.deleteUser(this.staffToDelete.id)
+        this.filterStaff()
+        this.closeDeleteModal()
+        showSuccessNotification('Staff member removed successfully!')
+      } catch (error) {
+        console.error('Error deleting staff:', error)
+        showErrorNotification(error, 'Error removing staff member. Please try again.')
+      }
+    },
+
+    closeDeleteModal() {
+      this.showDeleteModal = false
+      this.staffToDelete = null
     },
 
     closeModal() {
@@ -358,27 +659,6 @@ export default {
       return date.toLocaleDateString()
     },
 
-    showSuccessMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'success-notification'
-      notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
-    },
-
-    showErrorMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'error-notification'
-      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 5000)
-    },
 
     get isSubmitting() {
       return this.isLoading
@@ -941,5 +1221,115 @@ export default {
   .staff-actions {
     justify-content: center;
   }
+}
+
+/* Delete Modal Styles */
+.delete-modal {
+  max-width: 500px;
+}
+
+.delete-confirmation {
+  text-align: center;
+}
+
+.delete-icon {
+  font-size: 4rem;
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+
+.delete-confirmation h4 {
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.staff-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.staff-summary p {
+  margin: 0.5rem 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.staff-summary strong {
+  color: var(--text-medium);
+}
+
+.warning-text {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 1rem;
+  color: #92400e;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.form-help {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 4px;
+  display: block;
+}
+
+/* View Modal Styles */
+.view-modal {
+  max-width: 700px;
+}
+
+.staff-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.detail-section {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.detail-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-section .detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-section .detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item .label {
+  font-weight: 500;
+  color: var(--text-medium);
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: var(--text-dark);
 }
 </style>
