@@ -18,26 +18,50 @@
           <i class="fas fa-chart-bar"></i>
           Custom Report
         </button>
+        <button @click="forceRefresh" class="btn btn-outline" :disabled="isRefreshing" title="Refresh Data">
+          <i :class="['fas', isRefreshing ? 'fa-spinner fa-spin' : 'fa-sync-alt']"></i>
+          {{ isRefreshing ? 'Refreshing...' : 'Refresh' }}
+        </button>
       </div>
     </div>
 
     <!-- Date Range Picker for Custom -->
-    <div v-if="selectedPeriod === 'custom'" class="date-range-picker">
-      <div class="form-row">
-        <div class="form-group">
-          <label>From Date</label>
-          <input v-model="customDateRange.from" type="date" @change="refreshReports" />
-        </div>
-        <div class="form-group">
-          <label>To Date</label>
-          <input v-model="customDateRange.to" type="date" @change="refreshReports" />
+    <div v-if="selectedPeriod === 'custom'" class="filters-section">
+      <div class="filters-row">
+        <div class="filter-controls">
+          <div class="date-group">
+            <label for="fromDate" class="date-label">From:</label>
+            <input 
+              id="fromDate"
+              v-model="customDateRange.from" 
+              type="date" 
+              class="form-input date-input"
+              @change="refreshReports" 
+            />
+          </div>
+          <div class="date-group">
+            <label for="toDate" class="date-label">To:</label>
+            <input 
+              id="toDate"
+              v-model="customDateRange.to" 
+              type="date" 
+              class="form-input date-input"
+              @change="refreshReports" 
+            />
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Overview Stats -->
     <div class="stats-section">
-      <h2>Overview</h2>
+      <div class="section-header">
+        <h2>Overview</h2>
+        <div class="real-time-indicator">
+          <div class="live-dot" :class="{ 'active': isRealTimeActive }"></div>
+          <span class="live-text">{{ lastUpdated ? `Updated ${formatLastUpdated(lastUpdated)}` : 'Loading...' }}</span>
+        </div>
+      </div>
       <div class="stats-row">
         <div class="stat-card">
           <div class="stat-icon success">
@@ -398,6 +422,7 @@
 <script>
 import { mapState, mapActions } from 'pinia'
 import { useReportsStore } from '../stores/reports'
+import { showInfoModal } from '../utils/errorHandler'
 
 export default {
   name: 'Reports',
@@ -410,6 +435,11 @@ export default {
       },
       showCustomReportModal: false,
       isGeneratingReport: false,
+      isRefreshing: false,
+      isRealTimeActive: false,
+      lastUpdated: null,
+      refreshInterval: null,
+      isTabVisible: true,
       customReport: {
         name: '',
         type: '',
@@ -461,6 +491,12 @@ export default {
   },
   async mounted() {
     await this.loadReports()
+    this.setupRealTimeUpdates()
+    this.setupVisibilityHandling()
+  },
+  
+  beforeUnmount() {
+    this.clearRealTimeUpdates()
   },
   methods: {
     ...mapActions(useReportsStore, [
@@ -473,6 +509,7 @@ export default {
       try {
         const params = this.getDateRangeParams()
         await this.fetchAllReports(params)
+        this.lastUpdated = new Date()
       } catch (error) {
         console.error('Error loading reports:', error)
         this.showErrorMessage('Failed to load reports. Please refresh the page.')
@@ -481,6 +518,68 @@ export default {
     
     async refreshReports() {
       await this.loadReports()
+    },
+    
+    async forceRefresh() {
+      this.isRefreshing = true
+      try {
+        await this.loadReports()
+      } finally {
+        this.isRefreshing = false
+      }
+    },
+    
+    setupRealTimeUpdates() {
+      // Auto-refresh every 2 minutes for real-time data
+      this.refreshInterval = setInterval(() => {
+        if (this.isTabVisible && !this.isRefreshing) {
+          this.loadReports()
+        }
+      }, 120000) // 2 minutes
+      
+      this.isRealTimeActive = true
+    },
+    
+    clearRealTimeUpdates() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval)
+        this.refreshInterval = null
+      }
+      this.isRealTimeActive = false
+    },
+    
+    setupVisibilityHandling() {
+      // Handle page visibility to pause/resume real-time updates
+      const handleVisibilityChange = () => {
+        this.isTabVisible = !document.hidden
+        
+        if (this.isTabVisible) {
+          // Tab became visible - refresh data immediately
+          this.loadReports()
+          if (!this.refreshInterval) {
+            this.setupRealTimeUpdates()
+          }
+        } else {
+          // Tab became hidden - pause real-time updates to save resources
+          this.clearRealTimeUpdates()
+        }
+      }
+      
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    },
+    
+    formatLastUpdated(date) {
+      const now = new Date()
+      const diffInSeconds = Math.floor((now - date) / 1000)
+      
+      if (diffInSeconds < 60) {
+        return 'just now'
+      } else if (diffInSeconds < 300) { // 5 minutes
+        const minutes = Math.floor(diffInSeconds / 60)
+        return `${minutes}m ago`
+      } else {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
     },
     
     getDateRangeParams() {
@@ -541,23 +640,23 @@ export default {
     },
     
     viewDetailedReport(reportType) {
-      alert(`Detailed ${reportType} report view - Coming soon!`)
+      showInfoModal(`Detailed ${reportType} report view will be available soon! This feature will provide comprehensive analytics and insights.`, 'Detailed Report')
     },
     
     generateMonthlyReport() {
-      alert('Generate monthly report - Coming soon!')
+      showInfoModal('Generate monthly report functionality will be available soon! This feature will create comprehensive monthly performance summaries.', 'Monthly Report')
     },
     
     scheduledReports() {
-      alert('Scheduled reports management - Coming soon!')
+      showInfoModal('Scheduled reports management will be available soon! This feature will allow you to set up automatic report generation and delivery.', 'Scheduled Reports')
     },
     
     reportTemplates() {
-      alert('Report templates - Coming soon!')
+      showInfoModal('Report templates functionality will be available soon! This feature will allow you to create and customize report layouts.', 'Report Templates')
     },
     
     exportData() {
-      alert('Export raw data - Coming soon!')
+      showInfoModal('Export raw data functionality will be available soon! This feature will allow you to export data in various formats for external analysis.', 'Export Data')
     },
     
     async generateCustomReport() {
@@ -660,6 +759,82 @@ export default {
   align-items: center;
 }
 
+/* Section Header with Real-time Indicator */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.real-time-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-medium);
+  font-size: 0.875rem;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--gray-400);
+  transition: background-color 0.3s ease;
+}
+
+.live-dot.active {
+  background-color: #10b981;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.live-text {
+  font-weight: 500;
+}
+
+/* Refresh Button Styling */
+.btn-outline {
+  background: white;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.btn-outline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .period-select {
   padding: 10px 16px;
   border: 2px solid #e2e8f0;
@@ -668,43 +843,22 @@ export default {
   cursor: pointer;
 }
 
-.date-range-picker {
-  background: var(--white);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
-  margin-bottom: 2rem;
+/* Date Range Picker Styles */
+.date-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
+.date-label {
   font-weight: 500;
   color: var(--text-dark);
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  transition: border-color 0.3s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.date-input {
+  min-width: 160px;
 }
 
 .stats-section {

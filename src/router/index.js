@@ -1,15 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 
-import Login from '../views/Login.vue'
-import Dashboard from '../views/Dashboard.vue'
-import Participants from '../views/Participants.vue'
-import Staff from '../views/Staff.vue'
-import Scheduling from '../views/Scheduling.vue'
-import Documents from '../views/Documents.vue'
-import Billing from '../views/Billing.vue'
-import Reports from '../views/Reports.vue'
-import Settings from '../views/Settings.vue'
+// Lazy load components for better performance
+const Login = () => import('../views/Login.vue')
+const Dashboard = () => import('../views/Dashboard.vue')
+const Participants = () => import('../views/Participants.vue')
+const Staff = () => import('../views/Staff.vue')
+const Scheduling = () => import('../views/Scheduling.vue')
+const Documents = () => import('../views/Documents.vue')
+const Billing = () => import('../views/Billing.vue')
+const Reports = () => import('../views/Reports.vue')
+const Settings = () => import('../views/Settings.vue')
+const Profile = () => import('../views/Profile.vue')
+const SuperAdmin = () => import('../views/SuperAdmin.vue')
+const CarePlans = () => import('../views/CarePlans.vue')
+const Database = () => import('../views/Database.vue')
 
 const routes = [
   {
@@ -20,7 +26,11 @@ const routes = [
   },
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: to => {
+      // If user has a stored last route, redirect there
+      const lastRoute = localStorage.getItem('lastRoute')
+      return lastRoute || '/dashboard'
+    }
   },
   {
     path: '/dashboard',
@@ -65,10 +75,34 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/care-plans',
+    name: 'CarePlans',
+    component: CarePlans,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: Settings,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/superadmin',
+    name: 'SuperAdmin',
+    component: SuperAdmin,
+    meta: { requiresAuth: true, requiresSuperAdmin: true }
+  },
+  {
+    path: '/database',
+    name: 'Database',
+    component: Database,
+    meta: { requiresAuth: true, requiresSuperAdmin: true }
   }
 ]
 
@@ -77,42 +111,56 @@ const router = createRouter({
   routes
 })
 
-// Simplified auth guard
+// Enhanced auth guard with role-based permissions
 router.beforeEach(async (to, from, next) => {
-  console.log('Router guard - navigating to:', to.name)
-  
   const authStore = useAuthStore()
+  
+  // Save current route (except login) for refresh persistence
+  if (to.name && to.name !== 'Login' && to.path !== '/') {
+    localStorage.setItem('lastRoute', to.path)
+  }
   
   // If going to login page
   if (to.name === 'Login') {
     // If already authenticated, redirect to dashboard
     if (authStore.isAuthenticated) {
-      console.log('Already authenticated, redirecting to dashboard')
       next('/dashboard')
       return
     }
-    console.log('Going to login page')
     next()
     return
   }
   
   // For protected routes
   if (to.meta.requiresAuth !== false) {
-    console.log('Protected route, checking auth...')
     
-    // Quick check - if we have a token, allow navigation
-    if (authStore.isAuthenticated) {
-      console.log('Token exists, allowing navigation')
-      next()
+    // Check if user is authenticated
+    if (!authStore.isAuthenticated) {
+      next('/login')
       return
     }
     
-    console.log('No auth token, redirecting to login')
-    next('/login')
+    // For mock tokens, ensure user data is loaded
+    if (authStore.token?.startsWith('mock-jwt-token') && !authStore.user) {
+      try {
+        await authStore.getCurrentUser()
+      } catch (error) {
+        console.error('Failed to get current user:', error)
+        next('/login')
+        return
+      }
+    }
+    
+    // Check for super admin requirement
+    if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
+      next('/dashboard')
+      return
+    }
+    
+    next()
     return
   }
   
-  console.log('Public route, allowing navigation')
   next()
 })
 

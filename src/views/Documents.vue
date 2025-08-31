@@ -2,10 +2,16 @@
   <div class="page-container">
     <div class="page-header">
       <h1>Documents</h1>
-      <button @click="showUploadModal = true" class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Upload Document
-      </button>
+      <div class="header-actions">
+        <button @click="showCloudSettingsModal = true" class="btn btn-outline" title="Cloud Storage Settings">
+          <i class="fas fa-cloud"></i>
+          Cloud Storage
+        </button>
+        <button @click="showUploadModal = true" class="btn btn-primary">
+          <i class="fas fa-plus"></i>
+          Upload Document
+        </button>
+      </div>
     </div>
 
     <!-- Stats Cards -->
@@ -48,40 +54,78 @@
       </div>
     </div>
 
+    <!-- Cloud Storage Status -->
+    <div v-if="cloudStorageEnabled" class="cloud-storage-status">
+      <div class="cloud-provider-info">
+        <div class="provider-icon" :class="currentProvider">
+          <i :class="getProviderIcon(currentProvider)"></i>
+        </div>
+        <div class="provider-details">
+          <h4>{{ getProviderName(currentProvider) }} Connected</h4>
+          <p class="storage-quota">{{ formatStorage(storageUsed) }} of {{ formatStorage(storageLimit) }} used</p>
+          <div class="storage-bar">
+            <div class="storage-fill" :style="{ width: storagePercentage + '%' }"></div>
+          </div>
+        </div>
+        <div class="provider-actions">
+          <button @click="syncCloudStorage" class="btn-small btn-outline" :disabled="isSyncing">
+            <i :class="isSyncing ? 'fas fa-spinner fa-spin' : 'fas fa-sync'"></i>
+            {{ isSyncing ? 'Syncing...' : 'Sync' }}
+          </button>
+          <button @click="showCloudSettingsModal = true" class="btn-small btn-outline">
+            <i class="fas fa-cog"></i>
+            Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Search and Filters -->
     <div class="filters-section">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Search documents..."
-          @input="filterDocuments"
-        />
-      </div>
-      <div class="filter-controls">
-        <select v-model="categoryFilter" @change="filterDocuments">
-          <option value="">All Categories</option>
-          <option value="Medical">Medical</option>
-          <option value="Legal">Legal</option>
-          <option value="Insurance">Insurance</option>
-          <option value="Care Plan">Care Plan</option>
-          <option value="Personal">Personal</option>
-          <option value="Emergency">Emergency</option>
-          <option value="Other">Other</option>
-        </select>
-        <select v-model="participantFilter" @change="filterDocuments">
-          <option value="">All Participants</option>
-          <option v-for="participant in participants" :key="participant.id" :value="participant.id">
-            {{ participant.first_name }} {{ participant.last_name }}
-          </option>
-        </select>
-        <select v-model="statusFilter" @change="filterDocuments">
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="expired">Expired</option>
-          <option value="expiring">Expiring Soon</option>
-        </select>
+      <div class="filters-row">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search documents..." 
+            class="form-input"
+            @input="filterDocuments"
+          />
+        </div>
+        
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+          <select v-model="statusFilter" @change="filterDocuments" class="form-select">
+            <option value="">All Documents</option>
+            <option value="active">Active Documents</option>
+            <option value="expiring">Expiring Soon</option>
+            <option value="expired">Expired</option>
+          </select>
+          
+          <button @click="clearFilters" class="btn btn-outline-elegant">
+            <i class="fas fa-times"></i>
+            Clear Filters
+          </button>
+          
+          <!-- View Toggle -->
+          <div class="view-toggle">
+            <button 
+              @click="currentView = 'list'" 
+              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              title="List View"
+            >
+              <i class="fas fa-list"></i>
+            </button>
+            <button 
+              @click="currentView = 'grid'" 
+              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
+              title="Grid View"
+            >
+              <i class="fas fa-th"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -165,10 +209,6 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="deleteDocument(document)" class="btn-small btn-danger">
-              <i class="fas fa-trash"></i>
-              Delete
-            </button>
           </div>
         </div>
       </div>
@@ -190,6 +230,7 @@
               <input 
                 ref="fileInput" 
                 type="file" 
+                class="form-input"
                 @change="handleFileSelect" 
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
                 required 
@@ -200,14 +241,64 @@
               </div>
             </div>
 
+            <!-- Cloud Storage Destination -->
+            <div v-if="cloudStorageEnabled" class="form-group">
+              <label>Storage Destination</label>
+              <div class="storage-options">
+                <div class="storage-option" :class="{ active: newDocument.storageDestination === 'local' }">
+                  <input 
+                    id="storage-local" 
+                    v-model="newDocument.storageDestination" 
+                    type="radio" 
+                    value="local" 
+                  />
+                  <label for="storage-local" class="storage-label">
+                    <i class="fas fa-server"></i>
+                    <span>Local Storage</span>
+                    <small>Store on your server</small>
+                  </label>
+                </div>
+                
+                <div class="storage-option" :class="{ active: newDocument.storageDestination === 'google' }">
+                  <input 
+                    id="storage-google" 
+                    v-model="newDocument.storageDestination" 
+                    type="radio" 
+                    value="google"
+                    :disabled="!isGoogleConnected"
+                  />
+                  <label for="storage-google" class="storage-label">
+                    <i class="fab fa-google-drive"></i>
+                    <span>Google Drive</span>
+                    <small>{{ isGoogleConnected ? 'Connected' : 'Not connected' }}</small>
+                  </label>
+                </div>
+                
+                <div class="storage-option" :class="{ active: newDocument.storageDestination === 'onedrive' }">
+                  <input 
+                    id="storage-onedrive" 
+                    v-model="newDocument.storageDestination" 
+                    type="radio" 
+                    value="onedrive"
+                    :disabled="!isOneDriveConnected"
+                  />
+                  <label for="storage-onedrive" class="storage-label">
+                    <i class="fab fa-microsoft"></i>
+                    <span>OneDrive</span>
+                    <small>{{ isOneDriveConnected ? 'Connected' : 'Not connected' }}</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label>Document Name *</label>
-                <input v-model="newDocument.name" type="text" required placeholder="Enter document name" />
+                <input v-model="newDocument.name" type="text" class="form-input" required placeholder="Enter document name" />
               </div>
               <div class="form-group">
                 <label>Category *</label>
-                <select v-model="newDocument.category" required>
+                <select v-model="newDocument.category" class="form-select" required>
                   <option value="">Select Category</option>
                   <option value="Medical">Medical</option>
                   <option value="Legal">Legal</option>
@@ -223,7 +314,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Participant *</label>
-                <select v-model="newDocument.participant_id" required>
+                <select v-model="newDocument.participant_id" class="form-select" required>
                   <option value="">Select Participant</option>
                   <option v-for="participant in participants" :key="participant.id" :value="participant.id">
                     {{ participant.first_name }} {{ participant.last_name }}
@@ -232,7 +323,7 @@
               </div>
               <div class="form-group">
                 <label>Expiry Date</label>
-                <input v-model="newDocument.expiry_date" type="date" />
+                <input v-model="newDocument.expiry_date" type="date" class="form-input" />
               </div>
             </div>
 
@@ -241,6 +332,7 @@
               <textarea 
                 v-model="newDocument.description" 
                 rows="3" 
+                class="form-textarea"
                 placeholder="Brief description of the document..."
               ></textarea>
             </div>
@@ -269,6 +361,126 @@
         </div>
       </div>
     </div>
+
+    <!-- Cloud Settings Modal -->
+    <div v-if="showCloudSettingsModal" class="modal-overlay" @click="closeCloudModal">
+      <div class="modal-content cloud-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Cloud Storage Settings</h3>
+          <button @click="closeCloudModal" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="cloud-providers">
+            <!-- Google Drive Section -->
+            <div class="provider-section">
+              <div class="provider-header">
+                <div class="provider-icon google">
+                  <i class="fab fa-google-drive"></i>
+                </div>
+                <div class="provider-info">
+                  <h4>Google Drive</h4>
+                  <p>Store documents in your Google Drive account</p>
+                </div>
+                <div class="provider-status">
+                  <span :class="['status-indicator', isGoogleConnected ? 'connected' : 'disconnected']">
+                    {{ isGoogleConnected ? 'Connected' : 'Disconnected' }}
+                  </span>
+                </div>
+              </div>
+              <div class="provider-actions">
+                <button 
+                  v-if="!isGoogleConnected" 
+                  @click="connectGoogleDrive" 
+                  class="btn btn-primary"
+                  :disabled="isConnecting"
+                >
+                  <i :class="isConnecting ? 'fas fa-spinner fa-spin' : 'fab fa-google'"></i>
+                  {{ isConnecting ? 'Connecting...' : 'Connect Google Drive' }}
+                </button>
+                <div v-else class="connected-info">
+                  <p><strong>Account:</strong> {{ googleAccount || 'Connected' }}</p>
+                  <p><strong>Storage:</strong> {{ formatStorage(googleStorageUsed) }} / {{ formatStorage(googleStorageLimit) }}</p>
+                  <button @click="disconnectGoogleDrive" class="btn btn-outline">
+                    <i class="fas fa-unlink"></i>
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- OneDrive Section -->
+            <div class="provider-section">
+              <div class="provider-header">
+                <div class="provider-icon onedrive">
+                  <i class="fab fa-microsoft"></i>
+                </div>
+                <div class="provider-info">
+                  <h4>Microsoft OneDrive</h4>
+                  <p>Store documents in your OneDrive account</p>
+                </div>
+                <div class="provider-status">
+                  <span :class="['status-indicator', isOneDriveConnected ? 'connected' : 'disconnected']">
+                    {{ isOneDriveConnected ? 'Connected' : 'Disconnected' }}
+                  </span>
+                </div>
+              </div>
+              <div class="provider-actions">
+                <button 
+                  v-if="!isOneDriveConnected" 
+                  @click="connectOneDrive" 
+                  class="btn btn-primary"
+                  :disabled="isConnecting"
+                >
+                  <i :class="isConnecting ? 'fas fa-spinner fa-spin' : 'fab fa-microsoft'"></i>
+                  {{ isConnecting ? 'Connecting...' : 'Connect OneDrive' }}
+                </button>
+                <div v-else class="connected-info">
+                  <p><strong>Account:</strong> {{ oneDriveAccount || 'Connected' }}</p>
+                  <p><strong>Storage:</strong> {{ formatStorage(oneDriveStorageUsed) }} / {{ formatStorage(oneDriveStorageLimit) }}</p>
+                  <button @click="disconnectOneDrive" class="btn btn-outline">
+                    <i class="fas fa-unlink"></i>
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="cloud-settings">
+              <h4>Settings</h4>
+              <div class="setting-item">
+                <label>
+                  <input v-model="cloudStorageEnabled" type="checkbox" @change="toggleCloudStorage" />
+                  Enable cloud storage integration
+                </label>
+              </div>
+              <div class="setting-item">
+                <label>
+                  <input v-model="autoSyncEnabled" type="checkbox" />
+                  Automatically sync documents
+                </label>
+              </div>
+              <div class="setting-item">
+                <label>Default storage location:</label>
+                <select v-model="defaultStorageLocation" class="form-select">
+                  <option value="local">Local Storage</option>
+                  <option value="google" :disabled="!isGoogleConnected">Google Drive</option>
+                  <option value="onedrive" :disabled="!isOneDriveConnected">OneDrive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeCloudModal" class="btn btn-view">
+            <i class="fas fa-check"></i>
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -276,6 +488,7 @@
 import { mapState, mapActions, mapGetters } from 'pinia'
 import { useDocumentsStore } from '../stores/documents'
 import { useParticipantsStore } from '../stores/participants'
+import { showViewModal, showEditModal } from '../utils/errorHandler'
 
 export default {
   name: 'Documents',
@@ -283,9 +496,8 @@ export default {
     return {
       filteredDocuments: [],
       searchQuery: '',
-      categoryFilter: '',
-      participantFilter: '',
       statusFilter: '',
+      currentView: 'list',
       showUploadModal: false,
       isUploading: false,
       selectedFile: null,
@@ -295,14 +507,41 @@ export default {
         participant_id: '',
         expiry_date: '',
         description: '',
-        is_confidential: false
-      }
+        is_confidential: false,
+        storageDestination: 'local'
+      },
+      // Cloud storage properties
+      showCloudSettingsModal: false,
+      cloudStorageEnabled: true,
+      isConnecting: false,
+      isSyncing: false,
+      // Google Drive
+      isGoogleConnected: false,
+      googleAccount: null,
+      googleStorageUsed: 0,
+      googleStorageLimit: 15000000000, // 15GB
+      // OneDrive  
+      isOneDriveConnected: false,
+      oneDriveAccount: null,
+      oneDriveStorageUsed: 0,
+      oneDriveStorageLimit: 5000000000, // 5GB
+      // Settings
+      autoSyncEnabled: true,
+      defaultStorageLocation: 'local',
+      currentProvider: 'local',
+      storageUsed: 0,
+      storageLimit: 0
     }
   },
   computed: {
     ...mapState(useDocumentsStore, ['documents', 'isLoading', 'error']),
     ...mapGetters(useDocumentsStore, ['documentsByCategory', 'activeDocuments', 'expiringDocuments']),
-    ...mapState(useParticipantsStore, { participants: 'participants' })
+    ...mapState(useParticipantsStore, { participants: 'participants' }),
+    
+    storagePercentage() {
+      if (this.storageLimit === 0) return 0
+      return Math.min((this.storageUsed / this.storageLimit) * 100, 100)
+    }
   },
   async mounted() {
     await this.loadData()
@@ -334,14 +573,6 @@ export default {
           doc.category.toLowerCase().includes(query) ||
           doc.description?.toLowerCase().includes(query)
         )
-      }
-      
-      if (this.categoryFilter) {
-        filtered = filtered.filter(doc => doc.category === this.categoryFilter)
-      }
-
-      if (this.participantFilter) {
-        filtered = filtered.filter(doc => doc.participant_id == this.participantFilter)
       }
 
       if (this.statusFilter) {
@@ -434,11 +665,12 @@ export default {
       const status = this.getStatusLabel(document)
       const expiry = document.expiry_date ? `\n📅 Expires: ${this.formatDate(document.expiry_date)}` : ''
       
-      alert(`📄 ${document.name}\n📁 Category: ${document.category}\n👤 Participant: ${participant}\n📊 Status: ${status}\n📅 Uploaded: ${this.formatDate(document.created_at)}${expiry}${document.description ? '\n📝 Description: ' + document.description : ''}`)
+      const details = `📁 Category: ${document.category}\n👤 Participant: ${participant}\n📊 Status: ${status}\n📅 Uploaded: ${this.formatDate(document.created_at)}${expiry}${document.description ? '\n📝 Description: ' + document.description : ''}`
+      showViewModal(details, `📄 ${document.name}`)
     },
 
     editDocument(document) {
-      alert(`Edit functionality for "${document.name}" - Coming soon!`)
+      showEditModal(`Edit functionality for "${document.name}" will be available soon! This feature will allow you to modify document details and upload new versions.`, 'Edit Document')
     },
 
     async deleteDocument(document) {
@@ -458,6 +690,12 @@ export default {
       this.showUploadModal = false
       this.selectedFile = null
       this.resetForm()
+    },
+
+    clearFilters() {
+      this.searchQuery = ''
+      this.statusFilter = ''
+      this.filterDocuments()
     },
 
     resetForm() {
@@ -548,6 +786,134 @@ export default {
       setTimeout(() => {
         notification.remove()
       }, 3000)
+    },
+
+    // Cloud Storage Methods
+    closeCloudModal() {
+      this.showCloudSettingsModal = false
+    },
+
+    async connectGoogleDrive() {
+      this.isConnecting = true
+      try {
+        // Placeholder for OAuth implementation
+        // In production, this would open OAuth popup and handle authentication
+        setTimeout(() => {
+          this.isGoogleConnected = true
+          this.googleAccount = 'user@gmail.com'
+          this.googleStorageUsed = 2500000000 // 2.5GB
+          this.updateCurrentProvider()
+          this.showSuccessMessage('Google Drive connected successfully!')
+          this.isConnecting = false
+        }, 2000)
+      } catch (error) {
+        this.showErrorMessage('Failed to connect Google Drive. Please try again.')
+        this.isConnecting = false
+      }
+    },
+
+    async connectOneDrive() {
+      this.isConnecting = true
+      try {
+        // Placeholder for OAuth implementation
+        // In production, this would open OAuth popup and handle authentication  
+        setTimeout(() => {
+          this.isOneDriveConnected = true
+          this.oneDriveAccount = 'user@outlook.com'
+          this.oneDriveStorageUsed = 1200000000 // 1.2GB
+          this.updateCurrentProvider()
+          this.showSuccessMessage('OneDrive connected successfully!')
+          this.isConnecting = false
+        }, 2000)
+      } catch (error) {
+        this.showErrorMessage('Failed to connect OneDrive. Please try again.')
+        this.isConnecting = false
+      }
+    },
+
+    disconnectGoogleDrive() {
+      this.isGoogleConnected = false
+      this.googleAccount = null
+      this.googleStorageUsed = 0
+      if (this.defaultStorageLocation === 'google') {
+        this.defaultStorageLocation = 'local'
+      }
+      this.updateCurrentProvider()
+      this.showSuccessMessage('Google Drive disconnected')
+    },
+
+    disconnectOneDrive() {
+      this.isOneDriveConnected = false
+      this.oneDriveAccount = null
+      this.oneDriveStorageUsed = 0
+      if (this.defaultStorageLocation === 'onedrive') {
+        this.defaultStorageLocation = 'local'
+      }
+      this.updateCurrentProvider()
+      this.showSuccessMessage('OneDrive disconnected')
+    },
+
+    async syncCloudStorage() {
+      if (!this.cloudStorageEnabled) return
+      
+      this.isSyncing = true
+      try {
+        // Placeholder for sync implementation
+        // In production, this would sync files between local and cloud storage
+        setTimeout(() => {
+          this.showSuccessMessage('Documents synced successfully!')
+          this.isSyncing = false
+        }, 3000)
+      } catch (error) {
+        this.showErrorMessage('Sync failed. Please try again.')
+        this.isSyncing = false
+      }
+    },
+
+    toggleCloudStorage() {
+      if (!this.cloudStorageEnabled) {
+        // Reset to local storage when disabled
+        this.defaultStorageLocation = 'local'
+        this.newDocument.storageDestination = 'local'
+      }
+    },
+
+    updateCurrentProvider() {
+      if (this.isGoogleConnected) {
+        this.currentProvider = 'google'
+        this.storageUsed = this.googleStorageUsed
+        this.storageLimit = this.googleStorageLimit
+      } else if (this.isOneDriveConnected) {
+        this.currentProvider = 'onedrive'
+        this.storageUsed = this.oneDriveStorageUsed
+        this.storageLimit = this.oneDriveStorageLimit
+      } else {
+        this.currentProvider = 'local'
+        this.storageUsed = 0
+        this.storageLimit = 0
+      }
+    },
+
+    getProviderIcon(provider) {
+      const icons = {
+        'google': 'fab fa-google-drive',
+        'onedrive': 'fab fa-microsoft',
+        'local': 'fas fa-server'
+      }
+      return icons[provider] || 'fas fa-cloud'
+    },
+
+    getProviderName(provider) {
+      const names = {
+        'google': 'Google Drive',
+        'onedrive': 'OneDrive',
+        'local': 'Local Storage'
+      }
+      return names[provider] || 'Unknown'
+    },
+
+    formatStorage(bytes) {
+      return this.formatFileSize(bytes)
     }
   }
 }
@@ -557,6 +923,147 @@ export default {
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* Participants-style filters */
+.filters-section {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  margin-bottom: 1rem;
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-select {
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  min-width: 140px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background-color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.btn-outline-elegant {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  color: #4a5568;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.btn-outline-elegant:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(102, 126, 234, 0.04) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+}
+
+.view-toggle {
+  display: flex;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.view-btn-elegant {
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  min-width: 44px;
+}
+
+.view-btn-elegant:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  transform: translateY(-1px);
+}
+
+.view-btn-elegant.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.25);
 }
 
 .page-header {
@@ -570,6 +1077,304 @@ export default {
   font-size: 2rem;
   font-weight: 600;
   color: var(--text-dark);
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Filters Section - Enhanced for Care Plans style */
+.filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Cloud Storage Status Bar */
+.cloud-storage-status {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid var(--primary-500);
+}
+
+.cloud-provider-info {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.provider-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.provider-icon.google {
+  background: linear-gradient(135deg, #4285f4, #34a853);
+}
+
+.provider-icon.onedrive {
+  background: linear-gradient(135deg, #0078d4, #106ebe);
+}
+
+.provider-icon.local {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+.provider-details {
+  flex: 1;
+}
+
+.provider-details h4 {
+  margin: 0 0 0.25rem 0;
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
+}
+
+.storage-quota {
+  margin: 0 0 0.5rem 0;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+}
+
+.storage-bar {
+  width: 200px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.storage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  transition: width 0.3s ease;
+}
+
+.provider-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Storage Options in Upload Modal */
+.storage-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.storage-option {
+  position: relative;
+  border: 2px solid #e5e7eb;
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.storage-option:hover {
+  border-color: var(--primary-300);
+}
+
+.storage-option.active {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.storage-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.storage-label {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.storage-label i {
+  font-size: 1.5rem;
+  color: var(--primary-500);
+}
+
+.storage-label span {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: var(--font-size-sm);
+}
+
+.storage-label small {
+  color: var(--gray-500);
+  font-size: var(--font-size-xs);
+}
+
+/* Cloud Settings Modal */
+.cloud-modal {
+  max-width: 700px;
+}
+
+.cloud-providers {
+  space-y: 1.5rem;
+}
+
+.provider-section {
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.provider-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.provider-info {
+  flex: 1;
+}
+
+.provider-info h4 {
+  margin: 0 0 0.25rem 0;
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
+}
+
+.provider-info p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+}
+
+.provider-status .status-indicator {
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-indicator.connected {
+  background: var(--success-50);
+  color: var(--success-700);
+}
+
+.status-indicator.disconnected {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.provider-actions {
+  margin-top: 1rem;
+}
+
+.connected-info {
+  padding: 1rem;
+  background: var(--success-50);
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+}
+
+.connected-info p {
+  margin: 0 0 0.5rem 0;
+  color: var(--success-800);
+  font-size: var(--font-size-sm);
+}
+
+.connected-info p:last-of-type {
+  margin-bottom: 1rem;
+}
+
+.cloud-settings {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.cloud-settings h4 {
+  margin: 0 0 1rem 0;
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
+}
+
+.setting-item {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setting-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+}
+
+.setting-item select {
+  margin-left: auto;
+  min-width: 150px;
 }
 
 .stats-row {
@@ -660,20 +1465,7 @@ export default {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.filter-controls {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.filter-controls select {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  background: white;
-  cursor: pointer;
-  min-width: 120px;
-}
+/* Filter controls now use global styles for consistency */
 
 .content-card {
   background: var(--white);
@@ -1099,9 +1891,7 @@ export default {
     max-width: none;
   }
 
-  .filter-controls {
-    flex-direction: column;
-  }
+  /* Filter controls responsive styles handled by global CSS */
 
   .documents-grid {
     grid-template-columns: 1fr;

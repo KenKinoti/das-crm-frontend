@@ -289,6 +289,7 @@
         </div>
       </div>
 
+
       <!-- System Information -->
       <div class="settings-card">
         <div class="card-header">
@@ -337,7 +338,8 @@
 <script>
 import { mapState, mapActions, mapGetters } from 'pinia'
 import { useOrganizationStore } from '../stores/organization'
-import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
+import { useAuthStore } from '../stores/auth'
+import { showErrorNotification, showSuccessNotification, showInfoModal } from '../utils/errorHandler'
 
 export default {
   name: 'Settings',
@@ -378,11 +380,12 @@ export default {
         password_min_length: 8,
         require_2fa: false,
         auto_logout_inactive: true
-      }
+      },
     }
   },
   computed: {
     ...mapState(useOrganizationStore, ['organization', 'isLoading', 'error']),
+    ...mapState(useAuthStore, ['token']),
     ...mapGetters(useOrganizationStore, [
       'organizationName', 'organizationEmail', 'organizationPhone', 'organizationAddress',
       'timezone', 'currency', 'dateFormat', 'timeFormat', 'taxRate', 'paymentTerms',
@@ -412,9 +415,25 @@ export default {
     
     populateForms() {
       // Populate organization form
+      let addressString = ''
+      if (this.organization.address && typeof this.organization.address === 'object') {
+        // Convert address object to string
+        const addr = this.organization.address
+        const parts = [
+          addr.street,
+          addr.suburb,
+          addr.state,
+          addr.postcode,
+          addr.country
+        ].filter(part => part && part.trim())
+        addressString = parts.join(', ')
+      } else if (typeof this.organization.address === 'string') {
+        addressString = this.organization.address
+      }
+      
       this.organizationForm = {
         name: this.organization.name || '',
-        address: this.organization.address || '',
+        address: addressString,
         phone: this.organization.phone || '',
         email: this.organization.email || '',
         website: this.organization.website || '',
@@ -478,7 +497,7 @@ export default {
           name: this.organizationForm.name.trim(),
           email: this.organizationForm.email.trim(),
           phone: this.organizationForm.phone.trim(),
-          address: this.organizationForm.address.trim(),
+          address: (this.organizationForm.address || '').toString().trim(),
           website: this.organizationForm.website.trim(),
           abn: this.organizationForm.abn.trim(),
           settings: {
@@ -554,18 +573,18 @@ export default {
     },
     
     exportData() {
-      alert('Export data functionality - Coming soon!')
+      showInfoModal('Export data functionality will be available soon! This feature will allow you to export your organization data in various formats.', 'Export Data')
     },
     
     createBackup() {
-      alert('Create backup functionality - Coming soon!')
+      showInfoModal('Create backup functionality will be available soon! This feature will allow you to create secure backups of your data.', 'Create Backup')
     },
     
     resetSystem() {
       if (confirm('Are you sure you want to reset all settings? This action cannot be undone.')) {
-        alert('Reset system functionality - Coming soon!')
+        showInfoModal('Reset system functionality will be available soon! This feature will allow you to reset all settings to default values.', 'Reset System')
       }
-    },
+},
     
     formatDate(date) {
       return date.toLocaleDateString('en-AU', {
@@ -920,6 +939,7 @@ input:checked + .slider:before {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
 
 /* Success and Error notifications */
 :global(.success-notification) {

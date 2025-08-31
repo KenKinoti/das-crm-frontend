@@ -152,6 +152,7 @@
 
 <script>
 import api from '../services/api'
+import { useAuthStore } from '../stores/auth'
 
 export default {
   name: 'Dashboard',
@@ -184,7 +185,7 @@ export default {
       try {
         console.log('Fetching dashboard data...')
         
-        // Try to get real data from backend
+        // Check if all API calls fail, then use mock data
         const promises = [
           this.fetchParticipantStats(),
           this.fetchStaffStats(),
@@ -193,13 +194,18 @@ export default {
           this.fetchRecentActivity()
         ]
         
-        await Promise.allSettled(promises)
+        const results = await Promise.allSettled(promises)
+        
+        // If all promises failed, show error message
+        const allFailed = results.every(result => result.status === 'rejected')
+        if (allFailed) {
+          console.log('Backend unavailable')
+          this.error = 'Unable to connect to backend. Please ensure the server is running.'
+        }
         
       } catch (error) {
         console.error('Dashboard error:', error)
-        this.error = 'Failed to load dashboard data'
-        // Set fallback data
-        this.setFallbackData()
+        this.error = 'Failed to load dashboard data. Please try again.'
       } finally {
         this.isLoading = false
       }
@@ -210,7 +216,26 @@ export default {
         const response = await api.get('/participants?limit=1')
         if (response.success && response.data.pagination) {
           this.stats.totalParticipants = response.data.pagination.total || 0
-          this.stats.participantGrowth = '+12% from last month'
+          
+          // Calculate monthly growth
+          const now = new Date()
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          
+          try {
+            const monthlyResponse = await api.get(`/participants?created_after=${monthAgo.toISOString()}`)
+            const newParticipantsThisMonth = monthlyResponse.success && monthlyResponse.data.pagination 
+              ? monthlyResponse.data.pagination.total 
+              : 0
+              
+            if (this.stats.totalParticipants > 0 && newParticipantsThisMonth > 0) {
+              const growthPercentage = Math.round((newParticipantsThisMonth / Math.max(this.stats.totalParticipants - newParticipantsThisMonth, 1)) * 100)
+              this.stats.participantGrowth = growthPercentage > 0 ? `+${growthPercentage}% from last month` : 'No growth this month'
+            } else {
+              this.stats.participantGrowth = 'No new participants this month'
+            }
+          } catch {
+            this.stats.participantGrowth = 'Growth data unavailable'
+          }
         }
       } catch (error) {
         console.log('Failed to fetch participant stats:', error.message)
@@ -224,7 +249,23 @@ export default {
         const response = await api.get('/users?limit=1')
         if (response.success && response.data.pagination) {
           this.stats.activeStaff = response.data.pagination.total || 0
-          this.stats.staffGrowth = '+3 new this week'
+          
+          // Calculate weekly staff growth
+          const now = new Date()
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          
+          try {
+            const weeklyResponse = await api.get(`/users?created_after=${weekAgo.toISOString()}`)
+            const newStaffThisWeek = weeklyResponse.success && weeklyResponse.data.pagination 
+              ? weeklyResponse.data.pagination.total 
+              : 0
+              
+            this.stats.staffGrowth = newStaffThisWeek > 0 
+              ? `+${newStaffThisWeek} new this week`
+              : 'No new staff this week'
+          } catch {
+            this.stats.staffGrowth = 'Growth data unavailable'
+          }
         }
       } catch (error) {
         console.log('Failed to fetch staff stats:', error.message)
@@ -259,10 +300,41 @@ export default {
     
     async fetchRevenueStats() {
       try {
-        // This would typically come from a billing/revenue endpoint
-        // Setting to 0 as we don't have a revenue API endpoint yet
-        this.stats.monthlyRevenue = 0
-        this.stats.revenueGrowth = 0
+        const response = await api.get('/reports/dashboard')
+        if (response.success && response.data) {
+          this.stats.monthlyRevenue = response.data.monthly_revenue || 0
+          
+          // Calculate revenue from completed shifts this month
+          const now = new Date()
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+          const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+          
+          try {
+            const [currentMonth, lastMonth] = await Promise.all([
+              api.get(`/reports/revenue?start_date=${monthStart.toISOString().split('T')[0]}&end_date=${monthEnd.toISOString().split('T')[0]}`),
+              api.get(`/reports/revenue?start_date=${lastMonthStart.toISOString().split('T')[0]}&end_date=${lastMonthEnd.toISOString().split('T')[0]}`)
+            ])
+            
+            const currentRevenue = currentMonth.success ? (currentMonth.data.total_revenue || 0) : 0
+            const lastRevenue = lastMonth.success ? (lastMonth.data.total_revenue || 0) : 0
+            
+            if (currentRevenue > 0 || lastRevenue > 0) {
+              this.stats.monthlyRevenue = currentRevenue
+              if (lastRevenue > 0) {
+                const growthPercentage = Math.round(((currentRevenue - lastRevenue) / lastRevenue) * 100)
+                this.stats.revenueGrowth = growthPercentage >= 0 ? Math.abs(growthPercentage) : Math.abs(growthPercentage)
+              } else {
+                this.stats.revenueGrowth = currentRevenue > 0 ? 100 : 0
+              }
+            } else {
+              this.stats.revenueGrowth = 0
+            }
+          } catch {
+            this.stats.revenueGrowth = 0
+          }
+        }
       } catch (error) {
         console.log('Failed to fetch revenue stats:', error.message)
         this.stats.monthlyRevenue = 0
@@ -272,27 +344,72 @@ export default {
     
     async fetchRecentActivity() {
       try {
-        // This would come from an activity log endpoint
-        // For now, set empty until we have a real endpoint
-        this.recentActivities = []
+        const response = await api.get('/reports/dashboard')
+        if (response.success && response.data.recent_activities) {
+          this.recentActivities = response.data.recent_activities.map(activity => ({
+            id: activity.id,
+            title: activity.description,
+            subtitle: `By ${activity.user_name || 'System'}`,
+            time: this.formatTimeAgo(new Date(activity.timestamp)),
+            icon: this.getActivityIcon(activity.type),
+            color: this.getActivityColor(activity.type)
+          }))
+        }
       } catch (error) {
-        console.log('Could not fetch recent activity')
+        console.log('Could not fetch recent activity:', error.message)
         this.recentActivities = []
       }
     },
     
     setFallbackData() {
-      // No fallback data - show actual data or zeros
+      // Mock data for demonstration when backend is unavailable
+      const authStore = useAuthStore()
+      const isSuperAdmin = authStore.user?.role === 'super_admin'
+      
       this.stats = {
-        totalParticipants: 0,
-        activeStaff: 0,
-        shiftsThisWeek: 0,
-        monthlyRevenue: 0,
-        participantGrowth: 'No data',
-        staffGrowth: 'No data',
-        shiftCompletion: 0,
-        revenueGrowth: 0
+        totalParticipants: isSuperAdmin ? 156 : 42,
+        activeStaff: isSuperAdmin ? 28 : 12,
+        shiftsThisWeek: isSuperAdmin ? 124 : 38,
+        monthlyRevenue: isSuperAdmin ? 48500 : 12300,
+        participantGrowth: '+12% from last month',
+        staffGrowth: '+3 new this week',
+        shiftCompletion: 94,
+        revenueGrowth: 15
       }
+      
+      // Mock recent activities
+      this.recentActivities = [
+        {
+          id: 1,
+          type: 'shift_completed',
+          message: 'John Smith completed shift with Emily Davis',
+          time: new Date(Date.now() - 30 * 60 * 1000)
+        },
+        {
+          id: 2,
+          type: 'participant_added',
+          message: 'New participant Sarah Johnson registered',
+          time: new Date(Date.now() - 2 * 60 * 60 * 1000)
+        },
+        {
+          id: 3,
+          type: 'shift_scheduled',
+          message: 'New shift scheduled for next Monday',
+          time: new Date(Date.now() - 3 * 60 * 60 * 1000)
+        },
+        {
+          id: 4,
+          type: 'document_uploaded',
+          message: 'Care plan updated for Michael Brown',
+          time: new Date(Date.now() - 5 * 60 * 60 * 1000)
+        },
+        {
+          id: 5,
+          type: 'staff_added',
+          message: 'New staff member Lisa Wilson onboarded',
+          time: new Date(Date.now() - 24 * 60 * 60 * 1000)
+        }
+      ]
     },
     
     formatCurrency(amount) {
@@ -316,6 +433,45 @@ export default {
           this.isNavigating = false
         }, 300)
       }
+    },
+    
+    formatTimeAgo(date) {
+      const now = new Date()
+      const diffInMinutes = Math.floor((now - date) / (1000 * 60))
+      
+      if (diffInMinutes < 1) return 'Just now'
+      if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+      if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`
+      return date.toLocaleDateString()
+    },
+    
+    getActivityIcon(type) {
+      const iconMap = {
+        'shift_completed': 'fas fa-check-circle',
+        'shift_started': 'fas fa-play-circle',
+        'shift_scheduled': 'fas fa-calendar-plus',
+        'participant_added': 'fas fa-user-plus',
+        'staff_added': 'fas fa-user-tie',
+        'document_uploaded': 'fas fa-file-upload',
+        'billing_generated': 'fas fa-file-invoice',
+        'default': 'fas fa-info-circle'
+      }
+      return iconMap[type] || iconMap.default
+    },
+    
+    getActivityColor(type) {
+      const colorMap = {
+        'shift_completed': 'linear-gradient(135deg, #10b981, #059669)',
+        'shift_started': 'linear-gradient(135deg, #3b82f6, #2563eb)',
+        'shift_scheduled': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+        'participant_added': 'linear-gradient(135deg, #f59e0b, #d97706)',
+        'staff_added': 'linear-gradient(135deg, #ef4444, #dc2626)',
+        'document_uploaded': 'linear-gradient(135deg, #06b6d4, #0891b2)',
+        'billing_generated': 'linear-gradient(135deg, #84cc16, #65a30d)',
+        'default': 'linear-gradient(135deg, #6b7280, #4b5563)'
+      }
+      return colorMap[type] || colorMap.default
     }
   }
 }
@@ -328,46 +484,39 @@ export default {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   margin-bottom: 3rem;
+  padding: 0;
 }
 
 .stat-card {
-  background: var(--white);
-  padding: 2rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
+/* Stat card colors matching icon colors */
+.stat-card.primary {
+  border-left: 4px solid #3b82f6;
 }
 
-.stat-card.primary::before {
-  background: var(--primary-gradient);
+.stat-card.secondary {
+  border-left: 4px solid #6b7280;
 }
 
-.stat-card.secondary::before {
-  background: var(--secondary-gradient);
+.stat-card.success {
+  border-left: 4px solid #10b981;
 }
 
-.stat-card.success::before {
-  background: var(--success-gradient);
-}
-
-.stat-card.warning::before {
-  background: var(--warning-gradient);
+.stat-card.warning {
+  border-left: 4px solid #f59e0b;
 }
 
 .stat-header {
@@ -378,45 +527,56 @@ export default {
 }
 
 .stat-title {
-  font-size: 0.9rem;
-  color: var(--text-medium);
-  font-weight: 500;
+  font-size: 0.85rem;
+  color: rgba(107, 114, 128, 0.8);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.2);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .stat-icon.primary {
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
 
 .stat-icon.secondary {
-  background: var(--secondary-gradient);
+  background: linear-gradient(135deg, #6b7280, #4b5563);
 }
 
 .stat-icon.success {
-  background: var(--success-gradient);
+  background: linear-gradient(135deg, #10b981, #059669);
 }
 
 .stat-icon.warning {
-  background: var(--warning-gradient);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
 .stat-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--text-dark);
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1a1a1a 0%, #333333 50%, #1a1a1a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 0.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
 }
 
 .stat-change {
@@ -433,21 +593,47 @@ export default {
 
 /* Quick Actions */
 .quick-actions {
-  background: var(--white);
-  padding: 2rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 3rem;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04);
   margin-bottom: 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-actions::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(102, 126, 234, 0.02) 100%);
+  pointer-events: none;
 }
 
 .section-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--text-dark);
-  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  position: relative;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 1.4rem;
+  text-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .actions-grid {
@@ -460,23 +646,41 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 1.5rem;
-  background: var(--white);
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
+  gap: 16px;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
+  border: 2px solid rgba(226, 232, 240, 0.5);
+  border-radius: 20px;
   text-decoration: none;
   color: var(--text-medium);
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.6s;
+}
+
+.action-btn:hover::before {
+  left: 100%;
 }
 
 .action-btn:hover:not(.loading) {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-soft);
+  border-color: rgba(102, 126, 234, 0.6);
+  color: #667eea;
+  transform: translateY(-6px) scale(1.05);
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15), 0 8px 16px rgba(0,0,0,0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(102, 126, 234, 0.05) 100%);
 }
 
 .action-btn.loading {
@@ -485,60 +689,96 @@ export default {
 }
 
 .action-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  transition: all 0.3s ease;
+  font-size: 1.4rem;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #64748b;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 }
 
 .action-btn:hover:not(.loading) .action-icon {
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
 }
 
 .action-text {
-  font-weight: 500;
+  font-weight: 600;
   text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  font-size: 0.95rem;
 }
 
 /* Recent Activity */
 .recent-activity {
-  background: var(--white);
-  padding: 2rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 3rem;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.recent-activity::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(102, 126, 234, 0.02) 100%);
+  pointer-events: none;
 }
 
 .activity-list {
-  space-y: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: var(--border-radius-sm);
-  transition: background 0.3s ease;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  position: relative;
 }
 
 .activity-item:hover {
-  background: rgba(102, 126, 234, 0.05);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(102, 126, 234, 0.04) 100%);
+  border-color: rgba(102, 126, 234, 0.2);
+  transform: translateX(8px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.1);
 }
 
 .activity-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15), inset 0 1px 2px rgba(255,255,255,0.2);
+  transition: all 0.3s ease;
+}
+
+.activity-item:hover .activity-icon {
+  transform: scale(1.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.3);
 }
 
 .activity-content {

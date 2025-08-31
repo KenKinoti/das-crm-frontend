@@ -39,30 +39,57 @@
       </div>
     </div>
 
-    <!-- Search and Filters -->
+    <!-- Filters and Search -->
     <div class="filters-section">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Search staff members..."
-          @input="filterStaff"
-        />
-      </div>
-      <div class="filter-controls">
-        <select v-model="roleFilter" @change="filterStaff">
-          <option value="">All Roles</option>
-          <option value="care_worker">Care Worker</option>
-          <option value="support_coordinator">Support Coordinator</option>
-          <option value="manager">Manager</option>
-          <option value="admin">Administrator</option>
-        </select>
-        <select v-model="statusFilter" @change="filterStaff">
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+      <div class="filters-row">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search staff members..." 
+            class="form-input"
+            @input="filterStaff"
+          />
+        </div>
+        
+        <div class="filter-controls">
+          <select v-model="statusFilter" @change="filterStaff" class="form-select">
+            <option value="active">Active Staff</option>
+            <option value="inactive">Inactive Staff</option>
+            <option value="">All Staff</option>
+          </select>
+          
+          <select v-model="roleFilter" @change="filterStaff" class="form-select">
+            <option value="">All Roles</option>
+            <option value="care_worker">Care Worker</option>
+            <option value="support_coordinator">Support Coordinator</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Administrator</option>
+          </select>
+          
+          <button @click="clearFilters" class="btn btn-outline-elegant">
+            <i class="fas fa-times"></i>
+            Clear Filters
+          </button>
+          
+          <div class="view-toggle">
+            <button 
+              @click="currentView = 'list'" 
+              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              title="List View"
+            >
+              <i class="fas fa-list"></i>
+            </button>
+            <button 
+              @click="currentView = 'grid'" 
+              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
+              title="Grid View"
+            >
+              <i class="fas fa-th"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -89,6 +116,84 @@
         <p>Try adjusting your search criteria</p>
       </div>
 
+      <!-- List View -->
+      <div v-else-if="currentView === 'list'" class="staff-list">
+        <div class="list-header">
+          <div class="col-name">Staff Member</div>
+          <div class="col-role">Role</div>
+          <div class="col-contact">Contact</div>
+          <div v-if="isAdmin" class="col-company">Company</div>
+          <div class="col-status">Status</div>
+          <div class="col-actions">Actions</div>
+        </div>
+        <div v-for="member in filteredStaff" :key="member.id" class="list-row">
+          <div class="col-name">
+            <div class="staff-avatar-small">{{ getInitials(member.first_name, member.last_name) }}</div>
+            <div class="staff-info-compact">
+              <h4>{{ member.first_name }} {{ member.last_name }}</h4>
+              <span class="staff-id">ID: {{ member.id }}</span>
+            </div>
+          </div>
+          <div class="col-role">
+            <span class="role-badge">{{ formatRole(member.role) }}</span>
+          </div>
+          <div class="col-contact">
+            <div class="contact-info">
+              <div v-if="isAdmin || isSuperAdmin">
+                <div><i class="fas fa-envelope"></i> {{ member.email }}</div>
+                <div><i class="fas fa-phone"></i> {{ member.phone || 'N/A' }}</div>
+              </div>
+              <div v-else>
+                <div><i class="fas fa-envelope"></i> {{ member.email ? member.email.substring(0, 3) + '***@' + member.email.split('@')[1] : 'N/A' }}</div>
+                <div><i class="fas fa-phone"></i> {{ member.phone ? '***-***-' + member.phone.slice(-4) : 'N/A' }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="isAdmin" class="col-company">
+            <div class="company-info">
+              <div class="company-badge">
+                <span class="status-dot" :class="getCompanyStatusClass(member)"></span>
+                <span class="company-name">{{ getCompanyName(member) }}</span>
+              </div>
+              <div class="staff-status">
+                <span class="status-dot" :class="getStaffStatusClass(member)"></span>
+                <span class="status-text">{{ getStaffStatusText(member) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-status">
+            <div class="status-toggle">
+              <label class="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  :checked="member.is_active !== false"
+                  @change="toggleStaffStatus(member)"
+                  :disabled="isSubmitting"
+                />
+                <span class="slider"></span>
+              </label>
+              <span :class="['status-badge', member.is_active !== false ? 'active' : 'inactive']">
+                {{ member.is_active !== false ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+          <div class="col-actions">
+            <div class="action-buttons">
+              <button @click="viewStaff(member)" class="btn-small btn-view" title="View Details">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button @click="scheduleStaff(member)" class="btn-small btn-schedule" title="Schedule Shift">
+                <i class="fas fa-calendar-plus"></i>
+              </button>
+              <button @click="editStaff(member)" class="btn-small btn-edit" title="Edit Staff">
+                <i class="fas fa-edit"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid View -->
       <div v-else class="staff-grid">
         <div v-for="member in filteredStaff" :key="member.id" class="staff-card">
           <div class="staff-header">
@@ -143,10 +248,6 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="deleteStaff(member)" class="btn-small btn-delete">
-              <i class="fas fa-trash"></i>
-              Delete
-            </button>
           </div>
         </div>
       </div>
@@ -166,27 +267,27 @@
             <div class="form-row">
               <div class="form-group">
                 <label>First Name *</label>
-                <input v-model="newStaff.first_name" type="text" required placeholder="Enter first name" />
+                <input v-model="newStaff.first_name" type="text" class="form-input" required placeholder="Enter first name" />
               </div>
               <div class="form-group">
                 <label>Last Name *</label>
-                <input v-model="newStaff.last_name" type="text" required placeholder="Enter last name" />
+                <input v-model="newStaff.last_name" type="text" class="form-input" required placeholder="Enter last name" />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Email *</label>
-                <input v-model="newStaff.email" type="email" required placeholder="Enter email address" />
+                <input v-model="newStaff.email" type="email" class="form-input" required placeholder="Enter email address" />
               </div>
               <div class="form-group">
                 <label>Phone</label>
-                <input v-model="newStaff.phone" type="tel" placeholder="Enter phone number" />
+                <input v-model="newStaff.phone" type="tel" class="form-input" placeholder="Enter phone number" />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Role *</label>
-                <select v-model="newStaff.role" required>
+                <select v-model="newStaff.role" class="form-select" required>
                   <option value="">Select Role</option>
                   <option value="care_worker">Care Worker</option>
                   <option value="support_coordinator">Support Coordinator</option>
@@ -196,7 +297,7 @@
               </div>
               <div class="form-group">
                 <label>Password *</label>
-                <input v-model="newStaff.password" type="password" required placeholder="Default password" />
+                <input v-model="newStaff.password" type="password" class="form-input" required placeholder="Default password" />
               </div>
             </div>
             <div class="modal-actions">
@@ -231,27 +332,27 @@
             <div class="form-row">
               <div class="form-group">
                 <label>First Name *</label>
-                <input v-model="newStaff.first_name" type="text" required placeholder="Enter first name" />
+                <input v-model="newStaff.first_name" type="text" class="form-input" required placeholder="Enter first name" />
               </div>
               <div class="form-group">
                 <label>Last Name *</label>
-                <input v-model="newStaff.last_name" type="text" required placeholder="Enter last name" />
+                <input v-model="newStaff.last_name" type="text" class="form-input" required placeholder="Enter last name" />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Email</label>
-                <input v-model="newStaff.email" type="email" placeholder="Enter email address" />
+                <input v-model="newStaff.email" type="email" class="form-input" placeholder="Enter email address" />
               </div>
               <div class="form-group">
                 <label>Phone</label>
-                <input v-model="newStaff.phone" type="tel" placeholder="Enter phone number" />
+                <input v-model="newStaff.phone" type="tel" class="form-input" placeholder="Enter phone number" />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Role *</label>
-                <select v-model="newStaff.role" required>
+                <select v-model="newStaff.role" class="form-select" required>
                   <option value="">Select Role</option>
                   <option value="care_worker">Care Worker</option>
                   <option value="support_coordinator">Support Coordinator</option>
@@ -261,7 +362,7 @@
               </div>
               <div class="form-group">
                 <label>New Password (optional)</label>
-                <input v-model="newStaff.password" type="password" placeholder="Leave blank to keep current password" />
+                <input v-model="newStaff.password" type="password" class="form-input" placeholder="Leave blank to keep current password" />
                 <small class="form-help">Only enter a password if you want to change it</small>
               </div>
             </div>
@@ -381,6 +482,10 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
+            <button @click="deleteStaff(selectedStaffMember); closeViewModal()" class="btn btn-delete">
+              <i class="fas fa-trash"></i>
+              Delete
+            </button>
           </div>
         </div>
       </div>
@@ -400,7 +505,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Participant *</label>
-                <select v-model="newShift.participant_id" required>
+                <select v-model="newShift.participant_id" class="form-select" required>
                   <option value="">Select Participant</option>
                   <option v-for="participant in participants" :key="participant.id" :value="participant.id">
                     {{ participant.first_name }} {{ participant.last_name }}
@@ -409,7 +514,7 @@
               </div>
               <div class="form-group">
                 <label>Service Type *</label>
-                <select v-model="newShift.service_type" required>
+                <select v-model="newShift.service_type" class="form-select" required>
                   <option value="">Select Service</option>
                   <option value="Personal Care">Personal Care</option>
                   <option value="Community Access">Community Access</option>
@@ -425,11 +530,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Date *</label>
-                <input v-model="newShift.date" type="date" required />
+                <input v-model="newShift.date" type="date" class="form-input" required />
               </div>
               <div class="form-group">
                 <label>Location *</label>
-                <select v-model="newShift.location" required>
+                <select v-model="newShift.location" class="form-select" required>
                   <option value="">Select Location</option>
                   <option value="Participant's Home">Participant's Home</option>
                   <option value="Community">Community</option>
@@ -443,7 +548,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Start Time *</label>
-                <input v-model="newShift.start_time" type="time" required @change="calculateEndTimeFromDuration" />
+                <input v-model="newShift.start_time" type="time" class="form-input" required @change="calculateEndTimeFromDuration" />
               </div>
               <div class="form-group">
                 <label>Duration (hours)</label>
@@ -453,6 +558,7 @@
                   step="0.5" 
                   min="0.5" 
                   max="24" 
+                  class="form-input"
                   placeholder="4.0" 
                   @input="calculateEndTimeFromDuration"
                 />
@@ -463,7 +569,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>End Time *</label>
-                <input v-model="newShift.end_time" type="time" required @change="calculateDurationFromTimes" />
+                <input v-model="newShift.end_time" type="time" class="form-input" required @change="calculateDurationFromTimes" />
                 <small>Or set manually to override duration</small>
               </div>
               <div class="form-group"></div>
@@ -472,7 +578,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Hourly Rate ($) *</label>
-                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" required placeholder="45.00" />
+                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" class="form-input" required placeholder="45.00" />
               </div>
               <div class="form-group"></div>
             </div>
@@ -486,8 +592,8 @@
                 id="shift-notes"
                 v-model="newShift.notes" 
                 rows="4" 
+                class="form-textarea"
                 placeholder="Add any special instructions, requirements, or notes for this shift..."
-                class="notes-textarea"
               ></textarea>
               <small class="help-text">These notes will be visible to both the staff member and participant</small>
             </div>
@@ -517,6 +623,7 @@ import { mapState, mapActions } from 'pinia'
 import { useUsersStore } from '../stores/users'
 import { useShiftsStore } from '../stores/shifts'
 import { useParticipantsStore } from '../stores/participants'
+import { useAuthStore } from '../stores/auth'
 import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
 
 export default {
@@ -526,7 +633,8 @@ export default {
       filteredStaff: [],
       searchQuery: '',
       roleFilter: '',
-      statusFilter: '',
+      statusFilter: 'active',
+      currentView: 'list',
       showAddModal: false,
       showEditModal: false,
       showDeleteModal: false,
@@ -563,6 +671,7 @@ export default {
     ...mapState(useUsersStore, { staff: 'users', isLoading: 'isLoading', error: 'error' }),
     ...mapState(useShiftsStore, ['shifts']),
     ...mapState(useParticipantsStore, { allParticipants: 'participants' }),
+    ...mapState(useAuthStore, ['user']),
     
     // Filter only active participants for scheduling
     participants() {
@@ -573,6 +682,14 @@ export default {
     },
     availableToday() {
       return this.staff.filter(s => s.role !== 'admin' && s.is_active).length
+    },
+    
+    isAdmin() {
+      return this.user && (this.user.role === 'admin' || this.user.role === 'super_admin')
+    },
+    
+    isSuperAdmin() {
+      return this.user && this.user.role === 'super_admin'
     }
   },
   methods: {
@@ -621,6 +738,32 @@ export default {
           this.statusFilter === 'active' ? s.is_active : !s.is_active
         )
       }
+
+      // Role-based access control for search results
+      if (!this.isSuperAdmin) {
+        if (this.isAdmin) {
+          // Admins can see all staff within their organization
+          const userOrgId = this.user?.organization_id
+          if (userOrgId) {
+            filtered = filtered.filter(s => 
+              s.organization_id === userOrgId || !s.organization_id
+            )
+          }
+        } else {
+          // Non-admin users can only see staff in their direct working groups or team
+          // For now, restrict to same organization and active staff only
+          const userOrgId = this.user?.organization_id
+          if (userOrgId) {
+            filtered = filtered.filter(s => 
+              s.organization_id === userOrgId && s.is_active !== false
+            )
+          } else {
+            // If user has no organization, they can only see themselves
+            filtered = filtered.filter(s => s.id === this.user?.id)
+          }
+        }
+      }
+      // Super admins can see all staff members across all organizations
       
       // Sort by last name, then first name
       filtered.sort((a, b) => {
@@ -977,8 +1120,45 @@ export default {
       }
     },
 
-    get isSubmitting() {
-      return this.isLoading
+    getCompanyName(member) {
+      if (member.organization_id) {
+        return member.organization_name || `Organization ${member.organization_id}`
+      }
+      return 'No Company'
+    },
+
+    getCompanyStatusClass(member) {
+      if (!member.organization_id) return 'status-gray'
+      return member.organization_is_active ? 'status-green' : 'status-red'
+    },
+
+    getStaffStatusClass(member) {
+      if (member.is_active === false) return 'status-red'
+      if (member.last_login) {
+        const lastLogin = new Date(member.last_login)
+        const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
+        if (daysSinceLogin > 30) return 'status-orange'
+        if (daysSinceLogin > 7) return 'status-yellow'
+      }
+      return 'status-green'
+    },
+
+    getStaffStatusText(member) {
+      if (member.is_active === false) return 'Inactive'
+      if (member.last_login) {
+        const lastLogin = new Date(member.last_login)
+        const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
+        if (daysSinceLogin > 30) return 'Idle'
+        if (daysSinceLogin > 7) return 'Away'
+      }
+      return 'Active'
+    },
+
+    clearFilters() {
+      this.searchQuery = ''
+      this.statusFilter = 'active'
+      this.roleFilter = ''
+      this.filterStaff()
     }
   },
   async mounted() {
@@ -989,85 +1169,29 @@ export default {
 </script>
 
 <style scoped>
-/* Base styles - same as Participants */
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* Component-specific styles that extend the global theme */
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--text-dark);
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: var(--white);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--primary-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.2rem;
-}
-
-.stat-icon.success {
-  background: var(--success-gradient);
-}
-
-.stat-icon.warning {
-  background: var(--warning-gradient);
-}
-
-.stat-number {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: var(--text-medium);
-}
-
+/* Filters Section - Enhanced for Care Plans style */
 .filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+}
+
+.filters-row {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
   align-items: center;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .search-box {
   position: relative;
+  min-width: 300px;
   flex: 1;
-  max-width: 400px;
 }
 
 .search-box i {
@@ -1075,81 +1199,301 @@ export default {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-light);
+  color: #64748b;
+  z-index: 2;
 }
 
-.search-box input {
+.form-input {
   width: 100%;
   padding: 12px 12px 12px 40px;
   border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  transition: border-color 0.3s ease;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
 }
 
-.search-box input:focus {
+.form-input:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: #667eea;
+  background: white;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .filter-controls {
   display: flex;
+  align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.filter-controls select {
+.form-select {
   padding: 12px 16px;
   border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  background: white;
-  cursor: pointer;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 14px;
   min-width: 150px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
 }
 
-.content-card {
-  background: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
-  padding: 2rem;
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.btn-outline-elegant {
+  padding: 12px 20px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.btn-outline-elegant:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+  transform: translateY(-1px);
+}
+
+.view-toggle {
+  display: flex;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.view-btn-elegant {
+  padding: 12px 16px;
+  border: none;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.view-btn-elegant:hover {
+  background: #f1f5f9;
+  color: #667eea;
+}
+
+.view-btn-elegant.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.view-btn-elegant:not(:last-child) {
+  border-right: 1px solid #e2e8f0;
+}
+
+/* List View Styles */
+.staff-list {
+  background: white;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1.8fr 1fr 1fr;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--gray-50);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1.8fr 1fr 1fr;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--gray-100);
+  align-items: center;
+  transition: var(--transition-normal);
+}
+
+.list-row:hover {
+  background: var(--gray-25);
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.col-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.staff-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.staff-info-compact h4 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
+.staff-id {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--primary-50);
+  color: var(--primary-700);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contact-info {
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+}
+
+.contact-info div {
+  margin-bottom: 0.25rem;
+}
+
+.contact-info div:last-child {
+  margin-bottom: 0;
+}
+
+.contact-info i {
+  width: 12px;
+  margin-right: 0.5rem;
+  color: var(--gray-400);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Grid View Styles */
 .staff-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 1.5rem;
+  gap: var(--space-lg);
+}
+
+/* View Toggle Styles */
+.view-toggle {
+  display: flex;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+}
+
+.view-btn {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: white;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  font-size: var(--font-size-sm);
+}
+
+.view-btn:hover {
+  background: var(--gray-50);
+  color: var(--gray-700);
+}
+
+.view-btn.active {
+  background: var(--primary-500);
+  color: white;
+}
+
+.view-btn:first-child {
+  border-right: 1px solid var(--gray-200);
+}
+
+.view-btn.active:first-child {
+  border-right-color: var(--primary-500);
 }
 
 .staff-card {
-  border: 1px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  padding: 1.5rem;
-  transition: all 0.3s ease;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: var(--transition-normal);
+  background: white;
 }
 
 .staff-card:hover {
-  border-color: var(--primary-color);
-  box-shadow: var(--shadow-soft);
+  border-color: var(--primary-500);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
 .staff-header {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .staff-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   flex-shrink: 0;
 }
 
@@ -1159,38 +1503,26 @@ export default {
 
 .staff-info h3 {
   margin: 0 0 0.25rem 0;
-  color: var(--text-dark);
-  font-size: 1.1rem;
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
 }
 
 .staff-role {
-  margin: 0 0 0.25rem 0;
-  color: var(--primary-color);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.staff-employee-id {
   margin: 0;
-  color: var(--text-medium);
-  font-size: 0.8rem;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
 }
 
 .staff-status {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-end;
 }
 
 .status-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
 }
 
-/* Toggle Switch Styles */
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -1211,8 +1543,8 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
+  background-color: var(--gray-400);
+  transition: var(--transition-normal);
   border-radius: 24px;
 }
 
@@ -1224,16 +1556,16 @@ export default {
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: .4s;
+  transition: var(--transition-normal);
   border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: var(--primary-color, #667eea);
+  background-color: var(--primary-500);
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px var(--primary-color, #667eea);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 input:checked + .slider:before {
@@ -1245,798 +1577,359 @@ input:disabled + .slider {
   cursor: not-allowed;
 }
 
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.status-badge.active {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-badge.inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.availability-badge {
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-
-.availability-badge.available {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.availability-badge.unavailable {
-  background: #fef3c7;
-  color: #92400e;
-}
-
 .staff-details {
-  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-md);
 }
 
-.detail-item {
+.staff-detail-item {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-medium);
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.detail-item i {
-  width: 16px;
-  color: var(--text-light);
+.staff-detail-item .label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  font-weight: 600;
+}
+
+.staff-detail-item .value {
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
 }
 
 .staff-actions {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--gray-200);
 }
 
-.btn-small {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.staff-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
 }
 
-.btn-outline {
-  background: transparent;
-  border: 1px solid #e2e8f0;
-  color: var(--text-medium);
-}
-
-.btn-outline:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.btn-danger {
-  background: transparent;
-  border: 1px solid #fee2e2;
-  color: #dc2626;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-  color: white;
-}
-
-/* Modal styles - same as Participants */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-medium);
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.modal-header h3 {
-  font-size: 1.2rem;
+.detail-section h4 {
+  margin: 0 0 var(--space-md) 0;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--text-dark);
+  color: var(--gray-800);
+  padding-bottom: var(--space-xs);
+  border-bottom: 2px solid var(--primary-500);
+}
+
+.detail-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  color: var(--text-light);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+.detail-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--gray-100);
 }
 
-.close-btn:hover {
-  color: var(--text-dark);
-  background: #f1f5f9;
+.detail-list li:last-child {
+  border-bottom: none;
 }
 
-.modal-body {
-  padding: 1.5rem;
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+}
+
+.detail-item .label {
+  font-weight: 500;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: var(--gray-800);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-dark);
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  transition: border-color 0.3s ease;
-  font-size: 1rem;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.form-group input[type="checkbox"] {
-  width: auto;
-  margin-right: 8px;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  padding: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
-  margin: 0;
-  margin-top: 1.5rem;
-}
-
-/* Premium Button System */
+/* Elegant Button Styles */
 .btn {
-  padding: 0.875rem 1.5rem;
+  padding: 12px 20px;
   border: none;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: 8px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
+  gap: 8px;
+  font-size: 14px;
   text-decoration: none;
-  position: relative;
-  overflow: hidden;
-  min-width: 120px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-}
-
-.btn:not(:disabled):active {
-  transform: scale(0.98);
-}
-
-.btn-small {
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  min-width: 90px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+  border: 2px solid transparent;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
-}
-
-.btn-secondary {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  border-color: #d1d5db;
-  color: #374151;
-  background: #f9fafb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
-}
-
-.btn-success:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
-}
-
-.btn-outline {
-  background: transparent;
-  border: 2px solid #3b82f6;
-  color: #3b82f6;
-}
-
-.btn-outline:hover:not(:disabled) {
-  background: #3b82f6;
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
-}
-
-/* New Color Scheme Buttons */
-.btn-view {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
-}
-
-.btn-view:hover:not(:disabled) {
-  border-color: #d1d5db;
-  color: #374151;
-  background: #f9fafb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-edit {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
-}
-
-.btn-edit:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
-}
-
-.btn-delete {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
-}
-
-.btn-delete:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
 .btn-cancel {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+  background: #f8fafc;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+  background: #e2e8f0;
+  color: #475569;
+  transform: translateY(-1px);
 }
 
-.btn-start {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.btn-edit {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  border: 2px solid transparent;
 }
 
-.btn-start:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+.btn-edit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 25px rgba(240, 147, 251, 0.3);
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.btn-delete:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(250, 112, 154, 0.3);
+}
+
+.btn-view {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.btn-view:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
 
 .btn-schedule {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
   color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  border: 2px solid transparent;
 }
 
 .btn-schedule:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 25px rgba(67, 233, 123, 0.3);
 }
 
-
-/* Loading and Empty states */
-.loading-state,
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid var(--primary-color);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 2s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: var(--text-light);
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  color: var(--text-dark);
-  margin-bottom: 0.5rem;
-}
-
-.empty-state p {
-  color: var(--text-medium);
-  margin-bottom: 2rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Notifications */
-:global(.success-notification) {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #10b981;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  animation: slideIn 0.3s ease;
-}
-
-:global(.error-notification) {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #dc2626;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.btn-small {
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  min-width: auto;
 }
 
 @media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-
-  .filters-section {
+  .filters-row {
     flex-direction: column;
     align-items: stretch;
   }
-
+  
   .search-box {
-    max-width: none;
+    min-width: auto;
+    width: 100%;
   }
-
+  
   .filter-controls {
-    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .form-select {
+    min-width: auto;
+    flex: 1;
   }
 
   .staff-grid {
     grid-template-columns: 1fr;
   }
-
+  
   .form-row {
     grid-template-columns: 1fr;
   }
-
-  .modal-actions {
-    flex-direction: column;
+  
+  .staff-details-grid {
+    grid-template-columns: 1fr;
   }
 
-  .staff-actions {
-    justify-content: center;
+  .list-header,
+  .list-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+  }
+
+  .list-header {
+    display: none;
+  }
+
+  .list-row {
+    padding: var(--space-md);
+    display: block;
+  }
+
+  .col-name,
+  .col-role,
+  .col-contact,
+  .col-status,
+  .col-actions {
+    margin-bottom: var(--space-sm);
+  }
+
+  .col-actions:last-child {
+    margin-bottom: 0;
+  }
+
+  .action-buttons {
+    justify-content: flex-start;
+  }
+
+  .view-toggle {
+    align-self: flex-start;
   }
 }
 
-/* Delete Modal Styles */
-.delete-modal {
-  max-width: 500px;
+/* Company Information Styles */
+.col-company {
+  flex: 0 0 200px;
+  padding: 12px;
 }
 
-.delete-confirmation {
-  text-align: center;
-}
-
-.delete-icon {
-  font-size: 4rem;
-  color: #f59e0b;
-  margin-bottom: 1rem;
-}
-
-.delete-confirmation h4 {
-  color: var(--text-dark);
-  margin-bottom: 1.5rem;
-  font-size: 1.25rem;
-}
-
-.staff-summary {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  text-align: left;
-}
-
-.staff-summary p {
-  margin: 0.5rem 0;
-  display: flex;
-  justify-content: space-between;
-}
-
-.staff-summary strong {
-  color: var(--text-medium);
-}
-
-.warning-text {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 6px;
-  padding: 1rem;
-  color: #92400e;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.form-help {
-  font-size: 0.8rem;
-  color: var(--text-light);
-  margin-top: 4px;
-  display: block;
-}
-
-/* View Modal Styles */
-.view-modal {
-  max-width: 700px;
-}
-
-.staff-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.detail-section {
-  background: #f8fafc;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.detail-section h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.detail-section .detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.detail-section .detail-item:last-child {
-  border-bottom: none;
-}
-
-.detail-item .label {
-  font-weight: 500;
-  color: var(--text-medium);
-}
-
-.detail-item .value {
-  font-weight: 600;
-  color: var(--text-dark);
-}
-
-/* Schedule Modal Styles */
-.schedule-modal {
-  max-width: 800px;
-  max-height: 90vh;
-  overflow: hidden;
+.company-info {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
-.schedule-modal .modal-header {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  color: white;
-  padding: 2rem;
-  border-radius: 12px 12px 0 0;
-}
-
-.schedule-modal .modal-header h3 {
-  color: white;
-  font-size: 1.4rem;
-  font-weight: 600;
-  margin: 0;
+.company-badge {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f8f9fa;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.schedule-modal .modal-header h3::before {
-  content: '\f073';
-  font-family: 'Font Awesome 5 Free';
-  font-weight: 900;
-  opacity: 0.8;
-}
-
-.schedule-modal .close-btn {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 8px;
-  transition: all 0.3s ease;
-}
-
-.schedule-modal .close-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
-}
-
-.schedule-modal .modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 2rem;
-  background: white;
-}
-
-.schedule-modal .form-group.full-width {
-  grid-column: 1 / -1;
-  margin-top: 1rem;
-}
-
-.schedule-modal .form-group label {
+.staff-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-green {
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.status-red {
+  background-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+.status-yellow {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+.status-orange {
+  background-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+}
+
+.status-gray {
+  background-color: #6b7280;
+  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.3);
+}
+
+.company-name {
+  color: #374151;
+}
+
+.status-text {
+  color: #6b7280;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Adjust list header for admin company column */
+.list-header .col-company {
   font-weight: 600;
   color: #374151;
-  margin-bottom: 0.75rem;
 }
 
-.schedule-modal .form-group label i {
-  color: #10b981;
-  font-size: 0.9rem;
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .col-company {
+    flex: 0 0 160px;
+  }
+  
+  .company-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  
+  .status-text {
+    font-size: 10px;
+  }
 }
 
-.schedule-modal .notes-textarea {
-  width: 100%;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 1rem;
-  font-family: inherit;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  resize: vertical;
-  transition: all 0.3s ease;
-  background: #f9fafb;
-}
-
-.schedule-modal .notes-textarea:focus {
-  outline: none;
-  border-color: #10b981;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-.schedule-modal .notes-textarea::placeholder {
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.schedule-modal .help-text {
-  color: #6b7280;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.schedule-modal .help-text::before {
-  content: '\f05a';
-  font-family: 'Font Awesome 5 Free';
-  font-weight: 900;
-  color: #10b981;
-  font-size: 0.8rem;
-}
-
-.schedule-modal .form-group input,
-.schedule-modal .form-group select {
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 0.875rem;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  background: white;
-}
-
-.schedule-modal .form-group input:focus,
-.schedule-modal .form-group select:focus {
-  outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-.schedule-modal .form-group small {
-  color: #6b7280;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  display: block;
-}
-
-.schedule-modal .btn-primary {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-  border: none;
-  color: white;
-  font-weight: 600;
-  padding: 1rem 1.5rem;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25) !important;
-}
-
-.schedule-modal .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35) !important;
-}
-
-.schedule-modal .btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.15);
-}
-
-.schedule-modal .btn-secondary {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
-  font-weight: 600;
-  padding: 1rem 1.5rem;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.schedule-modal .btn-secondary:hover {
-  border-color: #d1d5db;
-  color: #374151;
-  background: #f9fafb;
-  transform: translateY(-1px);
+@media (max-width: 768px) {
+  .col-company {
+    display: none;
+  }
 }
 </style>

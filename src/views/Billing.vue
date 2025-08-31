@@ -50,41 +50,55 @@
 
     <!-- Search and Filters -->
     <div class="filters-section">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Search invoices..."
-          @input="filterBills"
-        />
-      </div>
-      <div class="filter-controls">
-        <select v-model="statusFilter" @change="filterBills">
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-          <option value="overdue">Overdue</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select v-model="participantFilter" @change="filterBills">
-          <option value="">All Participants</option>
-          <option v-for="participant in participants" :key="participant.id" :value="participant.id">
-            {{ participant.first_name }} {{ participant.last_name }}
-          </option>
-        </select>
-        <input 
-          v-model="dateFromFilter" 
-          type="date" 
-          @change="filterBills"
-          placeholder="From Date"
-        />
-        <input 
-          v-model="dateToFilter" 
-          type="date" 
-          @change="filterBills"
-          placeholder="To Date"
-        />
+      <div class="filters-row">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search invoices..."
+            class="form-input"
+            @input="filterBills"
+          />
+        </div>
+        
+        <div class="filter-controls">
+          <select v-model="statusFilter" @change="filterBills" class="form-select">
+            <option value="pending">Pending Invoices</option>
+            <option value="overdue">Overdue Invoices</option>
+            <option value="paid">Paid Invoices</option>
+            <option value="cancelled">Cancelled Invoices</option>
+            <option value="">All Invoices</option>
+          </select>
+          
+          <select v-model="participantFilter" @change="filterBills" class="form-select">
+            <option value="">All Participants</option>
+            <option v-for="participant in participants" :key="participant.id" :value="participant.id">
+              {{ participant.first_name }} {{ participant.last_name }}
+            </option>
+          </select>
+          
+          <input 
+            v-model="dateFromFilter" 
+            type="date" 
+            class="form-input"
+            @change="filterBills"
+            placeholder="From Date"
+          />
+          
+          <input 
+            v-model="dateToFilter" 
+            type="date" 
+            class="form-input"
+            @change="filterBills"
+            placeholder="To Date"
+          />
+          
+          <button @click="clearFilters" class="btn btn-outline-elegant">
+            <i class="fas fa-times"></i>
+            Clear Filters
+          </button>
+        </div>
       </div>
     </div>
 
@@ -176,10 +190,6 @@
             <button @click="editBill(bill)" class="btn-small btn-outline">
               <i class="fas fa-edit"></i>
               Edit
-            </button>
-            <button @click="deleteBill(bill)" class="btn-small btn-danger">
-              <i class="fas fa-trash"></i>
-              Delete
             </button>
           </div>
         </div>
@@ -290,6 +300,7 @@
 import { mapState, mapActions, mapGetters } from 'pinia'
 import { useBillingStore } from '../stores/billing'
 import { useParticipantsStore } from '../stores/participants'
+import { showViewModal, showEditModal } from '../utils/errorHandler'
 
 export default {
   name: 'Billing',
@@ -297,7 +308,7 @@ export default {
     return {
       filteredBills: [],
       searchQuery: '',
-      statusFilter: '',
+      statusFilter: 'pending',
       participantFilter: '',
       dateFromFilter: '',
       dateToFilter: '',
@@ -468,11 +479,12 @@ export default {
       const amount = parseFloat(bill.total_amount || 0).toFixed(2)
       const period = this.formatDateRange(bill.service_period_start, bill.service_period_end)
       
-      alert(`📄 Invoice #${bill.invoice_number || bill.id}\n👤 Participant: ${participant}\n💰 Amount: $${amount}\n📊 Status: ${status}\n📅 Issue Date: ${this.formatDate(bill.issue_date)}\n📅 Due Date: ${this.formatDate(bill.due_date)}\n📅 Service Period: ${period}${bill.description ? '\n📝 Description: ' + bill.description : ''}`)
+      const details = `👤 Participant: ${participant}\n💰 Amount: $${amount}\n📊 Status: ${status}\n📅 Issue Date: ${this.formatDate(bill.issue_date)}\n📅 Due Date: ${this.formatDate(bill.due_date)}\n📅 Service Period: ${period}${bill.description ? '\n📝 Description: ' + bill.description : ''}`
+      showViewModal(details, `📄 Invoice #${bill.invoice_number || bill.id}`)
     },
 
     editBill(bill) {
-      alert(`Edit functionality for invoice #${bill.invoice_number || bill.id} - Coming soon!`)
+      showEditModal(`Edit functionality for invoice #${bill.invoice_number || bill.id} will be available soon! This feature will allow you to modify billing details and update invoice information.`, 'Edit Invoice')
     },
 
     async deleteBill(bill) {
@@ -572,6 +584,15 @@ export default {
       setTimeout(() => {
         notification.remove()
       }, 3000)
+    },
+
+    clearFilters() {
+      this.searchQuery = ''
+      this.statusFilter = ''
+      this.participantFilter = ''
+      this.dateFromFilter = ''
+      this.dateToFilter = ''
+      this.filterBills()
     }
   }
 }
@@ -688,20 +709,14 @@ export default {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.filter-controls {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.filter-controls select,
+/* Filter controls now use global styles for consistency */
 .filter-controls input {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  background: white;
-  cursor: pointer;
-  min-width: 120px;
+  padding: 10px 16px;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  min-width: 150px;
+  transition: all 0.2s ease;
+  margin: var(--space-xs) 0;
 }
 
 .content-card {
@@ -1149,6 +1164,133 @@ export default {
   .detail-row {
     grid-template-columns: 1fr;
     gap: 0.5rem;
+  }
+}
+
+/* Elegant Filter Styling */
+.filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  min-width: 300px;
+  flex: 1;
+}
+
+.search-box i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  z-index: 2;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-select {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 14px;
+  min-width: 150px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-outline-elegant {
+  padding: 12px 20px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.btn-outline-elegant:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .filter-controls {
+    justify-content: space-between;
+  }
+  
+  .form-select {
+    min-width: auto;
+    flex: 1;
   }
 }
 </style>

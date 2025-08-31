@@ -32,14 +32,49 @@
 
     <!-- Search and Filters -->
     <div class="filters-section">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Search participants..."
-          @input="filterParticipants"
-        />
+      <div class="filters-row">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search participants..."
+            class="form-input"
+            @input="filterParticipants"
+          />
+        </div>
+        
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+          <select v-model="statusFilter" @change="filterParticipants" class="form-select">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          
+          <button @click="clearFilters" class="btn btn-outline-elegant">
+            <i class="fas fa-times"></i>
+            Clear Filters
+          </button>
+          
+          <!-- View Toggle -->
+          <div class="view-toggle">
+            <button 
+              @click="currentView = 'list'" 
+              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              title="List View"
+            >
+              <i class="fas fa-list"></i>
+            </button>
+            <button 
+              @click="currentView = 'grid'" 
+              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
+              title="Grid View"
+            >
+              <i class="fas fa-th"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -66,7 +101,8 @@
         <p>Try adjusting your search criteria</p>
       </div>
 
-      <div v-else class="participants-grid">
+      <!-- Grid View -->
+      <div v-else-if="currentView === 'grid'" class="participants-grid">
         <div v-for="participant in filteredParticipants" :key="participant.id" class="participant-card">
           <div class="participant-header">
             <div class="participant-avatar">
@@ -93,33 +129,96 @@
               </div>
             </div>
           </div>
+          
           <div class="participant-details">
-            <div class="detail-item">
-              <i class="fas fa-envelope"></i>
-              <span>{{ participant.email || 'No email provided' }}</span>
-            </div>
-            <div class="detail-item">
+            <div class="detail-row">
               <i class="fas fa-phone"></i>
-              <span>{{ participant.phone || 'No phone provided' }}</span>
+              <span>{{ participant.phone || 'No phone' }}</span>
             </div>
-            <div class="detail-item">
-              <i class="fas fa-calendar"></i>
-              <span>Added {{ formatDate(participant.created_at) }}</span>
+            <div class="detail-row">
+              <i class="fas fa-envelope"></i>
+              <span>{{ participant.email || 'No email' }}</span>
+            </div>
+            <div class="detail-row">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>{{ formatAddress(participant.address) }}</span>
+            </div>
+            <div class="detail-row">
+              <i class="fas fa-calendar-alt"></i>
+              <span>{{ calculateAge(participant.date_of_birth) }} years old</span>
             </div>
           </div>
+          
           <div class="participant-actions">
-            <button @click="viewParticipant(participant)" class="btn-small btn-view">
+            <button @click="viewParticipant(participant)" class="btn btn-success btn-sm">
               <i class="fas fa-eye"></i>
-              View
             </button>
-            <button @click="editParticipant(participant)" class="btn-small btn-edit">
+            <button @click="editParticipant(participant)" class="btn btn-primary btn-sm">
               <i class="fas fa-edit"></i>
-              Edit
             </button>
-            <button @click="deleteParticipantHandler(participant)" class="btn-small btn-delete">
+            <button @click="deleteParticipant(participant)" class="btn btn-danger btn-sm">
               <i class="fas fa-trash"></i>
-              Delete
             </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- List View -->
+      <div v-else class="participants-list">
+        <div class="list-header">
+          <div class="header-cell">Name</div>
+          <div class="header-cell">NDIS Number</div>
+          <div class="header-cell">Contact</div>
+          <div class="header-cell">Age</div>
+          <div class="header-cell">Status</div>
+          <div class="header-cell">Actions</div>
+        </div>
+        <div v-for="participant in filteredParticipants" :key="participant.id" class="list-row">
+          <div class="list-cell">
+            <div class="participant-avatar">
+              {{ getInitials(participant.first_name, participant.last_name) }}
+            </div>
+            <div class="participant-name">
+              <span class="name">{{ participant.first_name }} {{ participant.last_name }}</span>
+              <span class="email">{{ participant.email }}</span>
+            </div>
+          </div>
+          <div class="list-cell">{{ participant.ndis_number || 'Not provided' }}</div>
+          <div class="list-cell">
+            <div class="contact-info">
+              <div>{{ participant.phone || 'No phone' }}</div>
+              <div>{{ participant.email || 'No email' }}</div>
+            </div>
+          </div>
+          <div class="list-cell">{{ calculateAge(participant.date_of_birth) }} years</div>
+          <div class="list-cell">
+            <div class="status-toggle">
+              <label class="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  :checked="participant.is_active !== false"
+                  @change="toggleParticipantStatus(participant)"
+                  :disabled="isSubmitting"
+                />
+                <span class="slider"></span>
+              </label>
+              <span :class="['status-badge', participant.is_active !== false ? 'active' : 'inactive']">
+                {{ participant.is_active !== false ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+          <div class="list-cell">
+            <div class="action-buttons">
+              <button @click="viewParticipant(participant)" class="btn btn-success btn-sm">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button @click="editParticipant(participant)" class="btn btn-primary btn-sm">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button @click="deleteParticipant(participant)" class="btn btn-danger btn-sm">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -177,7 +276,7 @@
               </div>
               <div class="form-group">
                 <label>State</label>
-                <select v-model="newParticipant.address.state">
+                <select v-model="newParticipant.address.state" class="form-select">
                   <option value="">Select State</option>
                   <option value="SA">SA</option>
                   <option value="NSW">NSW</option>
@@ -264,7 +363,7 @@
               </div>
               <div class="form-group">
                 <label>State</label>
-                <select v-model="newParticipant.address.state">
+                <select v-model="newParticipant.address.state" class="form-select">
                   <option value="">Select State</option>
                   <option value="SA">SA</option>
                   <option value="NSW">NSW</option>
@@ -397,6 +496,10 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
+            <button @click="deleteParticipantHandler(selectedParticipant); closeViewModal()" class="btn btn-delete">
+              <i class="fas fa-trash"></i>
+              Delete
+            </button>
           </div>
         </div>
       </div>
@@ -415,6 +518,8 @@ export default {
     return {
       filteredParticipants: [],
       searchQuery: '',
+      statusFilter: 'active',
+      currentView: 'list',
       showAddModal: false,
       showEditModal: false,
       showDeleteModal: false,
@@ -696,7 +801,20 @@ export default {
       return ((firstName?.[0] || '') + (lastName?.[0] || '')).toUpperCase()
     },
 
+    calculateAge(dateString) {
+      if (!dateString) return 'N/A'
+      const birthDate = new Date(dateString)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      return age
+    },
+
     formatDate(dateString) {
+      if (!dateString) return 'N/A'
       const date = new Date(dateString)
       const now = new Date()
       const diffTime = Math.abs(now - date)
@@ -705,7 +823,21 @@ export default {
       if (diffDays === 1) return 'yesterday'
       if (diffDays < 7) return `${diffDays} days ago`
       if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
-      return date.toLocaleDateString()
+      return `${Math.ceil(diffDays / 365)} years ago`
+    },
+
+    clearFilters() {
+      this.searchQuery = ''
+      this.statusFilter = ''
+      // Reset to show all participants
+      this.filteredParticipants = [...this.participants]
+      this.filterParticipants()
+    },
+
+    formatAddress(address) {
+      if (!address) return 'No address provided'
+      const parts = [address.street, address.suburb, address.state, address.postcode].filter(part => part && part.trim())
+      return parts.length > 0 ? parts.join(', ') : 'No address provided'
     },
 
 
@@ -742,179 +874,50 @@ export default {
 </script>
 
 <style scoped>
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--text-dark);
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: var(--white);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--primary-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.2rem;
-}
-
-.stat-icon.success {
-  background: var(--success-gradient);
-}
-
-.stat-number {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: var(--text-medium);
-}
-
-.filters-section {
-  margin-bottom: 2rem;
-}
+/* Component-specific styles that extend the global theme */
 
 .search-box {
-  position: relative;
   max-width: 400px;
-}
-
-.search-box i {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-light);
-}
-
-.search-box input {
-  width: 100%;
-  padding: 12px 12px 12px 40px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  transition: border-color 0.3s ease;
-}
-
-.search-box input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.content-card {
-  background: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
-  padding: 2rem;
-}
-
-.loading-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid var(--primary-color);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 2s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: var(--text-light);
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  color: var(--text-dark);
-  margin-bottom: 0.5rem;
-}
-
-.empty-state p {
-  color: var(--text-medium);
-  margin-bottom: 2rem;
 }
 
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  gap: var(--space-lg);
 }
 
 .participant-card {
-  border: 1px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  padding: 1.5rem;
-  transition: all 0.3s ease;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: var(--transition-normal);
+  background: white;
 }
 
 .participant-card:hover {
-  border-color: var(--primary-color);
-  box-shadow: var(--shadow-soft);
+  border-color: var(--primary-500);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
 .participant-header {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .participant-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   flex-shrink: 0;
 }
 
@@ -924,14 +927,14 @@ export default {
 
 .participant-info h3 {
   margin: 0 0 0.25rem 0;
-  color: var(--text-dark);
-  font-size: 1.1rem;
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
 }
 
 .participant-ndis {
   margin: 0;
-  color: var(--text-medium);
-  font-size: 0.9rem;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
 }
 
 .participant-status {
@@ -941,10 +944,9 @@ export default {
 .status-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
 }
 
-/* Toggle Switch Styles */
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -965,8 +967,8 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
+  background-color: var(--gray-400);
+  transition: var(--transition-normal);
   border-radius: 24px;
 }
 
@@ -978,16 +980,16 @@ export default {
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: .4s;
+  transition: var(--transition-normal);
   border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: var(--primary-color, #667eea);
+  background-color: var(--primary-500);
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px var(--primary-color, #667eea);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 input:checked + .slider:before {
@@ -999,537 +1001,517 @@ input:disabled + .slider {
   cursor: not-allowed;
 }
 
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.status-badge.active {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-badge.inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 .participant-details {
-  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-md);
 }
 
-.detail-item {
+.participant-detail-item {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-medium);
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.detail-item i {
-  width: 16px;
-  color: var(--text-light);
+.participant-detail-item .label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  font-weight: 600;
+}
+
+.participant-detail-item .value {
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
 }
 
 .participant-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--gray-200);
 }
 
-.btn-small {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.participant-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
 }
 
-.btn-outline {
-  background: transparent;
-  border: 1px solid #e2e8f0;
-  color: var(--text-medium);
-}
-
-.btn-outline:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.btn-danger {
-  background: transparent;
-  border: 1px solid #fee2e2;
-  color: #dc2626;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-  color: white;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-medium);
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.modal-header h3 {
-  font-size: 1.2rem;
+.detail-section h4 {
+  margin: 0 0 var(--space-md) 0;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--text-dark);
+  color: var(--gray-800);
+  padding-bottom: var(--space-xs);
+  border-bottom: 2px solid var(--primary-500);
+}
+
+.detail-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  color: var(--text-light);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+.detail-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--gray-100);
 }
 
-.close-btn:hover {
-  color: var(--text-dark);
-  background: #f1f5f9;
+.detail-list li:last-child {
+  border-bottom: none;
 }
 
-.modal-body {
-  padding: 1.5rem;
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+}
+
+.detail-item .label {
+  font-weight: 500;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: var(--gray-800);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
-.form-group {
+@media (max-width: 768px) {
+  .participants-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .participant-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== FILTER CONTROLS & VIEW TOGGLE ===== */
+.filters-section {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   margin-bottom: 1rem;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-dark);
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  transition: border-color 0.3s ease;
-  font-size: 1rem;
-  background: white;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.modal-actions {
+.filters-row {
   display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
-/* Premium Button System */
-.btn {
-  padding: 0.875rem 1.5rem;
-  border: none;
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-select {
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  min-width: 140px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background-color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.btn-outline-elegant {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  color: #4a5568;
+  padding: 0.75rem 1rem;
   border-radius: 10px;
   font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.btn-outline-elegant:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(102, 126, 234, 0.04) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+}
+
+.view-toggle {
+  display: flex;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.view-btn-elegant {
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  text-decoration: none;
-  position: relative;
+  font-weight: 600;
+  min-width: 44px;
+}
+
+.view-btn-elegant:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  transform: translateY(-1px);
+}
+
+.view-btn-elegant.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.25);
+}
+
+.view-btn-elegant:not(:last-child) {
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* ===== LIST VIEW STYLES ===== */
+.participants-list {
+  background: white;
+  border-radius: 12px;
   overflow: hidden;
-  min-width: 120px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 2fr 1.5fr 1.5fr 1fr;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.header-cell {
+  display: flex;
+  align-items: center;
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 2fr 1.5fr 1.5fr 1fr;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+
+.list-row:hover {
+  background: #f8fafc;
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.list-cell {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #374151;
+}
+
+.list-cell .participant-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.participant-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.participant-name .name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.participant-name .email {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contact-info > div {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== GRID VIEW IMPROVEMENTS ===== */
+.participants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.participant-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.participant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #e5e7eb;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
+  /* Filter controls responsive styles handled by global CSS */
+  
+  .list-header,
+  .list-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .list-header {
+    display: none;
+  }
+  
+  .list-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .list-cell {
+    justify-content: space-between;
+  }
+  
+  .participants-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Elegant Button Styles */
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  text-decoration: none;
 }
 
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-}
-
-.btn:not(:disabled):active {
-  transform: scale(0.98);
-}
-
-.btn-small {
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  min-width: 90px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+  border: 2px solid transparent;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
-}
-
-.btn-secondary {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  border-color: #d1d5db;
-  color: #374151;
-  background: #f9fafb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
-}
-
-.btn-success:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
-}
-
-.btn-outline {
-  background: transparent;
-  border: 2px solid #3b82f6;
-  color: #3b82f6;
-}
-
-.btn-outline:hover:not(:disabled) {
-  background: #3b82f6;
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
-}
-
-/* New Color Scheme Buttons */
-.btn-view {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
-}
-
-.btn-view:hover:not(:disabled) {
-  border-color: #d1d5db;
-  color: #374151;
-  background: #f9fafb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-edit {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
-}
-
-.btn-edit:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
-}
-
-.btn-delete {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
-}
-
-.btn-delete:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
 .btn-cancel {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+  background: #f8fafc;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: #e2e8f0;
+  color: #475569;
+  transform: translateY(-1px);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.btn-edit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 8px 25px rgba(240, 147, 251, 0.3);
 }
 
-.btn-start {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.btn-delete {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  border: 2px solid transparent;
 }
 
-.btn-start:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+.btn-delete:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 25px rgba(250, 112, 154, 0.3);
 }
 
-.btn-schedule {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.btn-view {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   color: white;
-  border: none;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  border: 2px solid transparent;
 }
 
-.btn-schedule:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+.btn-view:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Notifications */
-:global(.success-notification) {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #10b981;
+.btn-success {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
   color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  animation: slideIn 0.3s ease;
+  border: 2px solid transparent;
 }
 
-:global(.error-notification) {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #dc2626;
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(67, 233, 123, 0.3);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  animation: slideIn 0.3s ease;
+  border: 2px solid transparent;
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.btn-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(250, 112, 154, 0.3);
 }
 
-@media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-
-  .participants-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .modal-actions {
-    flex-direction: column;
-  }
-
-  .participant-actions {
-    flex-wrap: wrap;
-  }
-}
-
-/* Delete Modal Styles */
-.delete-modal {
-  max-width: 500px;
-}
-
-.delete-confirmation {
-  text-align: center;
-}
-
-.delete-icon {
-  font-size: 4rem;
-  color: #f59e0b;
-  margin-bottom: 1rem;
-}
-
-.delete-confirmation h4 {
-  color: var(--text-dark);
-  margin-bottom: 1.5rem;
-  font-size: 1.25rem;
-}
-
-.participant-summary {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  text-align: left;
-}
-
-.participant-summary p {
-  margin: 0.5rem 0;
-  display: flex;
-  justify-content: space-between;
-}
-
-.participant-summary strong {
-  color: var(--text-medium);
-}
-
-.warning-text {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 12px;
   border-radius: 6px;
-  padding: 1rem;
-  color: #92400e;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
+  min-width: auto;
 }
 
-/* View Modal Styles */
-.view-modal {
-  max-width: 700px;
-}
-
-.participant-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.detail-section {
-  background: #f8fafc;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.detail-section h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.detail-section .detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.detail-section .detail-item:last-child {
-  border-bottom: none;
-}
-
-.detail-item .label {
-  font-weight: 500;
-  color: var(--text-medium);
-}
-
-.detail-item .value {
-  font-weight: 600;
-  color: var(--text-dark);
-}
 </style>

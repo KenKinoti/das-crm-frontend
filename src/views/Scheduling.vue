@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="page-header">
       <h1>Shift Scheduling</h1>
-      <button @click="showAddModal = true" class="btn btn-primary">
+      <button @click="showAddModal = true" class="btn btn-shift">
         <i class="fas fa-plus"></i>
         Schedule New Shift
       </button>
@@ -48,57 +48,104 @@
       </div>
     </div>
 
-    <!-- Search and Filters -->
-    <div class="filters-section">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Search shifts..."
-          @input="filterShifts"
-        />
+    <!-- Critical Shifts ETA Card -->
+    <div v-if="criticalShifts.length > 0" class="eta-alert-card">
+      <div class="eta-card-header">
+        <div class="eta-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="eta-title">
+          <h3>Critical Shifts - Immediate Attention Required</h3>
+          <p>{{ criticalShifts.length }} shift{{ criticalShifts.length !== 1 ? 's' : '' }} starting soon</p>
+        </div>
       </div>
-      <div class="filter-controls">
-        <select v-model="statusFilter" @change="filterShifts">
-          <option value="">All Status</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select v-model="dateFilter" @change="filterShifts">
-          <option value="">All Dates</option>
-          <option value="today">Today</option>
-          <option value="tomorrow">Tomorrow</option>
-          <option value="this_week">This Week</option>
-          <option value="next_week">Next Week</option>
-        </select>
-        <input 
-          v-model="participantFilter" 
-          type="text" 
-          placeholder="Filter by participant..."
-          @input="filterShifts"
-        />
+      <div class="eta-shifts-list">
+        <div v-for="shift in criticalShifts.slice(0, 3)" :key="shift.id" class="eta-shift-item">
+          <div class="eta-shift-time">
+            <div class="eta-countdown">{{ getTimeUntilShift(shift) }}</div>
+            <div class="eta-shift-date">{{ formatTime(shift.start_time) }} - {{ formatDate(shift.start_time) }}</div>
+          </div>
+          <div class="eta-shift-details">
+            <div class="eta-participant">{{ getParticipantName(shift.participant_id) }}</div>
+            <div class="eta-staff">{{ getStaffName(shift.staff_id) }}</div>
+            <div class="eta-service">{{ shift.service_type }}</div>
+          </div>
+          <div class="eta-actions">
+            <button @click="startShift(shift)" class="btn-eta-start">
+              <i class="fas fa-play"></i>
+              Start Now
+            </button>
+          </div>
+        </div>
+        <div v-if="criticalShifts.length > 3" class="eta-more">
+          +{{ criticalShifts.length - 3 }} more critical shifts
+        </div>
       </div>
     </div>
 
-    <!-- Calendar View Toggle -->
-    <div class="view-toggle">
-      <button 
-        @click="currentView = 'list'" 
-        :class="['view-btn', { active: currentView === 'list' }]"
-      >
-        <i class="fas fa-list"></i>
-        List View
-      </button>
-      <button 
-        @click="currentView = 'calendar'" 
-        :class="['view-btn', { active: currentView === 'calendar' }]"
-      >
-        <i class="fas fa-calendar"></i>
-        Calendar View
-      </button>
+    <!-- Search and Filters -->
+    <div class="filters-section">
+      <div class="filters-row">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search shifts..." 
+            class="form-input"
+            @input="filterShifts"
+          />
+        </div>
+        
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+          <select v-model="statusFilter" @change="filterShifts" class="form-select">
+            <option value="">All Status</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          
+          <select v-model="dateFilter" @change="filterShifts" class="form-select">
+            <option value="">All Dates</option>
+            <option value="today">Today</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="this_week">This Week</option>
+            <option value="next_week">Next Week</option>
+          </select>
+          
+          <button @click="clearFilters" class="btn btn-outline-elegant">
+            <i class="fas fa-times"></i>
+            Clear Filters
+          </button>
+          
+          <!-- View Toggle -->
+          <div class="view-toggle">
+            <button 
+              @click="currentView = 'grid'" 
+              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
+              title="Grid View"
+            >
+              <i class="fas fa-th"></i>
+            </button>
+            <button 
+              @click="currentView = 'list'" 
+              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              title="List View"
+            >
+              <i class="fas fa-list"></i>
+            </button>
+            <button 
+              @click="currentView = 'calendar'" 
+              :class="['view-btn-elegant', { active: currentView === 'calendar' }]"
+              title="Calendar View"
+            >
+              <i class="fas fa-calendar"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Shifts List/Calendar -->
@@ -112,7 +159,7 @@
         <i class="fas fa-calendar-alt"></i>
         <h3>No Shifts Scheduled</h3>
         <p>Get started by scheduling your first shift</p>
-        <button @click="showAddModal = true" class="btn btn-primary">
+        <button @click="showAddModal = true" class="btn btn-shift">
           <i class="fas fa-plus"></i>
           Schedule First Shift
         </button>
@@ -124,16 +171,19 @@
         <p>Try adjusting your search criteria</p>
       </div>
 
-      <!-- List View -->
-      <div v-else-if="currentView === 'list'" class="shifts-grid">
-        <div v-for="shift in filteredShifts" :key="shift.id" :class="['shift-card', `shift-${shift.status}`]">
-          <!-- Debug info (remove in production) -->
+      <!-- Grid View -->
+      <div v-if="currentView === 'grid'" class="shifts-grid">
+        <div v-for="shift in filteredShifts" :key="shift.id" :class="['shift-card', `shift-${shift.status}`, getUrgencyClass(shift)]">
           <div class="shift-header">
             <div class="shift-time">
               <div class="time-main">{{ formatTime(shift.start_time) }} - {{ formatTime(shift.end_time) }}</div>
               <div class="time-date">{{ formatDate(shift.start_time) }}</div>
             </div>
             <div class="shift-status">
+              <div v-if="getUrgencyLevel(shift) !== 'normal'" class="urgency-indicator" :class="getUrgencyLevel(shift)">
+                <i :class="getUrgencyIcon(shift)"></i>
+                <span>{{ getUrgencyText(shift) }}</span>
+              </div>
               <span :class="['status-badge', shift.status]">
                 {{ formatStatus(shift.status) }}
               </span>
@@ -178,14 +228,13 @@
           </div>
 
           <div class="shift-actions">
-            <button @click="viewShift(shift)" class="btn-small btn-view">
-              <i class="fas fa-eye"></i>
+            <button @click="viewShift(shift)" class="btn-small btn-info">
               View
             </button>
             <button 
               v-if="shift.status === 'scheduled'" 
               @click="startShift(shift)" 
-              class="btn-small btn-start"
+              class="btn-small btn-shift"
               :disabled="isSubmitting"
             >
               <i class="fas fa-play"></i>
@@ -193,7 +242,7 @@
             </button>
             <button 
               v-if="shift.status === 'in_progress'" 
-              @click="completeShift(shift)" 
+              @click="showCompleteShiftModal(shift)" 
               class="btn-small btn-complete"
               :disabled="isSubmitting"
             >
@@ -204,16 +253,72 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="cancelShift(shift)" class="btn-small btn-cancel">
+            <button v-if="canCancelShifts" @click="showCancelShiftModal(shift)" class="btn-small btn-cancel">
               <i class="fas fa-times"></i>
               Cancel
             </button>
           </div>
         </div>
       </div>
+      <!-- List View -->
+      <div v-else-if="currentView === 'list'" class="shifts-list-view">
+        <div class="list-header">
+          <div class="header-cell">Time</div>
+          <div class="header-cell">Participant</div>
+          <div class="header-cell">Staff</div>
+          <div class="header-cell">Service</div>
+          <div class="header-cell">Location</div>
+          <div class="header-cell">Status</div>
+          <div class="header-cell">Actions</div>
+        </div>
+        <div v-for="shift in filteredShifts" :key="shift.id" :class="['shift-row', `shift-${shift.status}`, getUrgencyClass(shift)]">
+          <div class="row-cell time-cell">
+            <div class="time-main">{{ formatTime(shift.start_time) }} - {{ formatTime(shift.end_time) }}</div>
+            <div class="time-date">{{ formatDate(shift.start_time) }}</div>
+          </div>
+          <div class="row-cell participant-cell">{{ getParticipantName(shift.participant_id) }}</div>
+          <div class="row-cell staff-cell">{{ getStaffName(shift.staff_id) }}</div>
+          <div class="row-cell service-cell">{{ shift.service_type }}</div>
+          <div class="row-cell location-cell">{{ shift.location }}</div>
+          <div class="row-cell status-cell">
+            <span :class="['status-badge', shift.status]">
+              {{ formatStatus(shift.status) }}
+            </span>
+            <div v-if="getUrgencyLevel(shift) !== 'normal'" class="urgency-indicator" :class="getUrgencyLevel(shift)">
+              <i :class="getUrgencyIcon(shift)"></i>
+            </div>
+          </div>
+          <div class="row-cell actions-cell">
+            <button 
+              v-if="shift.status === 'scheduled'" 
+              @click="startShift(shift)" 
+              class="btn-mini btn-start"
+              :disabled="isSubmitting"
+              title="Start Shift"
+            >
+              <i class="fas fa-play"></i>
+            </button>
+            <button 
+              v-if="shift.status === 'in_progress'" 
+              @click="showCompleteShiftModal(shift)" 
+              class="btn-mini btn-complete"
+              :disabled="isSubmitting"
+              title="Complete Shift"
+            >
+              <i class="fas fa-check-circle"></i>
+            </button>
+            <button @click="editShift(shift)" class="btn-mini btn-edit" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button v-if="canCancelShifts" @click="showCancelShiftModal(shift)" class="btn-mini btn-cancel" title="Cancel">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Calendar View -->
-      <div v-else class="calendar-view">
+      <div v-else-if="currentView === 'calendar'" class="calendar-view">
         <div class="calendar-header">
           <button @click="previousMonth" class="calendar-nav-btn">
             <i class="fas fa-chevron-left"></i>
@@ -263,7 +368,7 @@
     <!-- Add Shift Modal -->
     <div v-if="showAddModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
-        <div class="modal-header">
+        <div class="modal-header modal-header-shift-success">
           <h3>Schedule New Shift</h3>
           <button @click="closeModal" class="close-btn">
             <i class="fas fa-times"></i>
@@ -274,7 +379,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Participant *</label>
-                <select v-model="newShift.participant_id" required>
+                <select v-model="newShift.participant_id" class="form-select" required>
                   <option value="">Select Participant</option>
                   <option v-for="participant in participants" :key="participant.id" :value="participant.id">
                     {{ participant.first_name }} {{ participant.last_name }}
@@ -283,7 +388,7 @@
               </div>
               <div class="form-group">
                 <label>Staff Member *</label>
-                <select v-model="newShift.staff_id" required>
+                <select v-model="newShift.staff_id" class="form-select" required>
                   <option value="">Select Staff</option>
                   <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
                     {{ staff.first_name }} {{ staff.last_name }}
@@ -295,11 +400,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Date *</label>
-                <input v-model="newShift.date" type="date" required />
+                <input v-model="newShift.date" type="date" class="form-input" required />
               </div>
               <div class="form-group">
                 <label>Service Type *</label>
-                <select v-model="newShift.service_type" required>
+                <select v-model="newShift.service_type" class="form-select" required>
                   <option value="">Select Service</option>
                   <option value="Personal Care">Personal Care</option>
                   <option value="Community Access">Community Access</option>
@@ -315,7 +420,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Start Time *</label>
-                <input v-model="newShift.start_time" type="time" required @change="calculateEndTimeFromDuration" />
+                <input v-model="newShift.start_time" type="time" class="form-input" required @change="calculateEndTimeFromDuration" />
               </div>
               <div class="form-group">
                 <label>Duration (hours)</label>
@@ -325,6 +430,7 @@
                   step="0.5" 
                   min="0.5" 
                   max="24" 
+                  class="form-input"
                   placeholder="4.0" 
                   @input="calculateEndTimeFromDuration"
                 />
@@ -335,7 +441,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>End Time *</label>
-                <input v-model="newShift.end_time" type="time" required @change="calculateDurationFromTimes" />
+                <input v-model="newShift.end_time" type="time" class="form-input" required @change="calculateDurationFromTimes" />
                 <small>Or set manually to override duration</small>
               </div>
               <div class="form-group"></div>
@@ -344,11 +450,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Hourly Rate ($) *</label>
-                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" required placeholder="45.00" />
+                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" class="form-input" required placeholder="45.00" />
               </div>
               <div class="form-group">
                 <label>Location *</label>
-                <select v-model="newShift.location" required>
+                <select v-model="newShift.location" class="form-select" required>
                   <option value="">Select Location</option>
                   <option value="Participant's Home">Participant's Home</option>
                   <option value="Community">Community</option>
@@ -364,6 +470,7 @@
               <textarea 
                 v-model="newShift.notes" 
                 rows="3" 
+                class="form-textarea"
                 placeholder="Any special instructions or notes for this shift..."
               ></textarea>
             </div>
@@ -377,7 +484,7 @@
 
             <div class="modal-actions">
               <button type="button" @click="closeModal" class="btn btn-cancel">Cancel</button>
-              <button type="submit" class="btn btn-schedule" :disabled="isSubmitting">
+              <button type="submit" class="btn btn-shift" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
                   Scheduling...
@@ -396,7 +503,7 @@
     <!-- Edit Shift Modal -->
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal-content" @click.stop>
-        <div class="modal-header">
+        <div class="modal-header modal-header-shift-success">
           <h3>Edit Shift</h3>
           <button @click="closeEditModal" class="close-btn">
             <i class="fas fa-times"></i>
@@ -407,7 +514,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Participant *</label>
-                <select v-model="newShift.participant_id" required>
+                <select v-model="newShift.participant_id" class="form-select" required>
                   <option value="">Select Participant</option>
                   <option v-for="participant in participants" :key="participant.id" :value="participant.id">
                     {{ participant.first_name }} {{ participant.last_name }}
@@ -416,7 +523,7 @@
               </div>
               <div class="form-group">
                 <label>Staff Member *</label>
-                <select v-model="newShift.staff_id" required>
+                <select v-model="newShift.staff_id" class="form-select" required>
                   <option value="">Select Staff</option>
                   <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
                     {{ staff.first_name }} {{ staff.last_name }}
@@ -428,11 +535,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Date *</label>
-                <input v-model="newShift.date" type="date" required />
+                <input v-model="newShift.date" type="date" class="form-input" required />
               </div>
               <div class="form-group">
                 <label>Service Type *</label>
-                <select v-model="newShift.service_type" required>
+                <select v-model="newShift.service_type" class="form-select" required>
                   <option value="">Select Service</option>
                   <option value="Personal Care">Personal Care</option>
                   <option value="Community Access">Community Access</option>
@@ -448,7 +555,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Start Time *</label>
-                <input v-model="newShift.start_time" type="time" required @change="calculateEndTimeFromDuration" />
+                <input v-model="newShift.start_time" type="time" class="form-input" required @change="calculateEndTimeFromDuration" />
               </div>
               <div class="form-group">
                 <label>Duration (hours)</label>
@@ -458,6 +565,7 @@
                   step="0.5" 
                   min="0.5" 
                   max="24" 
+                  class="form-input"
                   placeholder="4.0" 
                   @input="calculateEndTimeFromDuration"
                 />
@@ -468,7 +576,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>End Time *</label>
-                <input v-model="newShift.end_time" type="time" required @change="calculateDurationFromTimes" />
+                <input v-model="newShift.end_time" type="time" class="form-input" required @change="calculateDurationFromTimes" />
                 <small>Or set manually to override duration</small>
               </div>
               <div class="form-group"></div>
@@ -477,11 +585,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Hourly Rate ($) *</label>
-                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" required placeholder="45.00" />
+                <input v-model="newShift.hourly_rate" type="number" step="0.01" min="0" class="form-input" required placeholder="45.00" />
               </div>
               <div class="form-group">
                 <label>Location *</label>
-                <select v-model="newShift.location" required>
+                <select v-model="newShift.location" class="form-select" required>
                   <option value="">Select Location</option>
                   <option value="Participant's Home">Participant's Home</option>
                   <option value="Community">Community</option>
@@ -497,13 +605,14 @@
               <textarea 
                 v-model="newShift.notes" 
                 rows="3" 
+                class="form-textarea"
                 placeholder="Any special instructions or notes for this shift..."
               ></textarea>
             </div>
 
             <div class="modal-actions">
               <button type="button" @click="closeEditModal" class="btn btn-cancel">Cancel</button>
-              <button type="submit" class="btn btn-edit" :disabled="isSubmitting">
+              <button type="submit" class="btn btn-shift" :disabled="isSubmitting">
                 <span v-if="isSubmitting">
                   <i class="fas fa-spinner fa-spin"></i>
                   Updating...
@@ -522,7 +631,7 @@
     <!-- View Shift Modal -->
     <div v-if="showViewModal && selectedShift" class="modal-overlay" @click="closeViewModal">
       <div class="modal-content view-modal" @click.stop>
-        <div class="modal-header">
+        <div class="modal-header modal-header-shift-info">
           <h3>Shift Details</h3>
           <button @click="closeViewModal" class="close-btn">
             <i class="fas fa-times"></i>
@@ -610,7 +719,7 @@
             </button>
             <button 
               v-if="selectedShift.status === 'in_progress'" 
-              @click="completeShift(selectedShift); closeViewModal()" 
+              @click="showCompleteShiftModal(selectedShift); closeViewModal()" 
               class="btn btn-success"
             >
               <i class="fas fa-check"></i>
@@ -671,7 +780,7 @@
     <!-- Start Shift Modal -->
     <div v-if="showStartModal && shiftToStart" class="modal-overlay" @click="closeStartModal">
       <div class="modal-content start-modal" @click.stop>
-        <div class="modal-header">
+        <div class="modal-header modal-header-shift-success">
           <h3>Start Shift</h3>
           <button @click="closeStartModal" class="close-btn">
             <i class="fas fa-times"></i>
@@ -713,7 +822,7 @@
     <!-- Complete Shift Modal -->
     <div v-if="showCompleteModal && shiftToComplete" class="modal-overlay" @click="closeCompleteModal">
       <div class="modal-content complete-modal" @click.stop>
-        <div class="modal-header">
+        <div class="modal-header modal-header-shift-success">
           <h3>Complete Shift</h3>
           <button @click="closeCompleteModal" class="close-btn">
             <i class="fas fa-times"></i>
@@ -770,6 +879,7 @@ import { mapState, mapActions } from 'pinia'
 import { useShiftsStore } from '../stores/shifts'
 import { useParticipantsStore } from '../stores/participants'
 import { useUsersStore } from '../stores/users'
+import { useAuthStore } from '../stores/auth'
 import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
 
 export default {
@@ -780,8 +890,7 @@ export default {
       searchQuery: '',
       statusFilter: '',
       dateFilter: '',
-      participantFilter: '',
-      currentView: 'list',
+      currentView: 'grid',
       showAddModal: false,
       showEditModal: false,
       showViewModal: false,
@@ -816,6 +925,18 @@ export default {
     ...mapState(useShiftsStore, ['shifts', 'isLoading', 'error']),
     ...mapState(useParticipantsStore, { allParticipants: 'participants' }),
     ...mapState(useUsersStore, { allStaffMembers: 'users' }),
+    ...mapState(useAuthStore, ['user']),
+    
+    // Permission checking
+    canCancelShifts() {
+      return this.user && (this.user.role === 'admin' || this.user.role === 'manager')
+    },
+
+    criticalShifts() {
+      return this.filteredShifts.filter(shift => {
+        return shift.status === 'scheduled' && this.getUrgencyLevel(shift) === 'critical'
+      }).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+    },
     
     // Filter only active participants and staff
     participants() {
@@ -888,7 +1009,7 @@ export default {
     await this.loadData()
   },
   methods: {
-    ...mapActions(useShiftsStore, ['fetchShifts', 'createShift', 'updateShift', 'deleteShift']),
+    ...mapActions(useShiftsStore, ['fetchShifts', 'createShift', 'updateShift', 'updateShiftStatus', 'startShift', 'completeShift', 'cancelShift', 'deleteShift']),
     ...mapActions(useParticipantsStore, ['fetchParticipants']),
     ...mapActions(useUsersStore, ['fetchUsers']),
     
@@ -931,6 +1052,13 @@ export default {
       } finally {
         this.isLoading = false
       }
+    },
+
+    clearFilters() {
+      this.searchQuery = ''
+      this.statusFilter = ''
+      this.dateFilter = ''
+      this.filterShifts()
     },
 
     filterShifts() {
@@ -1183,70 +1311,60 @@ export default {
       
       this.isSubmitting = true
       try {
-        console.log('🚀 Starting shift process for:', this.shiftToStart.id)
-        console.log('📊 Current shift status before:', this.shiftToStart.status)
-        
-        // Optimistically update the UI first
-        const shiftIndex = this.shifts.findIndex(s => s.id === this.shiftToStart.id)
-        console.log('📍 Found shift at index:', shiftIndex)
-        
-        if (shiftIndex !== -1) {
-          console.log('⚡ Updating shift status optimistically...')
-          
-          // Create a completely new shift object to force reactivity
-          const updatedShift = {
-            ...this.shifts[shiftIndex],
-            status: 'in_progress',
-            actual_start_time: new Date().toISOString()
-          }
-          
-          // Replace the entire array to force Vue to detect changes
-          const newShifts = [...this.shifts]
-          newShifts[shiftIndex] = updatedShift
-          this.shifts = newShifts
-          
-          console.log('✅ Local update done. New status:', this.shifts[shiftIndex].status)
-          console.log('🔍 Updated shift object:', this.shifts[shiftIndex])
-        }
-        
-        // Force immediate UI update
-        this.filterShifts()
-        this.$nextTick(() => {
-          this.$forceUpdate()
-        })
-        
         const updateData = {
           status: 'in_progress',
           actual_start_time: new Date().toISOString()
         }
         
-        console.log('🌐 Sending API update:', updateData)
-        const result = await this.updateShift(this.shiftToStart.id, updateData)
-        console.log('✅ API update successful:', result)
+        console.log('🚀 Starting shift:', this.shiftToStart.id)
+        console.log('📊 Update data:', updateData)
+        console.log('🔑 Auth token:', localStorage.getItem('auth_token')?.substring(0, 10) + '...')
         
-        // Refresh from server to ensure consistency
-        console.log('🔄 Refreshing data from server...')
+        // Use direct fetch for maximum debugging visibility
+        const response = await fetch(`http://localhost:8080/api/v1/shifts/${this.shiftToStart.id}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          },
+          body: JSON.stringify(updateData)
+        })
+        
+        console.log('🔍 Response status:', response.status)
+        console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()))
+        
+        const responseText = await response.text()
+        console.log('🔍 Raw response:', responseText)
+        
+        if (!response.ok) {
+          throw new Error(`API call failed with status ${response.status}: ${responseText}`)
+        }
+        
+        let responseData
+        try {
+          responseData = JSON.parse(responseText)
+          console.log('✅ Parsed response:', responseData)
+        } catch (parseError) {
+          console.warn('⚠️ Could not parse response as JSON:', parseError)
+          responseData = { success: true }
+        }
+        
+        // Refresh data from server
         await this.fetchShifts()
         this.filterShifts()
-        
-        // Check if the shift status is correct after refresh
-        const updatedShift = this.shifts.find(s => s.id === this.shiftToStart.id)
-        console.log('📊 Final shift status after refresh:', updatedShift?.status)
         
         this.closeStartModal()
         showSuccessNotification('Shift started successfully!')
+        
       } catch (error) {
-        console.error('❌ Error starting shift:', error)
-        // Revert optimistic update on error
-        await this.fetchShifts()
-        this.filterShifts()
-        showErrorNotification(error, 'Error starting shift. Please try again.')
+        console.error('❌ Start shift failed:', error)
+        showErrorNotification(error, `Error starting shift: ${error.message}`)
       } finally {
         this.isSubmitting = false
       }
     },
 
-    async completeShift(shift) {
+    async showCompleteShiftModal(shift) {
       this.shiftToComplete = shift
       this.completionNotes = ''
       this.showCompleteModal = true
@@ -1257,40 +1375,10 @@ export default {
       
       this.isSubmitting = true
       try {
-        // Optimistically update the UI first
-        const shiftIndex = this.shifts.findIndex(s => s.id === this.shiftToComplete.id)
-        if (shiftIndex !== -1) {
-          this.shifts[shiftIndex].status = 'completed'
-          this.shifts[shiftIndex].actual_end_time = new Date().toISOString()
-          if (this.completionNotes && this.completionNotes.trim()) {
-            this.shifts[shiftIndex].completion_notes = this.completionNotes.trim()
-          }
-          
-          // Also update filteredShifts if they exist
-          const filteredIndex = this.filteredShifts.findIndex(s => s.id === this.shiftToComplete.id)
-          if (filteredIndex !== -1) {
-            this.filteredShifts[filteredIndex].status = 'completed'
-            this.filteredShifts[filteredIndex].actual_end_time = new Date().toISOString()
-            if (this.completionNotes && this.completionNotes.trim()) {
-              this.filteredShifts[filteredIndex].completion_notes = this.completionNotes.trim()
-            }
-          }
-        }
+        const completionNotes = this.completionNotes && this.completionNotes.trim() ? this.completionNotes.trim() : ''
         
-        // Force immediate UI update
-        this.filterShifts()
-        this.$forceUpdate()
-        
-        const updateData = {
-          status: 'completed',
-          actual_end_time: new Date().toISOString()
-        }
-        if (this.completionNotes && this.completionNotes.trim()) {
-          updateData.completion_notes = this.completionNotes.trim()
-        }
-        
-        console.log('Completing shift with data:', updateData)
-        await this.updateShift(this.shiftToComplete.id, updateData)
+        // Use the store's completeShift method which handles the correct API call
+        await this.completeShift(this.shiftToComplete.id, completionNotes)
         
         // Refresh from server to ensure consistency
         await this.fetchShifts()
@@ -1298,10 +1386,6 @@ export default {
         this.closeCompleteModal()
         showSuccessNotification('Shift completed successfully!')
       } catch (error) {
-        console.error('Error completing shift:', error)
-        // Revert optimistic update on error
-        await this.fetchShifts()
-        this.filterShifts()
         showErrorNotification(error, 'Error completing shift. Please try again.')
       } finally {
         this.isSubmitting = false
@@ -1455,7 +1539,7 @@ export default {
       this.resetForm()
     },
 
-    cancelShift(shift) {
+    showCancelShiftModal(shift) {
       this.shiftToDelete = shift
       this.showDeleteModal = true
     },
@@ -1465,18 +1549,14 @@ export default {
       
       this.isSubmitting = true
       try {
-        const updateData = { 
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString()
-        }
-        await this.updateShift(this.shiftToDelete.id, updateData)
+        // Use the store's cancelShift method which handles the correct API call
+        await this.cancelShift(this.shiftToDelete.id, 'Cancelled by user')
         await this.fetchShifts()
         this.filterShifts()
         this.$forceUpdate()
         this.closeDeleteModal()
         showSuccessNotification('Shift cancelled successfully!')
       } catch (error) {
-        console.error('Error cancelling shift:', error)
         showErrorNotification(error, 'Error cancelling shift. Please try again.')
       } finally {
         this.isSubmitting = false
@@ -1590,7 +1670,75 @@ export default {
       }
       return staff ? `${staff.first_name} ${staff.last_name}` : 'Unknown Staff'
     },
+
+    getUrgencyLevel(shift) {
+      if (shift.status !== 'scheduled') return 'normal'
+      
+      const now = new Date()
+      const shiftStart = new Date(shift.start_time)
+      const daysUntilStart = (shiftStart - now) / (1000 * 60 * 60 * 24)
+      
+      // Critical if shift starts within 2 days
+      if (daysUntilStart <= 2 && daysUntilStart > 0) {
+        return 'critical'
+      }
+      // Urgent if shift starts within 7 days
+      else if (daysUntilStart <= 7 && daysUntilStart > 0) {
+        return 'urgent'
+      }
+      
+      return 'normal'
+    },
+
+    getUrgencyClass(shift) {
+      const urgency = this.getUrgencyLevel(shift)
+      if (urgency === 'critical') return 'shift-critical'
+      if (urgency === 'urgent') return 'shift-urgent'
+      return ''
+    },
     
+    getUrgencyIcon(shift) {
+      const urgency = this.getUrgencyLevel(shift)
+      if (urgency === 'critical') return 'fas fa-exclamation-circle'
+      if (urgency === 'urgent') return 'fas fa-exclamation-triangle'
+      return ''
+    },
+    
+    getUrgencyText(shift) {
+      const urgency = this.getUrgencyLevel(shift)
+      const now = new Date()
+      const shiftStart = new Date(shift.start_time)
+      const daysUntilStart = Math.ceil((shiftStart - now) / (1000 * 60 * 60 * 24))
+      
+      if (urgency === 'critical') {
+        return daysUntilStart === 1 ? 'Tomorrow' : `${daysUntilStart} days left`
+      }
+      if (urgency === 'urgent') {
+        return `${daysUntilStart} days left`
+      }
+      return ''
+    },
+    
+    getTimeUntilShift(shift) {
+      const now = new Date()
+      const shiftStart = new Date(shift.start_time)
+      const diffMs = shiftStart - now
+      
+      if (diffMs < 0) return 'Starting now'
+      
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+      
+      if (diffHours === 0) {
+        return `${diffMinutes}m`
+      } else if (diffHours < 24) {
+        return `${diffHours}h ${diffMinutes}m`
+      } else {
+        const diffDays = Math.floor(diffHours / 24)
+        const remainingHours = diffHours % 24
+        return `${diffDays}d ${remainingHours}h`
+      }
+    },
 
     // Calendar methods
     previousMonth() {
@@ -1642,16 +1790,6 @@ export default {
         const durationMs = endDate - startDate
         this.newShift.duration_hours = parseFloat((durationMs / (1000 * 60 * 60)).toFixed(1))
       }
-    },
-
-    formatStatus(status) {
-      const statusMap = {
-        scheduled: 'Scheduled',
-        in_progress: 'In Progress',
-        completed: 'Completed',
-        cancelled: 'Cancelled'
-      }
-      return statusMap[status] || status
     }
   }
 }
@@ -1676,6 +1814,409 @@ export default {
   color: var(--text-dark);
 }
 
+/* Filters Section - Enhanced for Care Plans style */
+/* Participants-style filters */
+.filters-section {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  margin-bottom: 1rem;
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-select {
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  min-width: 140px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background-color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.btn-outline-elegant {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  color: #4a5568;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.btn-outline-elegant:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(102, 126, 234, 0.04) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+}
+
+.view-toggle {
+  display: flex;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.view-btn-elegant {
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  min-width: 44px;
+}
+
+.view-btn-elegant:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  transform: translateY(-1px);
+}
+
+.view-btn-elegant.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.25);
+}
+
+/* ETA Alert Card */
+.eta-alert-card {
+  background: linear-gradient(135deg, 
+    #fee2e2 0%, 
+    #fecaca 25%, 
+    #fee2e2 50%, 
+    #fecaca 75%, 
+    #fee2e2 100%);
+  background-size: 400% 400%;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 20px;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 10px 40px rgba(239, 68, 68, 0.2),
+    0 4px 15px rgba(239, 68, 68, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  animation: etaBackgroundShift 8s ease-in-out infinite, etaPulse 3s infinite;
+}
+
+.eta-alert-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, 
+    #ef4444, #dc2626, #b91c1c, #ef4444, #dc2626);
+  background-size: 300% 300%;
+  border-radius: 22px;
+  z-index: -1;
+  animation: etaBorderGlow 4s ease-in-out infinite;
+}
+
+.eta-alert-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at top right, 
+    rgba(239, 68, 68, 0.1) 0%, 
+    transparent 50%),
+    radial-gradient(ellipse at bottom left, 
+    rgba(220, 38, 38, 0.05) 0%, 
+    transparent 50%);
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+.eta-card-header {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 2rem 1rem;
+  gap: 1rem;
+}
+
+.eta-icon {
+  width: 60px;
+  height: 60px;
+  background: #ef4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.eta-title h3 {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.eta-title p {
+  margin: 0.25rem 0 0;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.eta-shifts-list {
+  padding: 0 2rem 1.5rem;
+}
+
+.eta-shift-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  transition: all 0.3s ease;
+}
+
+.eta-shift-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);
+}
+
+.eta-shift-time {
+  flex: 1;
+}
+
+.eta-countdown {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #dc2626;
+  line-height: 1;
+}
+
+.eta-shift-date {
+  font-size: 0.75rem;
+  color: #7f1d1d;
+  margin-top: 0.25rem;
+}
+
+.eta-shift-details {
+  flex: 2;
+  padding: 0 1rem;
+}
+
+.eta-participant {
+  font-weight: 600;
+  color: #7f1d1d;
+  font-size: 0.875rem;
+}
+
+.eta-staff, .eta-service {
+  font-size: 0.75rem;
+  color: #991b1b;
+  margin-top: 0.25rem;
+}
+
+.eta-actions {
+  flex: 0 0 auto;
+}
+
+.btn-eta-start {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-eta-start:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+}
+
+.eta-more {
+  text-align: center;
+  padding: 0.75rem;
+  color: #7f1d1d;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px dashed #ef4444;
+}
+
+@keyframes etaPulse {
+  0%, 100% {
+    box-shadow: 
+      0 10px 40px rgba(239, 68, 68, 0.15),
+      0 4px 15px rgba(239, 68, 68, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 15px 50px rgba(239, 68, 68, 0.3),
+      0 6px 20px rgba(239, 68, 68, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+}
+
+@keyframes etaBackgroundShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 25%;
+  }
+  50% {
+    background-position: 100% 75%;
+  }
+  75% {
+    background-position: 0% 75%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes etaBorderGlow {
+  0%, 100% {
+    background-position: 0% 50%;
+    opacity: 1;
+  }
+  25% {
+    background-position: 100% 25%;
+    opacity: 0.8;
+  }
+  50% {
+    background-position: 100% 75%;
+    opacity: 1;
+  }
+  75% {
+    background-position: 0% 75%;
+    opacity: 0.9;
+  }
+}
+
+.search-box i.original {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1691,30 +2232,53 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Stat card colors matching icon colors */
+.stat-card:nth-child(1) {
+  border-left: 4px solid #6b7280;
+}
+
+.stat-card:nth-child(2) {
+  border-left: 4px solid #10b981;
+}
+
+.stat-card:nth-child(3) {
+  border-left: 4px solid #f59e0b;
+}
+
+.stat-card:nth-child(4) {
+  border-left: 4px solid #ef4444;
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 12px;
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #6b7280, #4b5563);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.2rem;
+  font-size: 24px;
 }
 
 .stat-icon.success {
-  background: var(--success-gradient);
+  background: linear-gradient(135deg, #10b981, #059669);
 }
 
 .stat-icon.warning {
-  background: var(--warning-gradient);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
 .stat-icon.danger {
-  background: var(--danger-gradient);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
 .stat-number {
@@ -1764,20 +2328,14 @@ export default {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.filter-controls {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.filter-controls select,
+/* Filter controls now use global styles for consistency */
 .filter-controls input {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius-sm);
-  background: white;
-  cursor: pointer;
-  min-width: 120px;
+  padding: 10px 16px;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  min-width: 150px;
+  transition: all 0.2s ease;
+  margin: var(--space-xs) 0;
 }
 
 .view-toggle {
@@ -1871,6 +2429,85 @@ export default {
   background: linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(107, 114, 128, 0.05) 100%);
   border-color: #9ca3af;
   opacity: 0.7;
+}
+
+/* Urgent shifts - within 7 days (yellow) */
+.shift-card.shift-urgent {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+  animation: urgentPulse 3s infinite;
+}
+
+.shift-card.shift-urgent:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+/* Critical shifts - within 2 days (red background as requested) */
+.shift-card.shift-critical {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.08) 100%);
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  animation: criticalPulse 2s infinite;
+}
+
+.shift-card.shift-critical:hover {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+@keyframes urgentPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.15);
+  }
+}
+
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.25);
+  }
+}
+
+/* Urgency indicator styles */
+.urgency-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.urgency-indicator.urgent {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.urgency-indicator.critical {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  border: 1px solid #f97316;
+  animation: criticalBlink 1.5s infinite;
+}
+
+@keyframes criticalBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .shift-header {
@@ -2082,6 +2719,109 @@ export default {
   padding: 1rem;
 }
 
+/* Grid View Styles */
+.shifts-grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.shift-card-grid {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.shift-card-grid:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.shift-card-grid.urgent {
+  border-left-color: #fbbf24;
+  background: linear-gradient(to right, #fef3c7 0%, white 8%);
+}
+
+.shift-card-grid.critical {
+  border-left-color: #f87171;
+  background: linear-gradient(to right, #fee2e2 0%, white 8%);
+}
+
+.shift-grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1rem 0.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.shift-participant {
+  font-size: 1rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.shift-grid-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.shift-grid-body > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.shift-grid-body i {
+  width: 16px;
+  color: #94a3b8;
+}
+
+.shift-grid-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.shift-grid-actions .btn-small {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .shifts-grid-view {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+  
+  .view-toggle {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .view-btn {
+    flex: 1;
+    min-width: auto;
+  }
+}
+
 .calendar-header {
   display: flex;
   justify-content: space-between;
@@ -2276,6 +3016,16 @@ export default {
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   color: white;
   border-radius: 16px 16px 0 0;
+}
+
+.modal-header-shift-success {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%) !important;
+  color: white;
+}
+
+.modal-header-shift-info {
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%) !important;
+  color: white;
 }
 
 .modal-header h3 {
@@ -2930,6 +3680,216 @@ export default {
 
   .view-toggle {
     justify-content: center;
+  }
+}
+
+/* List View Styles - Inline Row Layout */
+.shifts-list-view {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.2fr 1fr 1.2fr 100px 120px;
+  gap: 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 2px solid #e2e8f0;
+  padding: 1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.header-cell {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-medium);
+}
+
+.shift-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.2fr 1fr 1.2fr 100px 120px;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.shift-row:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(102, 126, 234, 0.01) 100%);
+  transform: translateX(4px);
+}
+
+.shift-row.shift-urgent {
+  border-left: 4px solid #fbbf24;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, transparent 100%);
+}
+
+.shift-row.shift-critical {
+  border-left: 4px solid #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+}
+
+.shift-row.urgent {
+  border-left: 4px solid #fa709a;
+  background: linear-gradient(135deg, rgba(250, 112, 154, 0.05) 0%, transparent 100%);
+}
+
+.shift-row.warning {
+  border-left: 4px solid #fbbf24;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.05) 0%, transparent 100%);
+}
+
+.row-cell {
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.time-main {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.time-date {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.participant-cell,
+.staff-cell {
+  font-weight: 500;
+}
+
+.service-cell,
+.location-cell {
+  font-size: 0.85rem;
+  color: var(--text-medium);
+}
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-cell .status-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.urgency-indicator {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+}
+
+.urgency-indicator.urgent {
+  background: #fa709a;
+  color: white;
+}
+
+.urgency-indicator.warning {
+  background: #fbbf24;
+  color: white;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.btn-mini {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-mini.btn-start {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.btn-mini.btn-complete {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: white;
+}
+
+.btn-mini.btn-edit {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-mini.btn-cancel {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: white;
+}
+
+.btn-mini:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-mini:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Mobile responsiveness for list view */
+@media (max-width: 1200px) {
+  .shifts-list-view .list-header,
+  .shifts-list-view .shift-row {
+    grid-template-columns: 1fr 1fr 1fr 80px 100px;
+  }
+  
+  .service-cell,
+  .location-cell {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .shifts-list-view .list-header,
+  .shifts-list-view .shift-row {
+    grid-template-columns: 1fr 1fr 60px;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  
+  .staff-cell,
+  .service-cell,
+  .location-cell {
+    display: none;
+  }
+  
+  .actions-cell {
+    flex-direction: column;
+    gap: 0.2rem;
   }
 }
 </style>

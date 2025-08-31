@@ -148,3 +148,103 @@ export function showSuccessNotification(message) {
     }
   }, 3000)
 }
+
+// Modal notification system with color-coded headers
+export function showModal(message, type = 'info', title = null, actions = null) {
+  // Clear any existing modals
+  const existingModals = document.querySelectorAll('.notification-modal-overlay')
+  existingModals.forEach(modal => modal.remove())
+  
+  const typeConfig = {
+    info: { color: 'white', icon: 'fas fa-info-circle', title: title || 'Information' },
+    view: { color: 'white', icon: 'fas fa-eye', title: title || 'Details' },
+    edit: { color: 'blue', icon: 'fas fa-edit', title: title || 'Edit' },
+    delete: { color: 'red', icon: 'fas fa-trash', title: title || 'Delete' },
+    shift: { color: 'green', icon: 'fas fa-calendar', title: title || 'Shift' },
+    success: { color: 'green', icon: 'fas fa-check-circle', title: title || 'Success' },
+    error: { color: 'red', icon: 'fas fa-exclamation-circle', title: title || 'Error' }
+  }
+  
+  const config = typeConfig[type] || typeConfig.info
+  
+  // Default actions for view modals - only Close and Delete
+  const defaultViewActions = type === 'view' ? `
+    <button class="btn btn-view" onclick="this.closest('.notification-modal-overlay').remove()">
+      <i class="fas fa-times"></i>
+      Close
+    </button>
+  ` : `
+    <button class="btn btn-primary" onclick="this.closest('.notification-modal-overlay').remove()">
+      OK
+    </button>
+  `
+  
+  const actionsHTML = actions || defaultViewActions
+  
+  const modal = document.createElement('div')
+  modal.className = 'notification-modal-overlay'
+  modal.innerHTML = `
+    <div class="notification-modal-content">
+      <div class="notification-modal-header ${config.color}">
+        <i class="${config.icon}"></i>
+        <h3>${config.title}</h3>
+        <button class="notification-modal-close" onclick="this.closest('.notification-modal-overlay').remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="notification-modal-body">
+        <p>${message.replace(/\n/g, '<br>')}</p>
+      </div>
+      <div class="notification-modal-actions">
+        ${actionsHTML}
+      </div>
+    </div>
+  `
+  
+  document.body.appendChild(modal)
+  
+  // Close on overlay click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove()
+    }
+  })
+  
+  // Close on escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      modal.remove()
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }
+  document.addEventListener('keydown', handleEscape)
+}
+
+// Convenience functions for different modal types
+export function showInfoModal(message, title = null) {
+  showModal(message, 'info', title)
+}
+
+export function showViewModal(message, title = null) {
+  showModal(message, 'view', title)
+}
+
+export function showEditModal(message, title = null) {
+  showModal(message, 'edit', title)
+}
+
+export function showDeleteModal(message, title = null) {
+  showModal(message, 'delete', title)
+}
+
+export function showShiftModal(message, title = null) {
+  showModal(message, 'shift', title)
+}
+
+export function showSuccessModal(message, title = null) {
+  showModal(message, 'success', title)
+}
+
+export function showErrorModal(message, title = null) {
+  showModal(message, 'error', title)
+}

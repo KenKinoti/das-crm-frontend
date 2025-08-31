@@ -22,15 +22,25 @@ export const shiftsService = {
   },
 
   startShift(id) {
-    return api.patch(`/shifts/${id}/start`)
+    return api.patch(`/shifts/${id}/status`, {
+      status: 'in_progress',
+      actual_start_time: new Date().toISOString()
+    })
   },
 
   completeShift(id, completionData = {}) {
-    return api.patch(`/shifts/${id}/complete`, completionData)
+    return api.patch(`/shifts/${id}/status`, {
+      status: 'completed',
+      actual_end_time: new Date().toISOString(),
+      ...completionData
+    })
   },
 
   cancelShift(id, reason = '') {
-    return api.patch(`/shifts/${id}/cancel`, { reason })
+    return api.patch(`/shifts/${id}/status`, {
+      status: 'cancelled',
+      completion_notes: reason
+    })
   },
 
   delete(id) {
