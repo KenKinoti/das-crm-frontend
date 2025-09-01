@@ -5,7 +5,7 @@
         <div class="logo-icon">
           <i class="fas fa-heart-pulse"></i>
         </div>
-        <span class="logo-text">DASYIN PRO</span>
+        <span class="logo-text">DASYIN CRM</span>
       </div>
     </div>
     

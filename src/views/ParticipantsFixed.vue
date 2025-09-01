@@ -142,7 +142,7 @@
                     type="checkbox" 
                     :checked="participant.is_active !== false"
                     @change="toggleParticipantStatus(participant)"
-                    :disabled="isSubmitting"
+                    :disabled="isSubmitting || (authStore.isSuperAdmin && !orgContextStore.currentOrgId)"
                   />
                   <span class="slider"></span>
                 </label>
@@ -211,7 +211,7 @@
                   type="checkbox" 
                   :checked="participant.is_active !== false"
                   @change="toggleParticipantStatus(participant)"
-                  :disabled="isSubmitting"
+                  :disabled="isSubmitting || (authStore.isSuperAdmin && !orgContextStore.currentOrgId)"
                 />
                 <span class="slider"></span>
               </label>
@@ -401,18 +401,13 @@
             </div>
           </div>
           
-          <div class="form-group">
-            <label for="address">Address</label>
-            <textarea
-              v-model="newParticipant.address"
-              id="address"
-              class="form-textarea"
-              rows="3"
-              maxlength="255"
-              placeholder="Street address, suburb, state, postcode"
-            ></textarea>
-            <small class="field-hint">Maximum 255 characters ({{ newParticipant.address.length }}/255)</small>
-          </div>
+          <AddressSearch
+            v-model="newParticipant.address"
+            label="Address"
+            placeholder="Start typing an address..."
+            field-id="newParticipantAddress"
+            @address-selected="handleNewParticipantAddressSelected"
+          />
           
           <div class="modal-actions">
             <button type="button" @click="closeModal" class="btn btn-outline-secondary">
@@ -608,18 +603,13 @@
             </div>
           </div>
           
-          <div class="form-group">
-            <label for="editAddress">Address</label>
-            <textarea
-              id="editAddress"
-              v-model="editParticipantData.address"
-              class="form-control"
-              placeholder="Enter full address"
-              rows="3"
-              maxlength="255"
-            ></textarea>
-            <small class="field-hint">Maximum 255 characters ({{ editParticipantData.address?.length || 0 }}/255)</small>
-          </div>
+          <AddressSearch
+            v-model="editParticipantData.address"
+            label="Address"
+            placeholder="Start typing an address..."
+            field-id="editParticipantAddress"
+            @address-selected="handleEditParticipantAddressSelected"
+          />
           
           <div class="form-group">
             <label class="checkbox-label">
@@ -656,11 +646,13 @@ import { useAuthStore } from '../stores/auth'
 import { useOrganizationContextStore } from '../stores/organizationContext'
 import { showError, showSuccess } from '../utils/notifications'
 import GlobalModal from '../components/GlobalModal.vue'
+import AddressSearch from '../components/AddressSearch.vue'
 
 export default {
   name: 'ParticipantsView',
   components: {
-    GlobalModal
+    GlobalModal,
+    AddressSearch
   },
   data() {
     return {
@@ -692,6 +684,14 @@ export default {
     ...mapState(useParticipantsStore, ['participants', 'isLoading', 'error']),
     ...mapState(useAuthStore, ['user']),
     ...mapState(useOrganizationContextStore, ['organizations', 'currentOrganization']),
+    
+    authStore() {
+      return useAuthStore()
+    },
+    
+    orgContextStore() {
+      return useOrganizationContextStore()
+    },
     
     isSuperAdmin() {
       return this.user?.role === 'super_admin'
@@ -838,6 +838,15 @@ export default {
     async toggleParticipantStatus(participant) {
       if (this.isSubmitting) return
       
+      // Check if we can update this participant (super admin viewing all orgs vs specific org)
+      const currentOrgId = this.orgContextStore.currentOrgId
+      
+      if (this.authStore.isSuperAdmin && !currentOrgId) {
+        // Super admin viewing "All Organizations" - warn about the limitation
+        await showError('Update Restricted', 'To update participant status, please select a specific organization from the dropdown first.')
+        return
+      }
+      
       this.isSubmitting = true
       try {
         const newStatus = participant.is_active === false ? true : false
@@ -857,7 +866,11 @@ export default {
         await showSuccess('Status Updated', `Participant ${statusText} successfully!`)
       } catch (error) {
         console.error('Error toggling participant status:', error)
-        await showError('Update Failed', 'Error updating participant status. Please try again.')
+        if (error.response?.status === 404) {
+          await showError('Participant Not Found', 'This participant may belong to a different organization. Please select the correct organization first.')
+        } else {
+          await showError('Update Failed', 'Error updating participant status. Please try again.')
+        }
         // Revert the local change on error
         participant.is_active = participant.is_active === false ? true : false
       } finally {
@@ -1024,6 +1037,18 @@ export default {
       } finally {
         this.isSubmitting = false
       }
+    },
+
+    handleNewParticipantAddressSelected(addressData) {
+      // Store the selected address and optionally its components
+      this.newParticipant.address = addressData.fullAddress
+      console.log('New participant address selected:', addressData)
+    },
+
+    handleEditParticipantAddressSelected(addressData) {
+      // Store the selected address and optionally its components
+      this.editParticipantData.address = addressData.fullAddress
+      console.log('Edit participant address selected:', addressData)
     }
   },
   async mounted() {
@@ -1317,6 +1342,8 @@ export default {
   transform: translateY(-50%);
   color: #9ca3af;
   font-size: 0.875rem;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .form-input {
@@ -2460,5 +2487,42 @@ input:checked + .slider:before {
     font-size: 0.875rem;
     padding: 0.625rem;
   }
+}
+
+/* Dark theme search and form styles */
+[data-theme="dark"] .search-box i {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .form-input {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: rgba(75, 85, 99, 0.3);
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .form-input:focus {
+  border-color: var(--primary-color);
+  background: rgba(31, 41, 55, 0.9);
+}
+
+[data-theme="dark"] .form-input::placeholder {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .form-select {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: rgba(75, 85, 99, 0.3);
+  color: #e5e7eb;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+[data-theme="dark"] .form-select:focus {
+  border-color: var(--primary-color);
+  background: rgba(31, 41, 55, 0.9);
+}
+
+[data-theme="dark"] .form-select option {
+  background: #1f2937;
+  color: #e5e7eb;
 }
 </style>

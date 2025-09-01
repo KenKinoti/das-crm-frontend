@@ -98,6 +98,7 @@
 <script>
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useOrganizationContextStore } from '../stores/organizationContext'
 import PageTemplate from '../components/PageTemplate.vue'
 
 export default {
@@ -157,6 +158,9 @@ export default {
     }
   },
   computed: {
+    orgStore() {
+      return useOrganizationContextStore()
+    },
     statsCards() {
       return [
         {
@@ -188,6 +192,12 @@ export default {
           change: `${this.stats.revenueGrowth}% vs last month`
         }
       ]
+    }
+  },
+  watch: {
+    'orgStore.currentOrganization'() {
+      console.log('📊 DASHBOARD DEBUG: Organization changed, refreshing data...')
+      this.fetchDashboardData()
     }
   },
   async mounted() {
@@ -230,7 +240,8 @@ export default {
     async fetchParticipantStats() {
       try {
         console.log('📊 DASHBOARD DEBUG: Fetching participant stats...')
-        const response = await api.get('/participants?limit=1')
+        const orgFilter = this.orgStore.currentOrgId ? `&organization_id=${this.orgStore.currentOrgId}` : ''
+        const response = await api.get(`/participants?limit=1${orgFilter}`)
         console.log('📊 DASHBOARD DEBUG: Participant response received:', response)
         
         if (response.success && response.data.pagination) {
@@ -242,7 +253,7 @@ export default {
           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
           
           try {
-            const monthlyResponse = await api.get(`/participants?created_after=${monthAgo.toISOString()}`)
+            const monthlyResponse = await api.get(`/participants?created_after=${monthAgo.toISOString()}${orgFilter}`)
             const newParticipantsThisMonth = monthlyResponse.success && monthlyResponse.data.pagination 
               ? monthlyResponse.data.pagination.total 
               : 0
@@ -270,7 +281,8 @@ export default {
     
     async fetchStaffStats() {
       try {
-        const response = await api.get('/users?limit=1')
+        const orgFilter = this.orgStore.currentOrgId ? `&organization_id=${this.orgStore.currentOrgId}` : ''
+        const response = await api.get(`/users?limit=1${orgFilter}`)
         if (response.success && response.data.pagination) {
           this.stats.activeStaff = response.data.pagination.total || 0
           
@@ -279,7 +291,7 @@ export default {
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
           
           try {
-            const weeklyResponse = await api.get(`/users?created_after=${weekAgo.toISOString()}`)
+            const weeklyResponse = await api.get(`/users?created_after=${weekAgo.toISOString()}${orgFilter}`)
             const newStaffThisWeek = weeklyResponse.success && weeklyResponse.data.pagination 
               ? weeklyResponse.data.pagination.total 
               : 0
@@ -305,7 +317,8 @@ export default {
         const weekStart = new Date(now.setDate(now.getDate() - now.getDay()))
         const weekEnd = new Date(now.setDate(now.getDate() - now.getDay() + 6))
         
-        const response = await api.get(`/shifts?start_date=${weekStart.toISOString()}&end_date=${weekEnd.toISOString()}`)
+        const orgFilter = this.orgStore.currentOrgId ? `&organization_id=${this.orgStore.currentOrgId}` : ''
+        const response = await api.get(`/shifts?start_date=${weekStart.toISOString()}&end_date=${weekEnd.toISOString()}${orgFilter}`)
         if (response.success && response.data.shifts) {
           this.stats.shiftsThisWeek = response.data.shifts.length || 0
           
@@ -324,7 +337,8 @@ export default {
     
     async fetchRevenueStats() {
       try {
-        const response = await api.get('/reports/dashboard')
+        const orgFilter = this.orgStore.currentOrgId ? `?organization_id=${this.orgStore.currentOrgId}` : ''
+        const response = await api.get(`/reports/dashboard${orgFilter}`)
         if (response.success && response.data) {
           this.stats.monthlyRevenue = response.data.monthly_revenue || 0
           
@@ -335,10 +349,12 @@ export default {
           const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
           const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
           
+          const orgParam = this.orgStore.currentOrgId ? `&organization_id=${this.orgStore.currentOrgId}` : ''
+          
           try {
             const [currentMonth, lastMonth] = await Promise.all([
-              api.get(`/reports/revenue?start_date=${monthStart.toISOString().split('T')[0]}&end_date=${monthEnd.toISOString().split('T')[0]}`),
-              api.get(`/reports/revenue?start_date=${lastMonthStart.toISOString().split('T')[0]}&end_date=${lastMonthEnd.toISOString().split('T')[0]}`)
+              api.get(`/reports/revenue?start_date=${monthStart.toISOString().split('T')[0]}&end_date=${monthEnd.toISOString().split('T')[0]}${orgParam}`),
+              api.get(`/reports/revenue?start_date=${lastMonthStart.toISOString().split('T')[0]}&end_date=${lastMonthEnd.toISOString().split('T')[0]}${orgParam}`)
             ])
             
             const currentRevenue = currentMonth.success ? (currentMonth.data.total_revenue || 0) : 0
@@ -368,7 +384,8 @@ export default {
     
     async fetchRecentActivity() {
       try {
-        const response = await api.get('/reports/dashboard')
+        const orgFilter = this.orgStore.currentOrgId ? `?organization_id=${this.orgStore.currentOrgId}` : ''
+        const response = await api.get(`/reports/dashboard${orgFilter}`)
         if (response.success && response.data.recent_activities) {
           this.recentActivities = response.data.recent_activities.map(activity => ({
             id: activity.id,

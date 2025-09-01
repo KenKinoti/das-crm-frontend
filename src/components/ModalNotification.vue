@@ -117,17 +117,8 @@ export default {
       if (this.closeOnOverlay) {
         this.close()
       }
-    }
-  },
-  mounted() {
-    // Add escape key listener
-    document.addEventListener('keydown', this.handleEscape)
-  },
-  beforeUnmount() {
-    document.removeEventListener('keydown', this.handleEscape)
-  },
-  methods: {
-    ...this.methods,
+    },
+    
     handleEscape(e) {
       if (e.key === 'Escape' && this.show) {
         if (this.type === 'confirm') {
@@ -137,6 +128,13 @@ export default {
         }
       }
     }
+  },
+  mounted() {
+    // Add escape key listener
+    document.addEventListener('keydown', this.handleEscape)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this.handleEscape)
   }
 }
 </script>
