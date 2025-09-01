@@ -654,7 +654,7 @@ import { mapState, mapActions } from 'pinia'
 import { useParticipantsStore } from '../stores/participants'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationContextStore } from '../stores/organizationContext'
-import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
+import { showError, showSuccess } from '../utils/notifications'
 import GlobalModal from '../components/GlobalModal.vue'
 
 export default {
@@ -786,7 +786,7 @@ export default {
         this.filterParticipants()
       } catch (error) {
         console.error('Error loading participants:', error)
-        showErrorNotification(error, 'Failed to load participants. Please try again.')
+        await showError('Load Failed', 'Failed to load participants. Please try again.')
       }
     },
     filterParticipants() {
@@ -854,10 +854,10 @@ export default {
         this.filterParticipants()
         
         const statusText = newStatus ? 'activated' : 'deactivated'
-        showSuccessNotification(`Participant ${statusText} successfully!`)
+        await showSuccess('Status Updated', `Participant ${statusText} successfully!`)
       } catch (error) {
         console.error('Error toggling participant status:', error)
-        showErrorNotification(error, 'Error updating participant status. Please try again.')
+        await showError('Update Failed', 'Error updating participant status. Please try again.')
         // Revert the local change on error
         participant.is_active = participant.is_active === false ? true : false
       } finally {
@@ -879,8 +879,15 @@ export default {
       this.showEditModal = true
     },
     async deleteParticipantWithConfirm(participant) {
-      const confirmed = confirm(
-        `Are you sure you want to delete ${participant.first_name} ${participant.last_name}?\n\nThis action cannot be undone.`
+      const { showConfirm } = await import('../utils/notifications')
+      
+      const confirmed = await showConfirm(
+        'Delete Participant',
+        `Are you sure you want to delete ${participant.first_name} ${participant.last_name}? This action cannot be undone.`,
+        {
+          confirmText: 'Delete',
+          cancelText: 'Cancel'
+        }
       )
       
       if (!confirmed) {
@@ -889,11 +896,11 @@ export default {
       
       try {
         await this.deleteParticipant(participant.id)
-        showSuccessNotification('Participant deleted successfully!')
+        await showSuccess('Deleted', 'Participant deleted successfully!')
         await this.loadParticipants()
       } catch (error) {
         console.error('Error deleting participant:', error)
-        showErrorNotification(error, 'Failed to delete participant. Please try again.')
+        await showError('Delete Failed', 'Failed to delete participant. Please try again.')
       }
     },
     
@@ -951,12 +958,12 @@ export default {
         this.closeEditModal()
         
         // Show success and reload
-        showSuccessNotification('Participant updated successfully!')
+        await showSuccess('Updated', 'Participant updated successfully!')
         await this.loadParticipants()
         
       } catch (error) {
         console.error('Error updating participant:', error)
-        showErrorNotification(error, 'Failed to update participant. Please try again.')
+        await showError('Update Failed', 'Failed to update participant. Please try again.')
       } finally {
         this.isSubmitting = false
       }
@@ -983,7 +990,7 @@ export default {
     
     async submitNewParticipant() {
       if (!this.newParticipant.first_name || !this.newParticipant.last_name) {
-        showErrorNotification(null, 'First name and last name are required')
+        await showError('Required Fields', 'First name and last name are required')
         return
       }
       
@@ -1008,12 +1015,12 @@ export default {
         this.closeModal()
         
         // Show success notification and reload data
-        showSuccessNotification('Participant added successfully!')
+        await showSuccess('Added', 'Participant added successfully!')
         await this.loadParticipants()
         
       } catch (error) {
         console.error('Error creating participant:', error)
-        showErrorNotification(error, 'Failed to add participant. Please try again.')
+        await showError('Add Failed', 'Failed to add participant. Please try again.')
       } finally {
         this.isSubmitting = false
       }
