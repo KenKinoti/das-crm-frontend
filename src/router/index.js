@@ -5,7 +5,7 @@ import { usePermissionsStore } from '../stores/permissions'
 // Lazy load components for better performance
 const Login = () => import('../views/Login.vue')
 const Dashboard = () => import('../views/Dashboard.vue')
-const Participants = () => import('../views/Participants.vue')
+const Participants = () => import('../views/ParticipantsFixed.vue')
 const Staff = () => import('../views/Staff.vue')
 const Scheduling = () => import('../views/Scheduling.vue')
 const Documents = () => import('../views/Documents.vue')
@@ -111,9 +111,23 @@ const router = createRouter({
   routes
 })
 
-// Enhanced auth guard with role-based permissions
+// Enhanced auth guard with role-based permissions  
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  
+  console.log('🛡️ ROUTER DEBUG: Guard triggered', {
+    from: from.path,
+    to: to.path,
+    timestamp: new Date().toISOString()
+  })
+  
+  console.log('🛡️ ROUTER DEBUG: Auth state check:', { 
+    isAuthenticated: authStore.isAuthenticated,
+    hasToken: !!authStore.token,
+    hasUser: !!authStore.user,
+    tokenValue: authStore.token ? authStore.token.substring(0, 30) + '...' : 'null',
+    userEmail: authStore.user?.email || 'null'
+  })
   
   // Save current route (except login) for refresh persistence
   if (to.name && to.name !== 'Login' && to.path !== '/') {
@@ -122,8 +136,15 @@ router.beforeEach(async (to, from, next) => {
   
   // If going to login page
   if (to.name === 'Login') {
-    // If already authenticated, redirect to dashboard
+    // Only check existing auth state, don't initialize if no token
+    if (authStore.token && !authStore.user) {
+      console.log('Has token but no user, initializing...')
+      await authStore.initializeAuth()
+    }
+    
+    // If authenticated, redirect to dashboard
     if (authStore.isAuthenticated) {
+      console.log('User already authenticated, redirecting to dashboard')
       next('/dashboard')
       return
     }
@@ -134,29 +155,34 @@ router.beforeEach(async (to, from, next) => {
   // For protected routes
   if (to.meta.requiresAuth !== false) {
     
-    // Check if user is authenticated
+    // Initialize auth state if not authenticated
     if (!authStore.isAuthenticated) {
-      next('/login')
-      return
-    }
-    
-    // For mock tokens, ensure user data is loaded
-    if (authStore.token?.startsWith('mock-jwt-token') && !authStore.user) {
-      try {
-        await authStore.getCurrentUser()
-      } catch (error) {
-        console.error('Failed to get current user:', error)
+      console.log('Initializing auth state...')
+      const isInitialized = await authStore.initializeAuth()
+      
+      if (!isInitialized) {
+        console.log('Auth initialization failed, redirecting to login')
         next('/login')
         return
       }
     }
     
+    // Final check - ensure we have both token and user
+    if (!authStore.isAuthenticated || !authStore.user) {
+      console.log('Authentication incomplete, redirecting to login')
+      authStore.logout() // Clear invalid state
+      next('/login')
+      return
+    }
+    
     // Check for super admin requirement
     if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
+      console.log('Super admin required, redirecting to dashboard')
       next('/dashboard')
       return
     }
     
+    console.log('Auth guard passed, proceeding to:', to.path)
     next()
     return
   }

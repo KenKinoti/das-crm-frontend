@@ -1,7 +1,13 @@
 <template>
-  <div class="page-container">
+  <div class="container-fluid">
     <div class="page-header">
-      <h1>Shift Scheduling</h1>
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-calendar-alt"></i>
+          Shift Scheduling
+        </h1>
+        <p>Manage staff shifts, assignments, and scheduling coordination</p>
+      </div>
       <button @click="showAddModal = true" class="btn btn-shift">
         <i class="fas fa-plus"></i>
         Schedule New Shift
@@ -46,6 +52,28 @@
           <div class="stat-label">Needs Attention</div>
         </div>
       </div>
+      
+      <!-- Split Components: Days Active -->
+      <div class="stat-card days-component" :class="daysColorClass">
+        <div class="stat-icon" :class="daysIconClass">
+          <i class="fas fa-calendar-week"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ activeDaysCount }}</div>
+          <div class="stat-label">Days Active</div>
+        </div>
+      </div>
+      
+      <!-- Split Components: Scheduled Shifts -->
+      <div class="stat-card scheduled-component" :class="scheduledColorClass">
+        <div class="stat-icon" :class="scheduledIconClass">
+          <i class="fas fa-calendar-check"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ totalScheduledShifts }}</div>
+          <div class="stat-label">Shifts Scheduled</div>
+        </div>
+      </div>
     </div>
 
     <!-- Critical Shifts ETA Card -->
@@ -60,20 +88,20 @@
         </div>
       </div>
       <div class="eta-shifts-list">
-        <div v-for="shift in criticalShifts.slice(0, 3)" :key="shift.id" class="eta-shift-item">
-          <div class="eta-shift-time">
-            <div class="eta-countdown">{{ getTimeUntilShift(shift) }}</div>
-            <div class="eta-shift-date">{{ formatTime(shift.start_time) }} - {{ formatDate(shift.start_time) }}</div>
-          </div>
-          <div class="eta-shift-details">
-            <div class="eta-participant">{{ getParticipantName(shift.participant_id) }}</div>
-            <div class="eta-staff">{{ getStaffName(shift.staff_id) }}</div>
-            <div class="eta-service">{{ shift.service_type }}</div>
-          </div>
-          <div class="eta-actions">
+        <div v-for="shift in criticalShifts.slice(0, 3)" :key="shift.id" class="eta-shift-badge">
+          <div class="eta-badge-content">
+            <div class="eta-countdown-badge">{{ getTimeUntilShift(shift) }}</div>
+            <div class="eta-shift-info">
+              <div class="eta-time">{{ formatTime(shift.start_time) }} - {{ formatDate(shift.start_time) }}</div>
+              <div class="eta-details-row">
+                <span class="eta-badge eta-participant-badge">{{ getParticipantName(shift.participant_id) }}</span>
+                <span class="eta-badge eta-staff-badge">{{ getStaffName(shift.staff_id) }}</span>
+                <span class="eta-badge eta-service-badge">{{ formatServiceType(shift.service_type) }}</span>
+              </div>
+            </div>
             <button @click="startShift(shift)" class="btn-eta-start">
               <i class="fas fa-play"></i>
-              Start Now
+              Start
             </button>
           </div>
         </div>
@@ -379,21 +407,76 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Participant *</label>
-                <select v-model="newShift.participant_id" class="form-select" required>
-                  <option value="">Select Participant</option>
-                  <option v-for="participant in participants" :key="participant.id" :value="participant.id">
-                    {{ participant.first_name }} {{ participant.last_name }}
-                  </option>
-                </select>
+                <div class="searchable-dropdown">
+                  <input 
+                    v-model="participantSearch" 
+                    @input="filterParticipants" 
+                    @focus="showParticipantDropdown = true"
+                    @blur="hideParticipantDropdown"
+                    :placeholder="selectedParticipant ? `${selectedParticipant.first_name} ${selectedParticipant.last_name}` : 'Search participants...'"
+                    class="form-input searchable-input"
+                    autocomplete="off"
+                  />
+                  <div v-if="showParticipantDropdown" class="dropdown-list">
+                    <div 
+                      v-for="participant in filteredParticipants" 
+                      :key="participant.id"
+                      @mousedown="selectParticipant(participant)"
+                      class="dropdown-item"
+                    >
+                      <div class="participant-option">
+                        <div class="participant-info">
+                          <span class="name">{{ participant.first_name }} {{ participant.last_name }}</span>
+                          <span class="details">{{ participant.ndis_number || 'No NDIS' }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="filteredParticipants.length === 0" class="dropdown-empty">
+                      No participants found
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="form-group">
                 <label>Staff Member *</label>
-                <select v-model="newShift.staff_id" class="form-select" required>
-                  <option value="">Select Staff</option>
-                  <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
-                    {{ staff.first_name }} {{ staff.last_name }}
-                  </option>
-                </select>
+                <div class="searchable-dropdown">
+                  <input 
+                    v-model="staffSearch" 
+                    @input="filterStaff" 
+                    @focus="showStaffDropdown = true"
+                    @blur="hideStaffDropdown"
+                    :placeholder="selectedStaff ? `${selectedStaff.first_name} ${selectedStaff.last_name}` : 'Search staff members...'"
+                    class="form-input searchable-input"
+                    autocomplete="off"
+                  />
+                  <div v-if="showStaffDropdown" class="dropdown-list">
+                    <div 
+                      v-for="staff in filteredStaffWithAvailability" 
+                      :key="staff.id"
+                      @mousedown="selectStaff(staff)"
+                      class="dropdown-item"
+                    >
+                      <div class="staff-option">
+                        <div class="staff-info">
+                          <span class="name">{{ staff.first_name }} {{ staff.last_name }}</span>
+                          <span class="role">{{ formatRole(staff.role) }}</span>
+                        </div>
+                        <div class="availability-info">
+                          <div class="availability-badge" :class="staff.availabilityClass">
+                            {{ staff.availabilityPercentage }}% available
+                          </div>
+                          <div class="hours-info">{{ staff.availableHours }}h available today</div>
+                          <div v-if="staff.nextAvailable" class="next-available">
+                            Next: {{ staff.nextAvailable }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="filteredStaffWithAvailability.length === 0" class="dropdown-empty">
+                      No staff members found
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -918,7 +1001,16 @@ export default {
         hourly_rate: 45.00,
         notes: '',
         send_notifications: true
-      }
+      },
+      // Searchable dropdown state
+      participantSearch: '',
+      staffSearch: '',
+      showParticipantDropdown: false,
+      showStaffDropdown: false,
+      selectedParticipant: null,
+      selectedStaff: null,
+      filteredParticipants: [],
+      filteredStaffWithAvailability: []
     }
   },
   computed: {
@@ -966,6 +1058,60 @@ export default {
         shift.status === 'scheduled' && 
         new Date(shift.start_time) < new Date(Date.now() + 24 * 60 * 60 * 1000)
       ).length
+    },
+    
+    // Combined stats for demonstration
+    activeDaysCount() {
+      // Count unique days that have scheduled shifts in the next 30 days
+      const now = new Date()
+      const next30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      
+      const uniqueDays = new Set()
+      this.shifts.forEach(shift => {
+        const shiftDate = new Date(shift.start_time)
+        if (shiftDate >= now && shiftDate <= next30Days) {
+          const dayString = shiftDate.toDateString()
+          uniqueDays.add(dayString)
+        }
+      })
+      return uniqueDays.size
+    },
+    
+    totalScheduledShifts() {
+      return this.shifts.filter(shift => shift.status === 'scheduled').length
+    },
+    
+    // Dynamic color classes for split components
+    daysColorClass() {
+      const count = this.activeDaysCount
+      if (count >= 20) return 'high-activity'
+      if (count >= 10) return 'moderate-activity'
+      if (count >= 5) return 'low-activity'
+      return 'minimal-activity'
+    },
+    
+    daysIconClass() {
+      const count = this.activeDaysCount
+      if (count >= 20) return 'success'
+      if (count >= 10) return 'warning'
+      if (count >= 5) return 'info'
+      return 'danger'
+    },
+    
+    scheduledColorClass() {
+      const count = this.totalScheduledShifts
+      if (count >= 50) return 'high-scheduled'
+      if (count >= 20) return 'moderate-scheduled'
+      if (count >= 10) return 'low-scheduled'
+      return 'minimal-scheduled'
+    },
+    
+    scheduledIconClass() {
+      const count = this.totalScheduledShifts
+      if (count >= 50) return 'success'
+      if (count >= 20) return 'primary'
+      if (count >= 10) return 'warning'
+      return 'danger'
     },
 
     calendarDays() {
@@ -1046,6 +1192,10 @@ export default {
         }
         
         this.filterShifts()
+        
+        // Initialize dropdowns with full data
+        this.filteredParticipants = this.participants.slice(0, 10)
+        this.filterStaff()
       } catch (error) {
         console.error('Error loading data:', error)
         showErrorNotification(error, 'Failed to load data. Please refresh the page.')
@@ -1630,6 +1780,17 @@ export default {
       return statusMap[status] || status
     },
 
+    formatServiceType(serviceType) {
+      const serviceMap = {
+        'support_work': 'Support',
+        'personal_care': 'Care',
+        'transport': 'Transport',
+        'community_access': 'Community',
+        'household_tasks': 'Household'
+      }
+      return serviceMap[serviceType] || serviceType
+    },
+
     calculateDuration(startTime, endTime) {
       const start = new Date(startTime)
       const end = new Date(endTime)
@@ -1790,6 +1951,119 @@ export default {
         const durationMs = endDate - startDate
         this.newShift.duration_hours = parseFloat((durationMs / (1000 * 60 * 60)).toFixed(1))
       }
+    },
+
+    // Searchable dropdown methods
+    filterParticipants() {
+      const query = this.participantSearch.toLowerCase()
+      this.filteredParticipants = this.participants.filter(participant => {
+        const fullName = `${participant.first_name} ${participant.last_name}`.toLowerCase()
+        const ndis = (participant.ndis_number || '').toLowerCase()
+        return fullName.includes(query) || ndis.includes(query)
+      }).slice(0, 10) // Limit to 10 results
+    },
+
+    filterStaff() {
+      const query = this.staffSearch.toLowerCase()
+      const targetDate = this.newShift.date || new Date().toISOString().split('T')[0]
+      
+      this.filteredStaffWithAvailability = this.staffMembers.filter(staff => {
+        const fullName = `${staff.first_name} ${staff.last_name}`.toLowerCase()
+        const role = (staff.role || '').toLowerCase()
+        return fullName.includes(query) || role.includes(query)
+      }).map(staff => {
+        const availability = this.calculateStaffAvailability(staff, targetDate)
+        return {
+          ...staff,
+          ...availability
+        }
+      }).sort((a, b) => {
+        // Sort by availability percentage (highest first), then by available hours
+        if (b.availabilityPercentage !== a.availabilityPercentage) {
+          return b.availabilityPercentage - a.availabilityPercentage
+        }
+        return b.availableHours - a.availableHours
+      }).slice(0, 10) // Limit to 10 results
+    },
+
+    calculateStaffAvailability(staff, date) {
+      const today = new Date(date).toDateString()
+      const staffShifts = this.shifts.filter(shift => {
+        const shiftDate = new Date(shift.start_time).toDateString()
+        return shiftDate === today && shift.staff_id == staff.id && shift.status !== 'cancelled'
+      })
+
+      const totalWorkingHours = 8 // Assume 8-hour work day
+      let scheduledHours = 0
+      let nextAvailableTime = null
+
+      staffShifts.forEach(shift => {
+        const start = new Date(shift.start_time)
+        const end = new Date(shift.end_time)
+        scheduledHours += (end - start) / (1000 * 60 * 60)
+      })
+
+      const availableHours = Math.max(0, totalWorkingHours - scheduledHours)
+      const availabilityPercentage = Math.round((availableHours / totalWorkingHours) * 100)
+
+      // Find next available time slot
+      if (staffShifts.length > 0) {
+        const sortedShifts = staffShifts.sort((a, b) => new Date(a.end_time) - new Date(b.end_time))
+        const lastShift = sortedShifts[sortedShifts.length - 1]
+        nextAvailableTime = new Date(lastShift.end_time).toLocaleTimeString('en-AU', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      } else {
+        nextAvailableTime = '9:00 AM'
+      }
+
+      let availabilityClass = 'high'
+      if (availabilityPercentage < 50) availabilityClass = 'low'
+      else if (availabilityPercentage < 80) availabilityClass = 'medium'
+
+      return {
+        availableHours: availableHours.toFixed(1),
+        availabilityPercentage,
+        availabilityClass,
+        nextAvailable: availableHours > 0 ? nextAvailableTime : 'Fully booked'
+      }
+    },
+
+    selectParticipant(participant) {
+      this.selectedParticipant = participant
+      this.newShift.participant_id = participant.id
+      this.participantSearch = `${participant.first_name} ${participant.last_name}`
+      this.showParticipantDropdown = false
+    },
+
+    selectStaff(staff) {
+      this.selectedStaff = staff
+      this.newShift.staff_id = staff.id
+      this.staffSearch = `${staff.first_name} ${staff.last_name}`
+      this.showStaffDropdown = false
+    },
+
+    hideParticipantDropdown() {
+      setTimeout(() => {
+        this.showParticipantDropdown = false
+      }, 150)
+    },
+
+    hideStaffDropdown() {
+      setTimeout(() => {
+        this.showStaffDropdown = false
+      }, 150)
+    },
+
+    formatRole(role) {
+      const roleMap = {
+        'care_worker': 'Care Worker',
+        'support_coordinator': 'Support Coordinator',
+        'manager': 'Manager',
+        'admin': 'Administrator'
+      }
+      return roleMap[role] || role
     }
   }
 }
@@ -2136,6 +2410,109 @@ export default {
   border: 1px dashed #ef4444;
 }
 
+/* New ETA Badge Layout */
+.eta-shift-badge {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(239, 68, 68, 0.2);
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.eta-shift-badge:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.eta-badge-content {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.eta-countdown-badge {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-align: center;
+  min-width: 80px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.eta-shift-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eta-time {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.eta-details-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.eta-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.eta-participant-badge {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.eta-staff-badge {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.eta-service-badge {
+  background: rgba(245, 158, 11, 0.1);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.btn-eta-start {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.btn-eta-start:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
 @keyframes etaPulse {
   0%, 100% {
     box-shadow: 
@@ -2341,7 +2718,6 @@ export default {
 .view-toggle {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
 }
 
 .view-btn {
@@ -3890,6 +4266,240 @@ export default {
   .actions-cell {
     flex-direction: column;
     gap: 0.2rem;
+  }
+}
+
+/* Combined stats styling */
+.stat-card.combined-stats {
+  border: 2px solid #e0f2fe;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.stat-combined {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.days-count {
+  color: #0f766e;
+}
+
+.separator {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.scheduled-count {
+  color: #1d4ed8;
+}
+
+/* Dynamic color classes for split components */
+.stat-card.days-component.high-activity {
+  border-left: 4px solid #059669;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+}
+
+.stat-card.days-component.moderate-activity {
+  border-left: 4px solid #d97706;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.stat-card.days-component.low-activity {
+  border-left: 4px solid #2563eb;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.stat-card.days-component.minimal-activity {
+  border-left: 4px solid #dc2626;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.stat-card.scheduled-component.high-scheduled {
+  border-left: 4px solid #059669;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+}
+
+.stat-card.scheduled-component.moderate-scheduled {
+  border-left: 4px solid #7c3aed;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+
+.stat-card.scheduled-component.low-scheduled {
+  border-left: 4px solid #d97706;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.stat-card.scheduled-component.minimal-scheduled {
+  border-left: 4px solid #dc2626;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+/* Searchable Dropdown Styles */
+.searchable-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.searchable-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+  border-left: 3px solid #667eea;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Participant Option Styling */
+.participant-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.participant-info .name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.participant-info .details {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Staff Option Styling */
+.staff-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.staff-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.staff-info .name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.staff-info .role {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.availability-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 120px;
+}
+
+.availability-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.availability-badge.high {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.availability-badge.medium {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.availability-badge.low {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.hours-info {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.next-available {
+  font-size: 10px;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .staff-option {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .availability-info {
+    align-items: flex-start;
+    min-width: auto;
+  }
+  
+  .dropdown-list {
+    max-height: 200px;
   }
 }
 </style>

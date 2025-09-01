@@ -8,6 +8,14 @@
     </div>
     
     <div class="header-right">
+      <!-- Theme Toggle -->
+      <div class="theme-toggle-container">
+        <button class="theme-toggle" :class="{ dark: isDarkMode }" @click="toggleTheme">
+          <i class="fas fa-sun theme-toggle-icon sun"></i>
+          <i class="fas fa-moon theme-toggle-icon moon"></i>
+        </button>
+      </div>
+      
       <div class="search-box">
         <input 
           type="text" 
@@ -46,6 +54,49 @@
         </div>
       </div>
       
+      <!-- Organization Selector for SuperAdmin -->
+      <div v-if="isSuperAdmin" class="org-selector" @click="toggleOrgDropdown">
+        <div class="org-display">
+          <i class="fas fa-building"></i>
+          <span>{{ currentOrgName }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        
+        <!-- Organization Dropdown -->
+        <div v-if="showOrgDropdown" class="org-dropdown">
+          <div class="dropdown-header">
+            <i class="fas fa-building"></i>
+            Switch Organization
+          </div>
+          <!-- Show All Organizations option for super admin -->
+          <div v-if="isSuperAdmin" 
+               class="dropdown-item" 
+               :class="{ active: !currentOrgId }"
+               @click="selectOrganization(null)">
+            <i class="fas fa-globe"></i>
+            <div class="org-info">
+              <div class="org-name">All Organizations</div>
+              <div class="org-details">View entire database corpus</div>
+            </div>
+            <i v-if="!currentOrgId" class="fas fa-check"></i>
+          </div>
+          <div v-for="org in availableOrganizations" :key="org.id" 
+               class="dropdown-item" 
+               :class="{ active: org.id === currentOrgId }"
+               @click="selectOrganization(org)">
+            <i class="fas fa-building"></i>
+            <div class="org-info">
+              <div class="org-name">{{ org.name }}</div>
+              <div class="org-details">{{ org.email || org.id }}</div>
+            </div>
+            <i v-if="org.id === currentOrgId" class="fas fa-check"></i>
+          </div>
+          <div v-if="availableOrganizations.length === 0" class="dropdown-item disabled">
+            No organizations available
+          </div>
+        </div>
+      </div>
+      
       <div class="user-menu" @click="toggleUserDropdown">
         <div class="user-avatar">{{ userInitials }}</div>
         <span>{{ userName }}</span>
@@ -74,6 +125,7 @@
 
 <script>
 import { useAuthStore } from '../stores/auth'
+import { useOrganizationContextStore } from '../stores/organizationContext'
 import api from '../services/api'
 
 export default {
@@ -91,16 +143,21 @@ export default {
   data() {
     return {
       showUserDropdown: false,
+      showOrgDropdown: false,
       searchQuery: '',
       searchResults: [],
       showSearchResults: false,
       isSearching: false,
-      searchTimeout: null
+      searchTimeout: null,
+      isDarkMode: false
     }
   },
   computed: {
     authStore() {
       return useAuthStore()
+    },
+    orgContextStore() {
+      return useOrganizationContextStore()
     },
     userName() {
       return this.authStore.userName || 'User'
@@ -110,6 +167,18 @@ export default {
         return (this.authStore.user.first_name?.[0] || '') + (this.authStore.user.last_name?.[0] || '')
       }
       return 'U'
+    },
+    isSuperAdmin() {
+      return this.authStore.isSuperAdmin
+    },
+    availableOrganizations() {
+      return this.orgContextStore.availableOrganizations
+    },
+    currentOrgName() {
+      return this.orgContextStore.currentOrgName
+    },
+    currentOrgId() {
+      return this.orgContextStore.currentOrgId
     }
   },
   methods: {
@@ -123,6 +192,21 @@ export default {
       } catch (error) {
         console.error('Logout error:', error)
       }
+    },
+    
+    toggleOrgDropdown() {
+      this.showOrgDropdown = !this.showOrgDropdown
+      // Close user dropdown if open
+      if (this.showOrgDropdown) {
+        this.showUserDropdown = false
+      }
+    },
+    
+    selectOrganization(organization) {
+      this.orgContextStore.setCurrentOrganization(organization)
+      this.showOrgDropdown = false
+      // Optionally emit event for parent components to react to org change
+      this.$emit('organization-changed', organization)
     },
     
     handleSearch() {
@@ -266,13 +350,40 @@ export default {
     navigateToSettings() {
       this.showUserDropdown = false
       this.$router.push('/settings')
+    },
+    
+    toggleTheme() {
+      this.isDarkMode = !this.isDarkMode
+      const theme = this.isDarkMode ? 'dark' : 'light'
+      
+      // Apply theme to document
+      document.documentElement.setAttribute('data-theme', theme)
+      
+      // Save to localStorage
+      localStorage.setItem('theme', theme)
+      
+      console.log('🎨 Theme toggled to:', theme)
     }
   },
-  mounted() {
-    // Close dropdown when clicking outside
+  async mounted() {
+    // Initialize theme from localStorage
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme === 'dark') {
+      this.isDarkMode = true
+      document.documentElement.setAttribute('data-theme', 'dark')
+    }
+    
+    // Initialize organization context for SuperAdmin
+    if (this.isSuperAdmin) {
+      this.orgContextStore.initializeFromStorage()
+      await this.orgContextStore.fetchOrganizations()
+    }
+    
+    // Close dropdowns when clicking outside
     document.addEventListener('click', (e) => {
       if (!this.$el.contains(e.target)) {
         this.showUserDropdown = false
+        this.showOrgDropdown = false
       }
     })
   }
@@ -370,10 +481,15 @@ export default {
   background: var(--white);
   border-radius: var(--border-radius-sm);
   box-shadow: var(--shadow-medium);
-  max-height: 400px;
-  overflow-y: auto;
   z-index: 1000;
   border: 1px solid #e2e8f0;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px;
+  gap: 8px;
+  max-width: 800px;
 }
 
 .search-loading,
@@ -390,20 +506,23 @@ export default {
 
 .search-result-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 12px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.search-result-item:last-child {
-  border-bottom: none;
+  transition: all 0.3s ease;
+  border-radius: var(--border-radius-sm);
+  background: rgba(102, 126, 234, 0.05);
+  min-width: 120px;
+  flex-shrink: 0;
+  text-align: center;
 }
 
 .search-result-item:hover {
-  background-color: rgba(102, 126, 234, 0.1);
+  background-color: rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
 }
 
 .result-icon {
@@ -423,33 +542,34 @@ export default {
 }
 
 .result-content {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .result-title {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   color: var(--text-dark);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.result-subtitle {
+  font-size: 0.7rem;
+  color: var(--text-medium);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.result-subtitle {
-  font-size: 0.8rem;
-  color: var(--text-medium);
-  margin-top: 2px;
-}
-
 .result-type {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  text-transform: capitalize;
-  background: #f1f5f9;
-  padding: 4px 8px;
-  border-radius: 12px;
-  flex-shrink: 0;
+  font-size: 0.6rem;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.5px;
+  margin-top: 4px;
 }
 
 .user-menu {
@@ -521,6 +641,169 @@ export default {
   border: none;
   border-top: 1px solid #e2e8f0;
   margin: 0;
+}
+
+/* Organization Selector Styles */
+.org-selector {
+  position: relative;
+  margin-right: 1rem;
+  cursor: pointer;
+}
+
+.org-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+  color: var(--text-dark);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.org-display:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.org-display i.fa-chevron-down {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.org-selector .org-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--white);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+  z-index: 1000;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.org-dropdown .dropdown-header {
+  background: var(--primary-gradient);
+  color: white;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.org-dropdown .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.org-dropdown .dropdown-item:hover {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.org-dropdown .dropdown-item.active {
+  background: rgba(102, 126, 234, 0.15);
+  color: var(--primary-600);
+}
+
+.org-dropdown .dropdown-item.disabled {
+  color: var(--text-light);
+  cursor: not-allowed;
+}
+
+.org-dropdown .dropdown-item.disabled:hover {
+  background: transparent;
+}
+
+.org-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.org-name {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 14px;
+}
+
+.org-details {
+  font-size: 12px;
+  color: var(--text-medium);
+  margin-top: 2px;
+}
+
+/* Theme Toggle Styles */
+.theme-toggle-container {
+  margin-right: 0.5rem;
+}
+
+.theme-toggle {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  background: var(--primary-gradient);
+  border-radius: 15px;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  outline: none;
+  overflow: hidden;
+}
+
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  transition: var(--transition-smooth);
+  box-shadow: var(--shadow-soft);
+}
+
+.theme-toggle.dark::after {
+  transform: translateX(30px);
+}
+
+.theme-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-medium);
+}
+
+.theme-toggle-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: white;
+  transition: var(--transition-fast);
+}
+
+.theme-toggle-icon.sun {
+  left: 8px;
+}
+
+.theme-toggle-icon.moon {
+  right: 8px;
 }
 
 @media (max-width: 768px) {

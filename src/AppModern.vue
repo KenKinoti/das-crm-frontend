@@ -1,57 +1,59 @@
 <template>
-  <div id="app">
+  <div id="app" class="min-h-screen bg-secondary-50">
     <!-- Debug info in development -->
-    <div v-if="$route.query.debug" class="debug-info" style="position: fixed; top: 0; right: 0; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px;">
-      Auth: {{ authStore.isAuthenticated }}<br>
-      Route: {{ $route.path }}<br>
-      Token: {{ authStore.token ? 'Present' : 'None' }}<br>
-      User: {{ authStore.user ? 'Present' : 'None' }}<br>
-      ShowAuth: {{ isAuthenticated }}
+    <div v-if="$route.query.debug" class="fixed top-4 right-4 bg-danger-600 text-white p-3 rounded-xl shadow-large z-50 text-xs font-mono">
+      <div>Auth: {{ authStore.isAuthenticated }}</div>
+      <div>Route: {{ $route.path }}</div>
+      <div>Token: {{ authStore.token ? 'Present' : 'None' }}</div>
+      <div>User: {{ authStore.user ? 'Present' : 'None' }}</div>
+      <div>ShowAuth: {{ isAuthenticated }}</div>
     </div>
     
-    <!-- Show full layout only when authenticated -->
-    <div v-if="isAuthenticated" class="app-container">
-      <!-- Sidebar Component (only show when authenticated) -->
-      <Sidebar 
+    <!-- Authenticated Layout -->
+    <div v-if="isAuthenticated" class="flex h-screen bg-secondary-50">
+      <!-- Modern Sidebar -->
+      <ModernSidebar 
         :is-open="sidebarOpen"
         :current-page="currentPage"
         @toggle="toggleSidebar"
         @navigate="setCurrentPage"
       />
 
-      <!-- Main Content -->
-      <main class="main-content" :class="{ 'expanded': !sidebarOpen }">
-        <!-- Header Component -->
-        <Header 
+      <!-- Main Content Area -->
+      <div class="flex-1 flex flex-col overflow-hidden" :class="{ 'ml-0': !sidebarOpen, 'ml-64': sidebarOpen }">
+        <!-- Modern Header -->
+        <ModernHeader 
           :page-title="pageTitle"
           :sidebar-open="sidebarOpen"
           @toggle-sidebar="toggleSidebar"
         />
 
-        <!-- Router View for different pages -->
-        <div class="content">
-          <router-view />
-        </div>
-      </main>
+        <!-- Page Content -->
+        <main class="flex-1 overflow-auto bg-white/50 backdrop-blur-sm">
+          <div class="container mx-auto px-6 py-8">
+            <router-view />
+          </div>
+        </main>
+      </div>
     </div>
 
-    <!-- Show only router view when not authenticated (Login page) -->
-    <div v-else class="auth-container">
+    <!-- Login Layout -->
+    <div v-else>
       <router-view />
     </div>
   </div>
 </template>
 
 <script>
-import Sidebar from './components/Sidebar.vue'
-import Header from './components/Header.vue'
+import ModernSidebar from './components/ModernSidebar.vue'
+import ModernHeader from './components/ModernHeader.vue'
 import { useAuthStore } from './stores/auth'
 
 export default {
-  name: 'App',
+  name: 'AppModern',
   components: {
-    Sidebar,
-    Header
+    ModernSidebar,
+    ModernHeader
   },
   data() {
     return {
@@ -87,12 +89,12 @@ export default {
   },
   methods: {
     toggleSidebar() {
-      // Immediately respond to avoid double-click issues
       this.sidebarOpen = !this.sidebarOpen
     },
     setCurrentPage(page) {
       this.currentPage = page
       this.$router.push(`/${page}`)
+      // Auto-close sidebar on mobile
       if (window.innerWidth <= 768) {
         this.sidebarOpen = false
       }
@@ -110,27 +112,19 @@ export default {
     const routeName = this.$route.name?.toLowerCase() || 'dashboard'
     this.currentPage = routeName
 
-    // Initialize auth state after page refresh only if we have a token
-    if (!this.authStore.isAuthenticated && localStorage.getItem('auth_token')) {
+    // Ensure auth is checked after page refresh
+    if (this.authStore.token && !this.authStore.user) {
       try {
-        await this.authStore.initializeAuth()
+        await this.authStore.getCurrentUser()
       } catch (error) {
-        console.error('Failed to initialize auth after refresh:', error)
+        console.error('Failed to get current user after refresh:', error)
         if (this.$route.path !== '/login') {
           this.$router.push('/login')
         }
       }
     }
 
-    // Only redirect if we're on the root path
-    if (this.$route.path === '/') {
-      if (this.authStore.isAuthenticated) {
-        this.$router.push('/dashboard')
-      } else {
-        this.$router.push('/login')
-      }
-    }
-
+    // Handle responsive sidebar
     const handleResize = () => {
       if (window.innerWidth <= 768) {
         this.sidebarOpen = false
@@ -144,21 +138,3 @@ export default {
   }
 }
 </script>
-
-<style>
-/* App.vue - Minimal styles, main styles are in main.css */
-
-.debug-info {
-  position: fixed;
-  top: 0;
-  right: 0;
-  background: #ef4444;
-  color: white;
-  padding: 10px;
-  z-index: 9999;
-  font-size: 12px;
-  font-family: var(--font-family);
-  border-radius: 0 0 0 8px;
-  box-shadow: var(--shadow-medium);
-}
-</style>

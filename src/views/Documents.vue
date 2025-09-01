@@ -1,7 +1,13 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1>Documents</h1>
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-file-alt"></i>
+          Documents
+        </h1>
+        <p>Manage participant documents, file storage, and cloud integration</p>
+      </div>
       <div class="header-actions">
         <button @click="showCloudSettingsModal = true" class="btn btn-outline" title="Cloud Storage Settings">
           <i class="fas fa-cloud"></i>

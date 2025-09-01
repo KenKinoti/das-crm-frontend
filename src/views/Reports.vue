@@ -1,7 +1,13 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1>Reports & Analytics</h1>
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-chart-line"></i>
+          Reports & Analytics
+        </h1>
+        <p>Generate comprehensive reports, track performance metrics, and analyze trends</p>
+      </div>
       <div class="header-actions">
         <select v-model="selectedPeriod" @change="refreshReports" class="period-select">
           <option value="7">Last 7 days</option>

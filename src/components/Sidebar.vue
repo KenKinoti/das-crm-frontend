@@ -129,14 +129,16 @@ export default {
 <style scoped>
 .sidebar {
   width: 240px;
-  background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+  background: var(--card-background);
   backdrop-filter: blur(20px);
   border-right: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.02);
+  box-shadow: var(--shadow-medium);
   position: fixed;
   height: 100vh;
   z-index: 1000;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-smooth);
+  overflow-y: auto;
+  font-family: var(--font-family);
 }
 
 .sidebar.collapsed {
@@ -144,9 +146,9 @@ export default {
 }
 
 .sidebar-header {
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid rgba(241, 245, 249, 0.5);
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, transparent 100%);
+  padding: var(--spacing-xl) var(--spacing-md);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(102, 126, 234, 0.02);
   position: relative;
 }
 
@@ -156,8 +158,9 @@ export default {
   bottom: 0;
   left: 2rem;
   right: 2rem;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.3) 50%, transparent 100%);
+  height: 2px;
+  background: var(--primary-gradient);
+  border-radius: 1px;
 }
 
 .logo {
@@ -167,56 +170,56 @@ export default {
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  background: var(--primary-gradient);
+  border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 1.2rem;
-  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.25), inset 0 1px 2px rgba(255,255,255,0.2);
-  transition: all 0.3s ease;
+  color: var(--text-white);
+  font-size: 1.5rem;
+  box-shadow: var(--shadow-soft);
+  transition: var(--transition-bounce);
 }
 
 .logo-icon:hover {
   transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);
+  box-shadow: var(--shadow-strong);
 }
 
 .logo-text {
-  font-size: 1.4rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  background: var(--primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  font-family: var(--font-family);
   letter-spacing: -0.02em;
 }
 
 .nav-menu {
-  padding: 1rem 0;
+  padding: var(--spacing-md) 0;
   overflow-y: auto;
   flex: 1;
 }
 
 .nav-item {
-  margin: 3px 1rem;
+  margin: var(--spacing-xs) var(--spacing-md);
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   text-decoration: none;
-  color: rgba(107, 114, 128, 0.8);
-  border-radius: 12px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  color: var(--text-medium);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-smooth);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-family);
   font-size: 0.875rem;
   position: relative;
   overflow: hidden;
@@ -238,17 +241,17 @@ export default {
 }
 
 .nav-link:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(102, 126, 234, 0.06) 100%);
-  color: #667eea;
-  transform: translateX(8px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--primary-color);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-soft);
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.3), inset 0 1px 2px rgba(255,255,255,0.2);
-  transform: translateX(8px) scale(1.05);
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  box-shadow: var(--shadow-medium);
+  transform: translateX(4px);
 }
 
 .nav-link.active::before {
@@ -256,10 +259,10 @@ export default {
 }
 
 .nav-icon {
-  width: 24px;
+  width: 20px;
   text-align: center;
-  font-size: 1.1rem;
-  transition: all 0.3s ease;
+  font-size: 1rem;
+  transition: var(--transition-fast);
 }
 
 .nav-link:hover .nav-icon {
@@ -267,28 +270,31 @@ export default {
 }
 
 .nav-link.active .nav-icon {
-  transform: scale(1.15);
+  transform: scale(1.1);
   text-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .nav-section {
-  margin-top: 1.5rem;
+  margin-top: var(--spacing-xl);
 }
 
 .nav-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.2) 50%, transparent 100%);
-  margin: 1rem 20px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--primary-color) 50%, transparent 100%);
+  margin: var(--spacing-md) var(--spacing-lg);
+  border-radius: 1px;
 }
 
 .nav-section-title {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(102, 126, 234, 0.7);
-  padding: 0.5rem 20px 1rem 20px;
+  color: var(--primary-color);
+  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-md) var(--spacing-lg);
   margin: 0;
+  font-family: var(--font-family);
+  opacity: 0.8;
 }
 
 @media (max-width: 768px) {

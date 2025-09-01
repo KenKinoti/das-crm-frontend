@@ -1,213 +1,189 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-header">
-        <div class="logo">
-          <div class="logo-icon">
-            <i class="fas fa-heart-pulse"></i>
+  <div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="card shadow-lg" style="width: 100%; max-width: 400px;">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <div class="mb-3">
+            <div class="stat-icon mx-auto" style="width: 60px; height: 60px; font-size: 1.5rem;">
+              <i class="fas fa-heart-pulse"></i>
+            </div>
           </div>
-          <span class="logo-text">DASYIN PRO</span>
-        </div>
-        <h2>Welcome Back</h2>
-        <p>Sign in to your account to continue</p>
-      </div>
-
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <div class="input-wrapper">
-            <i class="fas fa-envelope input-icon"></i>
-            <input
-              id="email"
-              v-model="form.email"
-              type="email"
-              placeholder="Enter your email"
-              required
-              :disabled="isLoading"
-              autocomplete="email"
-            />
-          </div>
+          <h3 class="gradient-text mb-2">DASYIN PRO</h3>
+          <h4 class="mb-1">Welcome Back</h4>
+          <p class="text-muted">Sign in to your account to continue</p>
         </div>
 
-        <div class="form-group">
-          <label for="password">Password</label>
-          <div class="input-wrapper">
-            <i class="fas fa-lock input-icon"></i>
-            <input
-              id="password"
-              v-model="form.password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="Enter your password"
-              required
-              :disabled="isLoading"
-              autocomplete="current-password"
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="showPassword = !showPassword"
-              :disabled="isLoading"
-            >
-              <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+        <form @submit.prevent="handleLogin" @submit="console.log('🚀 FORM DEBUG: Form submitted!')">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email Address</label>
+            <div class="position-relative">
+              <i class="fas fa-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+              <input
+                id="email"
+                v-model="form.email"
+                type="email"
+                class="form-control ps-5"
+                placeholder="Enter your email"
+                required
+                :disabled="isLoading"
+                autocomplete="email"
+              />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <div class="position-relative">
+              <i class="fas fa-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+              <input
+                id="password"
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                class="form-control ps-5 pe-5"
+                placeholder="Enter your password"
+                required
+                :disabled="isLoading"
+                autocomplete="current-password"
+                @keyup.enter="handleLogin"
+              />
+              <button
+                type="button"
+                class="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+                @click="showPassword = !showPassword"
+                :disabled="isLoading"
+              >
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" v-model="form.rememberMe" :disabled="isLoading" id="rememberMe">
+              <label class="form-check-label" for="rememberMe">
+                Remember me
+              </label>
+            </div>
+            <a href="#" class="text-decoration-none" @click.prevent="showForgotPassword">Forgot password?</a>
+          </div>
+
+          <button 
+            type="submit" 
+            @click.prevent="handleLoginClick"
+            class="btn btn-primary w-100 mb-3" 
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading">
+              <i class="fas fa-spinner fa-spin me-2"></i>
+              Signing In...
+            </span>
+            <span v-else>Sign In</span>
+          </button>
+
+          <!-- EMERGENCY BACKUP BUTTON -->
+          <button 
+            type="button"
+            @click="testLogin"
+            class="btn btn-success w-100 mb-3"
+            style="background: green !important;"
+          >
+            🚨 EMERGENCY LOGIN (Click this GREEN button if blue button doesn't work)
+          </button>
+
+          <div class="text-center mb-3">
+            <hr class="my-3">
+            <span class="text-muted">Or continue with</span>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="button" @click="loginWithGoogle" class="btn btn-outline-secondary" :disabled="isLoading">
+              <i class="fab fa-google me-2"></i>
+              Google
+            </button>
+            <button type="button" @click="loginWithMicrosoft" class="btn btn-outline-info" :disabled="isLoading">
+              <i class="fab fa-microsoft me-2"></i>
+              Microsoft
             </button>
           </div>
-        </div>
 
-        <div class="form-options">
-          <label class="checkbox-wrapper">
-            <input type="checkbox" v-model="form.rememberMe" :disabled="isLoading">
-            <span class="checkmark"></span>
-            Remember me
-          </label>
-          <a href="#" class="forgot-link" @click.prevent="showForgotPassword">Forgot password?</a>
-        </div>
-
-        <button type="submit" class="login-btn" :disabled="isLoading">
-          <span v-if="isLoading" class="loading-spinner"></span>
-          <span v-else>Sign In</span>
-        </button>
-
-        <div class="divider">
-          <span>Or continue with</span>
-        </div>
-
-        <div class="social-login">
-          <button type="button" @click="loginWithGoogle" class="social-btn google-btn" :disabled="isLoading">
-            <i class="fab fa-google"></i>
-            Google
-          </button>
-          <button type="button" @click="loginWithMicrosoft" class="social-btn microsoft-btn" :disabled="isLoading">
-            <i class="fab fa-microsoft"></i>
-            Microsoft
-          </button>
-        </div>
-
-        <div v-if="error" class="error-message">
-          <i class="fas fa-exclamation-circle"></i>
-          {{ error }}
-        </div>
-
-        <div v-if="successMessage" class="success-message">
-          <i class="fas fa-check-circle"></i>
-          {{ successMessage }}
-        </div>
-      </form>
-
-      <!-- Test Accounts Section -->
-      <div class="test-accounts-section">
-        <button @click="showTestAccounts = !showTestAccounts" class="test-accounts-toggle">
-          <i :class="showTestAccounts ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
-          {{ showTestAccounts ? 'Hide' : 'Show' }} Test Accounts
-        </button>
-        
-        <div v-if="showTestAccounts" class="test-accounts-list">
-          <h4>Available Test Accounts</h4>
-          <p class="test-accounts-note">All accounts use password: <strong>Test123!@#</strong></p>
-          
-          <div class="test-account-cards">
-            <div class="test-account-card" @click="fillLoginForm('kennedy@dasyin.com.au')">
-              <div class="account-role super-admin">Super Admin</div>
-              <div class="account-email">kennedy@dasyin.com.au</div>
-              <div class="account-description">Full system access</div>
-            </div>
-            
-            <div class="test-account-card" @click="fillLoginForm('Sarah.Smith75@test.com')">
-              <div class="account-role admin">Admin</div>
-              <div class="account-email">Sarah.Smith75@test.com</div>
-              <div class="account-description">Organization management</div>
-            </div>
-            
-            <div class="test-account-card" @click="fillLoginForm('William.White84@test.com')">
-              <div class="account-role manager">Manager</div>
-              <div class="account-email">William.White84@test.com</div>
-              <div class="account-description">Staff & schedule management</div>
-            </div>
-            
-            <div class="test-account-card" @click="fillLoginForm('Emma.Miller23@test.com')">
-              <div class="account-role coordinator">Support Coordinator</div>
-              <div class="account-email">Emma.Miller23@test.com</div>
-              <div class="account-description">Participant care plans</div>
-            </div>
-            
-            <div class="test-account-card" @click="fillLoginForm('James.Jones32@test.com')">
-              <div class="account-role care-worker">Care Worker</div>
-              <div class="account-email">James.Jones32@test.com</div>
-              <div class="account-description">Basic shift access</div>
-            </div>
-            
-            <div class="test-account-card" @click="fillLoginForm('Emma.Jones59@test.com')">
-              <div class="account-role admin">Admin (Org 2)</div>
-              <div class="account-email">Emma.Jones59@test.com</div>
-              <div class="account-description">Different organization</div>
-            </div>
+          <div v-if="error" class="alert alert-danger mt-3" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            {{ error }}
           </div>
-        </div>
-      </div>
 
-    </div>
+          <div v-if="successMessage" class="alert alert-success mt-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            {{ successMessage }}
+          </div>
+        </form>
 
-    <!-- Forgot Password Modal -->
-    <div v-if="showForgotPasswordModal" class="modal-overlay" @click="closeForgotPassword">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Reset Password</h3>
-          <button @click="closeForgotPassword" class="close-btn">
-            <i class="fas fa-times"></i>
+        <!-- Test Accounts Section -->
+        <div class="test-accounts-section">
+          <button type="button" @click="showTestAccounts = !showTestAccounts" class="test-accounts-toggle">
+            <i :class="showTestAccounts ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+            {{ showTestAccounts ? 'Hide' : 'Show' }} Test Accounts
           </button>
-        </div>
-        <div class="modal-body">
-          <p>Enter your email address and we'll send you a link to reset your password.</p>
-          <form @submit.prevent="handlePasswordReset">
-            <div class="form-group">
-              <label for="reset-email">Email Address</label>
-              <div class="input-wrapper">
-                <i class="fas fa-envelope input-icon"></i>
-                <input
-                  id="reset-email"
-                  v-model="resetForm.email"
-                  type="email"
-                  placeholder="Enter your email"
-                  required
-                  :disabled="isResetting"
-                  autocomplete="email"
-                />
+          
+          <div v-if="showTestAccounts" class="test-accounts-list">
+            <h4>Demo Accounts</h4>
+            <p class="test-accounts-note">Click any account to auto-fill login credentials</p>
+            
+            <div class="test-account-cards">
+              <div class="test-account-card" @click="fillLoginForm('admin@dasyin.com.au')">
+                <div class="account-role super-admin">Super Admin</div>
+                <div class="account-email">admin@dasyin.com.au</div>
+                <div class="account-description">Full system access</div>
+              </div>
+              
+              <div class="test-account-card" @click="fillLoginForm('kennedy@dasyin.com.au')">
+                <div class="account-role admin">Admin</div>
+                <div class="account-email">kennedy@dasyin.com.au</div>
+                <div class="account-description">Organization admin</div>
+              </div>
+              
+              <div class="test-account-card" @click="fillLoginForm('manager@dasyin.com.au')">
+                <div class="account-role manager">Manager</div>
+                <div class="account-email">manager@dasyin.com.au</div>
+                <div class="account-description">Team management</div>
+              </div>
+              
+              <div class="test-account-card" @click="fillLoginForm('coordinator@dasyin.com.au')">
+                <div class="account-role coordinator">Support Coordinator</div>
+                <div class="account-email">coordinator@dasyin.com.au</div>
+                <div class="account-description">Participant support</div>
+              </div>
+              
+              <div class="test-account-card" @click="fillLoginForm('careworker@dasyin.com.au')">
+                <div class="account-role care-worker">Care Worker</div>
+                <div class="account-email">careworker@dasyin.com.au</div>
+                <div class="account-description">Direct care services</div>
+              </div>
+              
+              <div class="test-account-card" @click="fillLoginForm('org2admin@dasyin.com.au')">
+                <div class="account-role admin">Org 2 Admin</div>
+                <div class="account-email">org2admin@dasyin.com.au</div>
+                <div class="account-description">Organization 2 administrator</div>
               </div>
             </div>
-            <div class="modal-actions">
-              <button type="button" @click="closeForgotPassword" class="btn btn-cancel" :disabled="isResetting">
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-primary" :disabled="isResetting">
-                <span v-if="isResetting" class="loading-spinner"></span>
-                <span v-else>Send Reset Link</span>
-              </button>
-            </div>
-          </form>
-          <div v-if="resetError" class="error-message">
-            <i class="fas fa-exclamation-circle"></i>
-            {{ resetError }}
-          </div>
-          <div v-if="resetSuccess" class="success-message">
-            <i class="fas fa-check-circle"></i>
-            {{ resetSuccess }}
           </div>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
 import { useAuthStore } from '../stores/auth'
-import { showInfoModal } from '../utils/errorHandler'
+import { showInfoModal } from '../utils/notifications'
 
 export default {
   name: 'Login',
   data() {
     return {
       form: {
-        email: 'kennedy@dasyin.com.au',
-        password: 'Test123!@#',
+        email: 'admin@dasyin.com.au',
+        password: 'password',
         rememberMe: false
       },
       showPassword: false,
@@ -224,42 +200,129 @@ export default {
       resetSuccess: null
     }
   },
-  computed: {
-    authStore() {
-      return useAuthStore()
+  setup() {
+    const authStore = useAuthStore()
+    return {
+      authStore
     }
   },
   methods: {
     async handleLogin() {
+      console.log('🚀 LOGIN DEBUG: handleLogin called')
+      
+      // Check if we're in a try-catch that might be failing silently
+      try {
+        console.log('🚀 LOGIN DEBUG: Inside try block')
+      
       this.isLoading = true
       this.error = null
       this.successMessage = null
 
       try {
-        console.log('Login form submitted with credentials:', { email: this.form.email })
+        console.log('🚀 LOGIN DEBUG: Form submitted with credentials:', { 
+          email: this.form.email,
+          passwordLength: this.form.password?.length 
+        })
+        
+        console.log('🚀 LOGIN DEBUG: AuthStore state before login:', {
+          hasToken: !!this.authStore.token,
+          hasUser: !!this.authStore.user,
+          isAuthenticated: this.authStore.isAuthenticated
+        })
         
         const result = await this.authStore.login(this.form)
-        console.log('Login result:', result)
-        console.log('Auth store state after login:', {
-          token: this.authStore.token,
-          user: this.authStore.user,
-          isAuthenticated: this.authStore.isAuthenticated
+        console.log('🚀 LOGIN DEBUG: Login result:', result)
+        
+        console.log('🚀 LOGIN DEBUG: Auth store state after login:', {
+          hasToken: !!this.authStore.token,
+          hasUser: !!this.authStore.user,
+          isAuthenticated: this.authStore.isAuthenticated,
+          tokenValue: this.authStore.token ? this.authStore.token.substring(0, 30) + '...' : 'null',
+          userEmail: this.authStore.user?.email || 'null'
         })
         
         this.successMessage = 'Login successful! Redirecting...'
         
-        // Small delay to show success message
-        setTimeout(() => {
-          const redirectTo = this.$route.query.redirect || '/dashboard'
-          console.log('Redirecting to:', redirectTo)
-          this.$router.push(redirectTo)
-        }, 1000)
+        // Wait a moment to ensure auth state is fully updated
+        await this.$nextTick()
+        
+        // Small delay to ensure reactivity has updated
+        console.log('🚀 LOGIN DEBUG: Waiting for reactivity update...')
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        const redirectTo = this.$route.query.redirect || '/dashboard'
+        console.log('🚀 LOGIN DEBUG: Preparing to redirect to:', redirectTo)
+        
+        console.log('🚀 LOGIN DEBUG: Final auth state before redirect:', {
+          hasToken: !!this.authStore.token,
+          hasUser: !!this.authStore.user,
+          isAuthenticated: this.authStore.isAuthenticated,
+          tokenValue: this.authStore.token ? this.authStore.token.substring(0, 30) + '...' : 'null',
+          userEmail: this.authStore.user?.email || 'null'
+        })
+        
+        // Verify authentication state one more time
+        if (!this.authStore.isAuthenticated) {
+          console.log('🚀 LOGIN DEBUG: Authentication state check failed!')
+          throw new Error('Authentication state not properly set after login')
+        }
+        
+        console.log('🚀 LOGIN DEBUG: Authentication verified, executing redirect...')
+        // Use replace instead of push to prevent login page from staying in history
+        await this.$router.replace(redirectTo)
+        console.log('🚀 LOGIN DEBUG: Router.replace executed')
         
       } catch (error) {
-        console.error('Login error:', error)
+        console.error('🚀 LOGIN DEBUG: Error in try block:', error)
+        console.error('🚀 LOGIN DEBUG: Error details:', error.stack)
         this.error = this.authStore.error || error.message || 'Login failed. Please try again.'
       } finally {
+        console.log('🚀 LOGIN DEBUG: Finally block executed')
         this.isLoading = false
+      }
+      
+      } catch (outerError) {
+        console.error('🚀 LOGIN DEBUG: OUTER CATCH - Critical error:', outerError)
+        console.error('🚀 LOGIN DEBUG: OUTER CATCH - Error stack:', outerError.stack)
+        this.isLoading = false
+        this.error = 'Critical login error: ' + outerError.message
+      }
+    },
+
+    // EXPLICIT BUTTON CLICK HANDLER
+    async handleLoginClick(event) {
+      console.log('🚀 BUTTON DEBUG: handleLoginClick called', {
+        event: event,
+        eventType: event?.type,
+        form: this.form,
+        disabled: this.isLoading
+      })
+      
+      if (this.isLoading) {
+        console.log('🚀 BUTTON DEBUG: Button disabled, ignoring click')
+        return
+      }
+      
+      try {
+        await this.handleLogin()
+      } catch (error) {
+        console.error('🚀 BUTTON DEBUG: Click handler error:', error)
+      }
+    },
+
+    // SUPER SIMPLE TEST METHOD
+    async testLogin() {
+      console.log('🚀 TEST: Simple login test started')
+      try {
+        // Set form data manually
+        this.form.email = 'admin@dasyin.com.au'
+        this.form.password = 'password'
+        console.log('🚀 TEST: Form data set:', this.form)
+        
+        // Call login directly
+        await this.handleLogin()
+      } catch (error) {
+        console.error('🚀 TEST: Login test failed:', error)
       }
     },
     
@@ -333,17 +396,26 @@ export default {
 
     fillLoginForm(email) {
       this.form.email = email
-      this.form.password = 'Test123!@#'
+      this.form.password = 'password'
       this.error = null
       this.successMessage = null
     }
   },
   
   mounted() {
-    console.log('Login component mounted')
+    console.log('🚀 LOGIN DEBUG: Login component mounted')
+    console.log('🚀 LOGIN DEBUG: Initial form state:', this.form)
+    console.log('🚀 LOGIN DEBUG: AuthStore instance:', {
+      exists: !!this.authStore,
+      hasToken: !!this.authStore?.token,
+      hasUser: !!this.authStore?.user,
+      isAuthenticated: this.authStore?.isAuthenticated
+    })
+    console.log('🚀 LOGIN DEBUG: Available test emails:', ['admin@dasyin.com.au', 'kennedy@dasyin.com.au', 'manager@dasyin.com.au', 'coordinator@dasyin.com.au'])
+    
     // If already authenticated, redirect to dashboard
     if (this.authStore.isAuthenticated) {
-      console.log('Already authenticated, redirecting...')
+      console.log('🚀 LOGIN DEBUG: Already authenticated, redirecting...')
       this.$router.push('/dashboard')
     }
   }

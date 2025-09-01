@@ -1,122 +1,57 @@
 <template>
-  <div class="care-plans-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h1>
-          <i class="fas fa-clipboard-list"></i>
-          Care Plans Management
-        </h1>
-        <p>Manage participant care plans, approvals, and service objectives</p>
-      </div>
-      <button @click="showCreateModal = true" class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Create Care Plan
+  <PageTemplate
+    title="Care Plans Management"
+    description="Manage participant care plans, approvals, and service objectives"
+    icon="fa-clipboard-list"
+    :stats="statsCards"
+    :search-placeholder="'Search care plans...'"
+    :search-query="searchQuery"
+    @search="searchQuery = $event"
+    :show-add-button="true"
+    @add="showCreateModal = true"
+    add-button-text="Create Care Plan"
+  >
+    <template #filters>
+      <select v-model="statusFilter" @change="filterPlans" class="form-select">
+        <option value="">All Status</option>
+        <option value="active">Active Plans</option>
+        <option value="pending_approval">Pending Approval</option>
+        <option value="draft">Draft Plans</option>
+        <option value="expired">Expired Plans</option>
+        <option value="cancelled">Cancelled Plans</option>
+      </select>
+      
+      <button @click="clearFilters" class="btn btn-outline-secondary">
+        <i class="fas fa-times"></i>
+        Clear Filters
       </button>
-    </div>
-
-    <!-- Stats Overview -->
-    <div class="stats-overview">
-      <div class="stat-card primary">
-        <div class="stat-icon">
-          <i class="fas fa-clipboard-check"></i>
-        </div>
-        <div class="stat-content">
-          <h3>{{ activePlans.length }}</h3>
-          <p>Active Plans</p>
-        </div>
-      </div>
       
-      <div class="stat-card warning">
-        <div class="stat-icon">
-          <i class="fas fa-clock"></i>
-        </div>
-        <div class="stat-content">
-          <h3>{{ pendingApproval.length }}</h3>
-          <p>Pending Approval</p>
-        </div>
+      <div class="btn-group" role="group">
+        <button 
+          @click="currentView = 'list'" 
+          :class="['btn', currentView === 'list' ? 'btn-primary' : 'btn-outline-primary']"
+          title="List View"
+        >
+          <i class="fas fa-list"></i>
+        </button>
+        <button 
+          @click="currentView = 'grid'" 
+          :class="['btn', currentView === 'grid' ? 'btn-primary' : 'btn-outline-primary']"
+          title="Grid View"
+        >
+          <i class="fas fa-th"></i>
+        </button>
       </div>
-      
-      <div class="stat-card info">
-        <div class="stat-icon">
-          <i class="fas fa-calendar-alt"></i>
-        </div>
-        <div class="stat-content">
-          <h3>{{ expiringPlans.length }}</h3>
-          <p>Expiring Soon</p>
-        </div>
-      </div>
-      
-      <div class="stat-card success">
-        <div class="stat-icon">
-          <i class="fas fa-chart-line"></i>
-        </div>
-        <div class="stat-content">
-          <h3>{{ completionRate }}%</h3>
-          <p>Completion Rate</p>
-        </div>
-      </div>
-    </div>
+    </template>
 
-    <!-- Search and Filters -->
-    <div class="filters-section">
-      <div class="filters-row">
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input 
-            v-model="searchQuery" 
-            @input="debouncedSearch"
-            type="text" 
-            class="form-input"
-            placeholder="Search care plans..." 
-          />
+    <template #content>
+      <div class="care-plans-content">
+        <div v-if="isLoading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Loading care plans...</p>
         </div>
-        
-        <!-- Filter Controls -->
-        <div class="filter-controls">
-          <select v-model="statusFilter" @change="filterPlans" class="form-select">
-            <option value="">All Status</option>
-            <option value="active">Active Plans</option>
-            <option value="pending_approval">Pending Approval</option>
-            <option value="draft">Draft Plans</option>
-            <option value="expired">Expired Plans</option>
-            <option value="cancelled">Cancelled Plans</option>
-          </select>
-          
-          <button @click="clearFilters" class="btn btn-outline-elegant">
-            <i class="fas fa-times"></i>
-            Clear Filters
-          </button>
-          
-          <!-- View Toggle -->
-          <div class="view-toggle">
-            <button 
-              @click="currentView = 'list'" 
-              :class="['view-btn-elegant', { active: currentView === 'list' }]"
-              title="List View"
-            >
-              <i class="fas fa-list"></i>
-            </button>
-            <button 
-              @click="currentView = 'grid'" 
-              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
-              title="Grid View"
-            >
-              <i class="fas fa-th"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Loading care plans...</p>
-    </div>
-
-    <!-- Care Plans Grid -->
-    <div v-else-if="filteredCarePlans.length" class="care-plans-grid">
+        <div v-else-if="filteredCarePlans.length" class="care-plans-grid">
       <div v-for="plan in filteredCarePlans" :key="plan.id" class="care-plan-card">
         <div class="plan-header">
           <div class="plan-info">
@@ -212,20 +147,22 @@
           </button>
         </div>
       </div>
-    </div>
+        </div>
 
-    <!-- Empty State -->
-    <div v-else class="empty-state">
+        <div v-else class="empty-state">
       <div class="empty-icon">
         <i class="fas fa-clipboard-list"></i>
       </div>
       <h3>No Care Plans Found</h3>
       <p>{{ searchQuery ? 'No care plans match your search criteria.' : 'Get started by creating your first care plan.' }}</p>
-      <button v-if="!searchQuery" @click="showCreateModal = true" class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Create First Care Plan
-      </button>
-    </div>
+          <button v-if="!searchQuery" @click="showCreateModal = true" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Create First Care Plan
+          </button>
+        </div>
+      </div>
+    </template>
+  </PageTemplate>
 
     <!-- Create/Edit Modal -->
     <div v-if="showCreateModal || showEditModal" class="modal-overlay" @click="closeModal">
@@ -365,9 +302,13 @@ import { useParticipantsStore } from '../stores/participants'
 import { performanceMixin } from '../mixins/performance'
 import { showSuccessModal, showErrorModal, showViewModal } from '../utils/errorHandler'
 import { debounce } from '../utils/performance'
+import PageTemplate from '../components/PageTemplate.vue'
 
 export default {
   name: 'CarePlans',
+  components: {
+    PageTemplate
+  },
   mixins: [performanceMixin],
   
   data() {
@@ -435,6 +376,35 @@ export default {
       if (!this.activePlans.length) return 0
       const totalProgress = this.activePlans.reduce((sum, plan) => sum + this.calculateProgress(plan), 0)
       return Math.round(totalProgress / this.activePlans.length)
+    },
+
+    statsCards() {
+      return [
+        {
+          title: 'Active Plans',
+          value: this.activePlans.length,
+          icon: 'fa-clipboard-check',
+          color: 'info'
+        },
+        {
+          title: 'Pending Approval',
+          value: this.pendingApproval.length,
+          icon: 'fa-clock',
+          color: 'warning'
+        },
+        {
+          title: 'Expiring Soon',
+          value: this.expiringPlans.length,
+          icon: 'fa-calendar-alt',
+          color: 'info'
+        },
+        {
+          title: 'Completion Rate',
+          value: this.completionRate + '%',
+          icon: 'fa-chart-line',
+          color: 'success'
+        }
+      ]
     }
   },
   
