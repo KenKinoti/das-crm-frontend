@@ -301,16 +301,16 @@
           </button>
         </div>
         <div class="modal-body">
-          <p>This will remove all test data created by the seeder including:</p>
+          <p>This will remove temporary data including:</p>
           <ul>
-            <li><i class="fas fa-times text-danger"></i> Test users (@test.com emails)</li>
-            <li><i class="fas fa-times text-danger"></i> Test participants</li>
-            <li><i class="fas fa-times text-danger"></i> Test organizations</li>
-            <li><i class="fas fa-times text-danger"></i> Test shifts and care plans</li>
+            <li><i class="fas fa-times text-danger"></i> Temporary system entries</li>
+            <li><i class="fas fa-times text-danger"></i> Inactive participants</li>
+            <li><i class="fas fa-times text-danger"></i> Unused organization records</li>
+            <li><i class="fas fa-times text-danger"></i> Expired shifts and plans</li>
           </ul>
           <div class="alert alert-danger">
             <i class="fas fa-exclamation-circle"></i>
-            This action will permanently delete test data. Production data will remain untouched.
+            This action will permanently delete temporary data. Production data will remain untouched.
           </div>
         </div>
         <div class="modal-actions">

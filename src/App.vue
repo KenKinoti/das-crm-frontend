@@ -39,19 +39,36 @@
     <div v-else class="auth-container">
       <router-view />
     </div>
+
+    <!-- Global Modal Component -->
+    <ModalNotification
+      v-if="modalStore.currentModal"
+      :show="!!modalStore.currentModal"
+      :type="modalStore.currentModal.type"
+      :title="modalStore.currentModal.title"
+      :message="modalStore.currentModal.message"
+      :confirm-text="modalStore.currentModal.confirmText"
+      :cancel-text="modalStore.currentModal.cancelText"
+      @confirm="handleModalConfirm"
+      @cancel="handleModalCancel"
+      @close="handleModalClose"
+    />
   </div>
 </template>
 
 <script>
 import Sidebar from './components/Sidebar.vue'
 import Header from './components/Header.vue'
+import ModalNotification from './components/ModalNotification.vue'
 import { useAuthStore } from './stores/auth'
+import { useModalStore } from './stores/modal'
 
 export default {
   name: 'App',
   components: {
     Sidebar,
-    Header
+    Header,
+    ModalNotification
   },
   data() {
     return {
@@ -62,6 +79,9 @@ export default {
   computed: {
     authStore() {
       return useAuthStore()
+    },
+    modalStore() {
+      return useModalStore()
     },
     isAuthenticated() {
       // Show authenticated layout when user is authenticated and not on login page
@@ -96,6 +116,15 @@ export default {
       if (window.innerWidth <= 768) {
         this.sidebarOpen = false
       }
+    },
+    handleModalConfirm() {
+      this.modalStore.closeModal(true)
+    },
+    handleModalCancel() {
+      this.modalStore.closeModal(false)
+    },
+    handleModalClose() {
+      this.modalStore.closeModal(null)
     }
   },
   watch: {
@@ -110,26 +139,23 @@ export default {
     const routeName = this.$route.name?.toLowerCase() || 'dashboard'
     this.currentPage = routeName
 
-    // Initialize auth state after page refresh only if we have a token
-    if (!this.authStore.isAuthenticated && localStorage.getItem('auth_token')) {
-      try {
-        await this.authStore.initializeAuth()
-      } catch (error) {
-        console.error('Failed to initialize auth after refresh:', error)
-        if (this.$route.path !== '/login') {
-          this.$router.push('/login')
-        }
-      }
-    }
-
-    // Only redirect if we're on the root path
+    // Handle root path redirects
     if (this.$route.path === '/') {
-      if (this.authStore.isAuthenticated) {
+      const lastRoute = localStorage.getItem('lastRoute')
+      const storedToken = localStorage.getItem('auth_token')
+      
+      if (storedToken && lastRoute) {
+        console.log('🔄 App mounted: Restoring last route:', lastRoute)
+        this.$router.push(lastRoute)
+      } else if (storedToken) {
         this.$router.push('/dashboard')
       } else {
         this.$router.push('/login')
       }
+      return
     }
+
+    console.log('🚀 App mounted on route:', this.$route.path)
 
     const handleResize = () => {
       if (window.innerWidth <= 768) {

@@ -1,7 +1,9 @@
 /**
  * Notification utilities for the AGO Vue application
- * Provides simple notification functions for user feedback
+ * Provides modal-based notification functions for user feedback
  */
+
+import { useModalStore } from '../stores/modal'
 
 /**
  * Show an informational modal dialog
@@ -9,38 +11,67 @@
  * @param {string} message - Modal message
  * @param {Object} options - Additional options
  */
-export function showInfoModal(title, message, options = {}) {
-  // For now, use a simple alert - can be enhanced with proper modal later
-  if (typeof title === 'string' && typeof message === 'string') {
-    alert(`${title}\n\n${message}`)
-  } else if (typeof title === 'string') {
-    alert(title)
-  }
+export async function showInfoModal(title, message, options = {}) {
+  const modalStore = useModalStore()
+  return await modalStore.showInfo(title, message, options)
 }
 
 /**
- * Show a success notification
+ * Show a success notification modal
+ * @param {string} title - Success title 
  * @param {string} message - Success message
+ * @param {Object} options - Additional options
  */
-export function showSuccess(message) {
-  console.log('Success:', message)
-  // Can be enhanced with toast notifications later
+export async function showSuccess(title, message, options = {}) {
+  const modalStore = useModalStore()
+  return await modalStore.showSuccess(title, message || '', options)
 }
 
 /**
- * Show an error notification
+ * Show an error notification modal
+ * @param {string} title - Error title
  * @param {string} message - Error message
+ * @param {Object} options - Additional options
  */
-export function showError(message) {
-  console.error('Error:', message)
-  alert(`Error: ${message}`)
+export async function showError(title, message, options = {}) {
+  const modalStore = useModalStore()
+  return await modalStore.showError(title, message || '', options)
 }
 
 /**
- * Show a warning notification
+ * Show a warning notification modal
+ * @param {string} title - Warning title
  * @param {string} message - Warning message
+ * @param {Object} options - Additional options
  */
-export function showWarning(message) {
-  console.warn('Warning:', message)
-  alert(`Warning: ${message}`)
+export async function showWarning(title, message, options = {}) {
+  const modalStore = useModalStore()
+  return await modalStore.showWarning(title, message || '', options)
+}
+
+/**
+ * Show a confirmation modal
+ * @param {string} title - Confirmation title
+ * @param {string} message - Confirmation message
+ * @param {Object} options - Additional options
+ */
+export async function showConfirm(title, message, options = {}) {
+  const modalStore = useModalStore()
+  const result = await modalStore.showConfirm(title, message, options)
+  return result === true // Convert to boolean for backward compatibility
+}
+
+// Legacy compatibility functions
+export function showErrorNotification(error, message) {
+  if (typeof error === 'string' && !message) {
+    return showError('Error', error)
+  }
+  return showError('Error', message || error?.message || 'An error occurred')
+}
+
+export function showSuccessNotification(title, message) {
+  if (typeof title === 'string' && !message) {
+    return showSuccess('Success', title)
+  }
+  return showSuccess(title, message || '')
 }

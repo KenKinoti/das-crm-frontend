@@ -375,6 +375,8 @@ export default {
     
     // Initialize organization context for SuperAdmin
     if (this.isSuperAdmin) {
+      // Ensure default to "All Organizations" first
+      this.orgContextStore.setDefaultAllOrganizations()
       this.orgContextStore.initializeFromStorage()
       await this.orgContextStore.fetchOrganizations()
     }

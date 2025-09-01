@@ -1,9 +1,9 @@
 <template>
   <PageTemplate
-    title="Dashboard"
-    description="Overview of your NDIS support operations and key metrics"
-    icon="fa-tachometer-alt"
-    :stats="statsCards"
+    page-title="Dashboard"
+    page-description="Overview of your NDIS support operations and key metrics"
+    header-icon="fas fa-tachometer-alt"
+    :stats-cards="statsCards"
     :show-search="false"
     :show-filters="false"
     :show-add-button="false"
@@ -23,63 +23,47 @@
         </div>
 
     <!-- Quick Actions -->
-    <div class="card mt-4">
-      <div class="card-header">
-        <h5 class="mb-0">
-          <i class="fas fa-bolt me-2"></i>
-          Quick Actions
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4 col-lg-2 mb-3">
-            <button class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-3" 
-                    @click="navigateTo('participants')" 
-                    :disabled="isNavigating">
-              <i class="fas fa-user-plus fa-2x mb-2"></i>
-              <span>Add New Participant</span>
-            </button>
+    <div class="quick-actions mt-4">
+      <h2 class="section-title">
+        <i class="fas fa-bolt"></i>
+        Quick Actions
+      </h2>
+      <div class="actions-grid">
+        <div class="action-btn" @click="navigateTo('participants')" :class="{ 'loading': isNavigating }">
+          <div class="action-icon">
+            <i class="fas fa-user-plus"></i>
           </div>
-          <div class="col-md-4 col-lg-2 mb-3">
-            <button class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center p-3" 
-                    @click="navigateTo('scheduling')" 
-                    :disabled="isNavigating">
-              <i class="fas fa-calendar-plus fa-2x mb-2"></i>
-              <span>Schedule Shift</span>
-            </button>
+          <div class="action-text">Add Participant</div>
+        </div>
+        <div class="action-btn" @click="navigateTo('scheduling')" :class="{ 'loading': isNavigating }">
+          <div class="action-icon">
+            <i class="fas fa-calendar-plus"></i>
           </div>
-          <div class="col-md-4 col-lg-2 mb-3">
-            <button class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center p-3" 
-                    @click="navigateTo('documents')" 
-                    :disabled="isNavigating">
-              <i class="fas fa-upload fa-2x mb-2"></i>
-              <span>Upload Document</span>
-            </button>
+          <div class="action-text">Schedule</div>
+        </div>
+        <div class="action-btn" @click="navigateTo('documents')" :class="{ 'loading': isNavigating }">
+          <div class="action-icon">
+            <i class="fas fa-upload"></i>
           </div>
-          <div class="col-md-4 col-lg-2 mb-3">
-            <button class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center p-3" 
-                    @click="navigateTo('billing')" 
-                    :disabled="isNavigating">
-              <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
-              <span>Generate Invoice</span>
-            </button>
+          <div class="action-text">Upload</div>
+        </div>
+        <div class="action-btn" @click="navigateTo('billing')" :class="{ 'loading': isNavigating }">
+          <div class="action-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
           </div>
-          <div class="col-md-4 col-lg-2 mb-3">
-            <button class="btn btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center p-3" 
-                    @click="navigateTo('staff')" 
-                    :disabled="isNavigating">
-              <i class="fas fa-user-tie fa-2x mb-2"></i>
-              <span>Add Staff Member</span>
-            </button>
+          <div class="action-text">Invoice</div>
+        </div>
+        <div class="action-btn" @click="navigateTo('staff')" :class="{ 'loading': isNavigating }">
+          <div class="action-icon">
+            <i class="fas fa-user-tie"></i>
           </div>
-          <div class="col-md-4 col-lg-2 mb-3">
-            <button class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-3" 
-                    @click="navigateTo('reports')" 
-                    :disabled="isNavigating">
-              <i class="fas fa-chart-line fa-2x mb-2"></i>
-              <span>View Reports</span>
-            </button>
+          <div class="action-text">Add Staff</div>
+        </div>
+        <div class="action-btn" @click="navigateTo('reports')" :class="{ 'loading': isNavigating }">
+          <div class="action-icon">
+            <i class="fas fa-chart-line"></i>
           </div>
+          <div class="action-text">Reports</div>
         </div>
       </div>
     </div>
@@ -176,31 +160,31 @@ export default {
     statsCards() {
       return [
         {
-          title: 'Total Participants',
+          label: 'Total Participants',
           value: this.stats.totalParticipants,
-          icon: 'fa-users',
-          color: 'info',
+          icon: 'fas fa-users',
+          type: 'info',
           change: this.stats.participantGrowth
         },
         {
-          title: 'Active Staff',
+          label: 'Active Staff',
           value: this.stats.activeStaff,
-          icon: 'fa-user-nurse',
-          color: 'success',
+          icon: 'fas fa-user-nurse',
+          type: 'success',
           change: this.stats.staffGrowth
         },
         {
-          title: 'Shifts This Week',
+          label: 'Shifts This Week',
           value: this.stats.shiftsThisWeek,
-          icon: 'fa-calendar-check',
-          color: 'warning',
+          icon: 'fas fa-calendar-check',
+          type: 'warning',
           change: `${this.stats.shiftCompletion}% completion`
         },
         {
-          title: 'Monthly Revenue',
+          label: 'Monthly Revenue',
           value: '$' + this.formatCurrency(this.stats.monthlyRevenue),
-          icon: 'fa-dollar-sign',
-          color: 'info',
+          icon: 'fas fa-dollar-sign',
+          type: 'info',
           change: `${this.stats.revenueGrowth}% vs last month`
         }
       ]
@@ -396,111 +380,14 @@ export default {
           }))
         } else {
           // Use mock data if API doesn't return activities
-          this.setMockRecentActivities()
+          this.recentActivities = []
         }
       } catch (error) {
         console.log('Could not fetch recent activity:', error.message)
-        // Use mock data on error
-        this.setMockRecentActivities()
+        this.recentActivities = []
       }
     },
     
-    setMockRecentActivities() {
-      // Generate realistic mock activities
-      this.recentActivities = [
-        {
-          id: 1,
-          title: 'Shift completed',
-          subtitle: 'By John Smith',
-          time: this.formatTimeAgo(new Date(Date.now() - 30 * 60 * 1000)),
-          icon: this.getActivityIcon('shift_completed'),
-          color: this.getActivityColor('shift_completed')
-        },
-        {
-          id: 2,
-          title: 'New participant registered',
-          subtitle: 'By System',
-          time: this.formatTimeAgo(new Date(Date.now() - 2 * 60 * 60 * 1000)),
-          icon: this.getActivityIcon('participant_added'),
-          color: this.getActivityColor('participant_added')
-        },
-        {
-          id: 3,
-          title: 'Shift scheduled for Monday',
-          subtitle: 'By Maria White',
-          time: this.formatTimeAgo(new Date(Date.now() - 3 * 60 * 60 * 1000)),
-          icon: this.getActivityIcon('shift_scheduled'),
-          color: this.getActivityColor('shift_scheduled')
-        },
-        {
-          id: 4,
-          title: 'Care plan updated',
-          subtitle: 'By Linda Taylor',
-          time: this.formatTimeAgo(new Date(Date.now() - 5 * 60 * 60 * 1000)),
-          icon: this.getActivityIcon('document_uploaded'),
-          color: this.getActivityColor('document_uploaded')
-        },
-        {
-          id: 5,
-          title: 'New staff member added',
-          subtitle: 'By Admin',
-          time: this.formatTimeAgo(new Date(Date.now() - 24 * 60 * 60 * 1000)),
-          icon: this.getActivityIcon('staff_added'),
-          color: this.getActivityColor('staff_added')
-        }
-      ]
-    },
-    
-    setFallbackData() {
-      // Mock data for demonstration when backend is unavailable
-      const authStore = useAuthStore()
-      const isSuperAdmin = authStore.user?.role === 'super_admin'
-      
-      this.stats = {
-        totalParticipants: isSuperAdmin ? 156 : 42,
-        activeStaff: isSuperAdmin ? 28 : 12,
-        shiftsThisWeek: isSuperAdmin ? 124 : 38,
-        monthlyRevenue: isSuperAdmin ? 48500 : 12300,
-        participantGrowth: '+12% from last month',
-        staffGrowth: '+3 new this week',
-        shiftCompletion: 94,
-        revenueGrowth: 15
-      }
-      
-      // Mock recent activities
-      this.recentActivities = [
-        {
-          id: 1,
-          type: 'shift_completed',
-          message: 'John Smith completed shift with Emily Davis',
-          time: new Date(Date.now() - 30 * 60 * 1000)
-        },
-        {
-          id: 2,
-          type: 'participant_added',
-          message: 'New participant Sarah Johnson registered',
-          time: new Date(Date.now() - 2 * 60 * 60 * 1000)
-        },
-        {
-          id: 3,
-          type: 'shift_scheduled',
-          message: 'New shift scheduled for next Monday',
-          time: new Date(Date.now() - 3 * 60 * 60 * 1000)
-        },
-        {
-          id: 4,
-          type: 'document_uploaded',
-          message: 'Care plan updated for Michael Brown',
-          time: new Date(Date.now() - 5 * 60 * 60 * 1000)
-        },
-        {
-          id: 5,
-          type: 'staff_added',
-          message: 'New staff member Lisa Wilson onboarded',
-          time: new Date(Date.now() - 24 * 60 * 60 * 1000)
-        }
-      ]
-    },
     
     formatCurrency(amount) {
       return new Intl.NumberFormat('en-AU', {
@@ -683,15 +570,22 @@ export default {
 
 /* Quick Actions */
 .quick-actions {
-  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 3rem;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-bottom: 3rem;
   position: relative;
   overflow: hidden;
+}
+
+[data-theme="dark"] .quick-actions {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .quick-actions::before {
@@ -708,16 +602,17 @@ export default {
 .section-title {
   font-size: 1.6rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1f2937;
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
   gap: 12px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
   position: relative;
+}
+
+[data-theme="dark"] .section-title {
+  color: #f3f4f6;
 }
 
 .section-title i {
@@ -727,50 +622,70 @@ export default {
 }
 
 .actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 1.5rem;
+  justify-content: space-between;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  width: 100%;
 }
 
 .action-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 2rem 1.5rem;
-  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
-  border: 2px solid rgba(226, 232, 240, 0.5);
-  border-radius: 20px;
+  gap: 12px;
+  padding: 1.5rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
   text-decoration: none;
-  color: var(--text-medium);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #374151;
+  transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
+  flex: 1 1 auto !important;
+  min-width: 130px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.action-btn::before {
+/* Add shimmer effect to match stat cards */
+.action-btn::after {
   content: '';
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   transition: left 0.6s;
 }
 
-.action-btn:hover::before {
+.action-btn:hover::after {
   left: 100%;
 }
 
+[data-theme="dark"] .action-btn {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  color: #e5e7eb;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+
 .action-btn:hover:not(.loading) {
-  border-color: rgba(102, 126, 234, 0.6);
-  color: #667eea;
-  transform: translateY(-6px) scale(1.05);
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15), 0 8px 16px rgba(0,0,0,0.08);
-  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(102, 126, 234, 0.05) 100%);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] .action-btn:hover:not(.loading) {
+  border-color: rgba(102, 126, 234, 0.8);
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.98) 0%, rgba(31, 41, 55, 0.9) 100%);
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25), 0 4px 8px rgba(0,0,0,0.3);
 }
 
 .action-btn.loading {
@@ -779,24 +694,24 @@ export default {
 }
 
 .action-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #64748b;
+  font-size: 1.2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
 }
 
 .action-btn:hover:not(.loading) .action-icon {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
   color: white;
-  transform: scale(1.1) rotate(-5deg);
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
 }
 
 .action-text {
@@ -804,49 +719,33 @@ export default {
   text-align: center;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
   font-size: 0.95rem;
+  line-height: 1.3;
+  word-wrap: break-word;
+  color: #374151;
+}
+
+[data-theme="dark"] .action-text {
+  color: #e5e7eb;
 }
 
 /* Recent Activity */
 .recent-activity {
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 3rem;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
 }
 
-/* Dark theme styling for recent activity - keep it white */
-.dark .recent-activity {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255,255,255,0.3);
+/* Dark theme styling for recent activity */
+[data-theme="dark"] .recent-activity {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
   box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.15);
-}
-
-.dark .recent-activity .section-title {
-  color: #1f2937;
-}
-
-.dark .recent-activity .activity-item {
-  color: #1f2937;
-}
-
-.dark .recent-activity .no-activity p {
-  color: #4b5563;
-}
-
-.dark .recent-activity .activity-title {
-  color: #1f2937;
-}
-
-.dark .recent-activity .activity-subtitle {
-  color: #6b7280;
-}
-
-.dark .recent-activity .activity-time {
-  color: #9ca3af;
 }
 
 .recent-activity::before {
@@ -884,6 +783,11 @@ export default {
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.1);
 }
 
+[data-theme="dark"] .activity-item:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(102, 126, 234, 0.08) 100%);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
 .activity-icon {
   width: 48px;
   height: 48px;
@@ -908,25 +812,41 @@ export default {
 
 .activity-title {
   font-weight: 500;
-  color: var(--text-dark);
+  color: #1f2937;
   margin-bottom: 2px;
+}
+
+[data-theme="dark"] .activity-title {
+  color: #f3f4f6;
 }
 
 .activity-subtitle {
   font-size: 0.85rem;
-  color: var(--text-light);
+  color: #6b7280;
+}
+
+[data-theme="dark"] .activity-subtitle {
+  color: #9ca3af;
 }
 
 .activity-time {
   font-size: 0.8rem;
-  color: var(--text-light);
+  color: #9ca3af;
   font-weight: 500;
+}
+
+[data-theme="dark"] .activity-time {
+  color: #6b7280;
 }
 
 .no-activity {
   text-align: center;
   padding: 2rem;
-  color: var(--text-light);
+  color: #6b7280;
+}
+
+[data-theme="dark"] .no-activity {
+  color: #9ca3af;
 }
 
 /* Loading and Error States */

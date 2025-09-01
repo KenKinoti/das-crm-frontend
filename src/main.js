@@ -11,6 +11,9 @@ import '@fortawesome/fontawesome-free/css/all.css'
 import './styles/bootstrap-theme.css'
 import './assets/css/main.css'
 
+// Import auto-authentication utility
+import './utils/autoAuth'
+
 const app = createApp(App)
 const pinia = createPinia()
 

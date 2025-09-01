@@ -5,7 +5,7 @@ import api from '../services/api'
 export const useOrganizationContextStore = defineStore('organizationContext', {
   state: () => ({
     organizations: [],
-    currentOrganization: null,
+    currentOrganization: null, // Defaults to "All Organizations" for super admin
     isLoading: false,
     error: null
   }),
@@ -56,19 +56,17 @@ export const useOrganizationContextStore = defineStore('organizationContext', {
             if (userOrg) {
               this.currentOrganization = userOrg
             }
-          } else if (authStore.isSuperAdmin && !this.currentOrganization && this.organizations.length > 0) {
-            // For super admin, try to restore from storage or select first org
+          } else if (authStore.isSuperAdmin) {
+            // For super admin, try to restore from storage but default to "All Organizations"
             const stored = localStorage.getItem('selectedOrganizationId')
             if (stored) {
               const storedOrg = this.organizations.find(org => org.id === stored)
               if (storedOrg) {
                 this.currentOrganization = storedOrg
-              } else {
-                this.currentOrganization = this.organizations[0]
               }
-            } else {
-              this.currentOrganization = this.organizations[0]
+              // If stored org not found, leave as null (All Organizations)
             }
+            // Default to null (All Organizations) for super admin
           }
         }
       } catch (error) {
@@ -107,7 +105,7 @@ export const useOrganizationContextStore = defineStore('organizationContext', {
         return
       }
       
-      // For super admins, restore from storage
+      // For super admins, restore from storage but prefer "All Organizations"
       const storedId = localStorage.getItem('selectedOrganizationId')
       if (storedId && this.organizations.length > 0) {
         const storedOrg = this.organizations.find(org => org.id === storedId)
@@ -115,12 +113,22 @@ export const useOrganizationContextStore = defineStore('organizationContext', {
           this.currentOrganization = storedOrg
         }
       }
+      // If no stored selection, default to null (All Organizations)
     },
 
     clearOrganizationContext() {
       this.currentOrganization = null
       this.organizations = []
       localStorage.removeItem('selectedOrganizationId')
+    },
+
+    setDefaultAllOrganizations() {
+      // Force set to "All Organizations" for super admin
+      const authStore = useAuthStore()
+      if (authStore.isSuperAdmin) {
+        this.currentOrganization = null
+        localStorage.removeItem('selectedOrganizationId')
+      }
     }
   }
 })

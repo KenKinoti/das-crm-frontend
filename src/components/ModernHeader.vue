@@ -1,5 +1,5 @@
 <template>
-  <header class="bg-white/80 backdrop-blur-md border-b border-secondary-200 px-6 py-4">
+  <header class="beautiful-header">
     <div class="flex items-center justify-between">
       <!-- Left: Menu Toggle & Page Title -->
       <div class="flex items-center gap-4">
@@ -190,3 +190,153 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Beautiful Header Design */
+.beautiful-header {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.95) 0%, 
+    rgba(139, 92, 246, 0.95) 25%,
+    rgba(236, 72, 153, 0.95) 50%,
+    rgba(245, 158, 11, 0.95) 75%,
+    rgba(16, 185, 129, 0.95) 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease-in-out infinite;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.5rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated gradient background */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Glassmorphism overlay */
+.beautiful-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+/* Shimmer effect */
+.beautiful-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.8) 50%, 
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Content styling */
+.beautiful-header * {
+  position: relative;
+  z-index: 1;
+}
+
+.beautiful-header h1 {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.beautiful-header p {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Button styling for header */
+.beautiful-header button {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.beautiful-header button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Profile avatar enhancement */
+.beautiful-header .profile-avatar {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.beautiful-header .profile-avatar:hover {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+/* Notification badge glow */
+.beautiful-header .notification-badge {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .beautiful-header {
+  background: linear-gradient(135deg, 
+    rgba(17, 24, 39, 0.95) 0%, 
+    rgba(31, 41, 55, 0.95) 25%,
+    rgba(55, 65, 81, 0.95) 50%,
+    rgba(75, 85, 99, 0.95) 75%,
+    rgba(107, 114, 128, 0.95) 100%
+  );
+}
+
+[data-theme="dark"] .beautiful-header::before {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .beautiful-header {
+    padding: 1rem;
+  }
+  
+  .beautiful-header h1 {
+    font-size: 1.5rem;
+  }
+}
+</style>

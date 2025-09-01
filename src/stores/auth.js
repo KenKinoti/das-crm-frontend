@@ -63,101 +63,26 @@ export const useAuthStore = defineStore('auth', {
           isAuthenticated: this.isAuthenticated
         })
         
-        // Check if this is one of our frontend test users - always use mock for them
-        const mockUsers = this.getMockUsers()
-        console.log('🔐 AUTH DEBUG: Mock users available:', mockUsers.map(u => u.email))
-        const mockUser = mockUsers.find(u => u.email === credentials.email)
+        // Backend authentication only - no mock users
+        console.log('🔐 AUTH DEBUG: Attempting backend authentication for:', credentials.email)
+        const response = await authService.login(credentials)
         
-        if (mockUser) {
-          console.log('🔐 AUTH DEBUG: Using mock authentication for frontend test user:', credentials.email)
-          console.log('🔐 AUTH DEBUG: Mock user found:', { 
-            id: mockUser.id, 
-            role: mockUser.role 
-          })
+        if (response.success) {
+          this.token = response.data.token
+          this.refreshToken = response.data.refresh_token
+          this.user = response.data.user
           
-          // Verify password
-          console.log('🔐 AUTH DEBUG: Verifying password...')
-          if (mockUser.password !== credentials.password) {
-            console.log('🔐 AUTH DEBUG: Password verification failed')
-            throw new Error('Invalid credentials for test account')
-          }
-          console.log('🔐 AUTH DEBUG: Password verified successfully')
-          
-          // Set up mock authentication
-          const newToken = `mock-jwt-token-${mockUser.role}-${Date.now()}`
-          const newUser = {
-            id: mockUser.id,
-            email: mockUser.email,
-            first_name: mockUser.first_name,
-            last_name: mockUser.last_name,
-            role: mockUser.role,
-            organization_id: mockUser.organization_id,
-            permissions: mockUser.permissions || []
-          }
-          
-          console.log('🔐 AUTH DEBUG: Setting token and user:', {
-            token: newToken.substring(0, 30) + '...',
-            user: { id: newUser.id, email: newUser.email, role: newUser.role }
-          })
-          
-          this.token = newToken
-          this.user = newUser
-          
-          console.log('🔐 AUTH DEBUG: State after setting:', {
-            hasToken: !!this.token,
-            hasUser: !!this.user,
-            isAuthenticated: this.isAuthenticated,
-            tokenMatch: this.token === newToken,
-            userMatch: this.user === newUser
-          })
-          
+          // Store tokens in localStorage
           localStorage.setItem('auth_token', this.token)
-          localStorage.setItem('current_user', JSON.stringify(this.user))
-          console.log('🔐 AUTH DEBUG: LocalStorage updated')
-          
-          // Refresh permissions after successful login
-          const permissionsStore = await import('./permissions').then(m => m.usePermissionsStore())
-          permissionsStore.refreshPermissions()
-          
-          console.log('Mock login successful for test user:', { 
-            user: this.user, 
-            token: this.token,
-            isAuthenticated: this.isAuthenticated 
-          })
-          
-          // Verify localStorage was set correctly
-          console.log('LocalStorage verification:', {
-            auth_token: localStorage.getItem('auth_token'),
-            current_user: localStorage.getItem('current_user')
-          })
-          
-          return { success: true, data: { user: this.user, token: this.token } }
-        }
-        
-        // For non-test users, try backend authentication
-        try {
-          console.log('Attempting backend authentication for:', credentials.email)
-          const response = await authService.login(credentials)
-          
-          if (response.success) {
-            this.token = response.data.token
-            this.refreshToken = response.data.refresh_token
-            this.user = response.data.user
-            
-            // Store tokens in localStorage
-            localStorage.setItem('auth_token', this.token)
-            if (this.refreshToken) {
-              localStorage.setItem('refresh_token', this.refreshToken)
-            }
-            
-            console.log('Backend login successful:', { user: this.user, token: this.token })
-            return response
-          } else {
-            throw new Error(response.error?.message || 'Login failed')
+          if (this.refreshToken) {
+            localStorage.setItem('refresh_token', this.refreshToken)
           }
-        } catch (backendError) {
-          console.log('Backend login failed:', backendError.message)
-          throw new Error('Invalid credentials. Please try again.')
+          localStorage.setItem('current_user', JSON.stringify(this.user))
+          
+          console.log('✅ Backend login successful:', { user: this.user, token: this.token })
+          return response
+        } else {
+          throw new Error(response.error?.message || 'Login failed')
         }
       } catch (error) {
         console.error('Login error:', error)
@@ -170,8 +95,8 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       try {
-        // Only call API logout if we have a valid real JWT token (not mock tokens)
-        if (this.token && !this.token.startsWith('mock-jwt-token') && this.isValidJWT(this.token)) {
+        // Call API logout if we have a valid JWT token
+        if (this.token && this.isValidJWT(this.token)) {
           await authService.logout()
         }
       } catch (error) {
@@ -188,6 +113,7 @@ export const useAuthStore = defineStore('auth', {
         localStorage.removeItem('auth_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('current_user')
+        localStorage.removeItem('user_data')
       }
     },
 
@@ -204,45 +130,6 @@ export const useAuthStore = defineStore('auth', {
       if (!this.token) {
         console.log('No token found')
         return false
-      }
-      
-      if (this.token?.startsWith('mock-jwt-token')) {
-        console.log('Mock token detected, current user:', this.user)
-        
-        // Mock auth - restore user from localStorage if needed
-        if (!this.user) {
-          console.log('No user in store, checking localStorage')
-          const storedUser = localStorage.getItem('current_user')
-          if (storedUser) {
-            try {
-              this.user = JSON.parse(storedUser)
-              console.log('User restored from localStorage:', this.user)
-            } catch (error) {
-              console.error('Error parsing stored user:', error)
-              // Don't clear auth state, just fallback
-              this.user = {
-                id: 'user_admin',
-                email: 'kennedy@dasyin.com.au',
-                first_name: 'Ken',
-                last_name: 'Kinoti',
-                role: 'super_admin',
-                organization_id: 'org_1'
-              }
-            }
-          } else {
-            console.log('No stored user, using fallback admin')
-            this.user = {
-              id: 'user_admin',
-              email: 'kennedy@dasyin.com.au',
-              first_name: 'Ken',
-              last_name: 'Kinoti',
-              role: 'super_admin',
-              organization_id: 'org_1'
-            }
-          }
-        }
-        console.log('Final user for mock auth:', this.user)
-        return true
       }
       
       try {
@@ -276,82 +163,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // Mock users for testing different roles and permissions
-    getMockUsers() {
-      return [
-        // Super Admin - Full system access
-        {
-          id: 'user_superadmin',
-          email: 'admin@dasyin.com.au',
-          password: 'password',
-          first_name: 'System',
-          last_name: 'Administrator',
-          role: 'super_admin',
-          organization_id: '3ce93742-a4bf-401a-9150-91af9ce3e87b',
-          permissions: ['all']
-        },
-        
-        // Organization Admin - Full org access
-        {
-          id: 'user_admin',
-          email: 'kennedy@dasyin.com.au',
-          password: 'password',
-          first_name: 'Ken',
-          last_name: 'Kinoti',
-          role: 'admin',
-          organization_id: '3ce93742-a4bf-401a-9150-91af9ce3e87b',
-          permissions: ['manage_users', 'manage_participants', 'view_reports', 'manage_billing']
-        },
-        
-        // Manager - Limited management access
-        {
-          id: 'user_manager',
-          email: 'manager@dasyin.com.au',
-          password: 'password',
-          first_name: 'Sarah',
-          last_name: 'Wilson',
-          role: 'manager',
-          organization_id: '3ce93742-a4bf-401a-9150-91af9ce3e87b',
-          permissions: ['manage_staff', 'manage_schedules', 'view_reports']
-        },
-        
-        // Support Coordinator - Participant focused
-        {
-          id: 'user_coordinator',
-          email: 'coordinator@dasyin.com.au',
-          password: 'password',
-          first_name: 'Lisa',
-          last_name: 'Johnson',
-          role: 'support_coordinator',
-          organization_id: '3ce93742-a4bf-401a-9150-91af9ce3e87b',
-          permissions: ['manage_participants', 'manage_care_plans', 'view_schedules']
-        },
-        
-        // Care Worker - Basic access
-        {
-          id: 'user_careworker',
-          email: 'careworker@dasyin.com.au',
-          password: 'password',
-          first_name: 'John',
-          last_name: 'Smith',
-          role: 'care_worker',
-          organization_id: '3ce93742-a4bf-401a-9150-91af9ce3e87b',
-          permissions: ['view_schedules', 'update_shifts', 'view_participants']
-        },
-        
-        // Organization 2 Admin
-        {
-          id: 'user_org2_admin',
-          email: 'org2admin@dasyin.com.au',
-          password: 'password',
-          first_name: 'Mark',
-          last_name: 'Davis',
-          role: 'admin',
-          organization_id: '872ed655-c801-4eb4-8f7f-ff4666d5cc24',
-          permissions: ['manage_users', 'manage_participants', 'view_reports', 'manage_billing']
-        }
-      ]
-    },
 
     // Initialize authentication state from localStorage
     async initializeAuth() {
@@ -379,7 +190,9 @@ export const useAuthStore = defineStore('auth', {
           try {
             this.user = JSON.parse(storedUser)
             console.log('Auth state initialized:', { token: !!this.token, user: !!this.user })
-            return true
+            
+            // Validate token is still valid by checking user data
+            return await this.getCurrentUser()
           } catch (error) {
             console.error('Error parsing stored user:', error)
             this.logout()
@@ -388,11 +201,7 @@ export const useAuthStore = defineStore('auth', {
         }
         
         // If we have a token but no user, try to get user data
-        if (token.startsWith('mock-jwt-token')) {
-          return await this.getCurrentUser()
-        }
-        
-        return false
+        return await this.getCurrentUser()
       } finally {
         this._initializing = false
       }

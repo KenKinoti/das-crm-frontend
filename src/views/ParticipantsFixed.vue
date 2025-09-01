@@ -61,15 +61,17 @@
     <!-- Search and Filters -->
     <div class="filters-section">
       <div class="filters-row">
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search participants..." 
-            class="form-input"
-            @input="filterParticipants"
-          />
+        <div class="search-section">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Search participants..." 
+              class="form-input"
+              @input="filterParticipants"
+            />
+          </div>
         </div>
         
         <div class="filter-controls">
@@ -81,7 +83,7 @@
           
           <button @click="clearFilters" class="btn btn-outline-elegant">
             <i class="fas fa-times"></i>
-            Clear Filters
+            Clear
           </button>
           
           <!-- View Toggle -->
@@ -169,7 +171,7 @@
             <button @click="editParticipant(participant)" class="action-btn edit-btn" title="Edit Participant">
               <i class="fas fa-edit"></i>
             </button>
-            <button @click="deleteParticipant(participant)" class="action-btn delete-btn" title="Delete Participant">
+            <button @click="deleteParticipantWithConfirm(participant)" class="action-btn delete-btn" title="Delete Participant">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -226,12 +228,422 @@
               <button @click="editParticipant(participant)" class="action-btn edit-btn" title="Edit Participant">
                 <i class="fas fa-edit"></i>
               </button>
-              <button @click="deleteParticipant(participant)" class="action-btn delete-btn" title="Delete Participant">
+              <button @click="deleteParticipantWithConfirm(participant)" class="action-btn delete-btn" title="Delete Participant">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
           </div>
         </div>
+      </div>
+      
+      <!-- Pagination Controls -->
+      <div v-if="filteredParticipants.length > itemsPerPage" class="pagination-container">
+        <div class="pagination-info">
+          Showing {{ (currentPage - 1) * itemsPerPage + 1 }}-{{ Math.min(currentPage * itemsPerPage, filteredParticipants.length) }} of {{ filteredParticipants.length }} participants
+        </div>
+        
+        <div class="pagination-controls">
+          <button 
+            @click="goToPage(1)"
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+            title="First Page"
+          >
+            <i class="fas fa-angle-double-left"></i>
+          </button>
+          
+          <button 
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+            title="Previous Page"
+          >
+            <i class="fas fa-angle-left"></i>
+            Previous
+          </button>
+          
+          <div class="page-numbers">
+            <span 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :class="['page-number', { active: page === currentPage }]"
+            >
+              {{ page }}
+            </span>
+          </div>
+          
+          <button 
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage >= totalPages"
+            class="pagination-btn"
+            title="Next Page"
+          >
+            Next
+            <i class="fas fa-angle-right"></i>
+          </button>
+          
+          <button 
+            @click="goToPage(totalPages)"
+            :disabled="currentPage >= totalPages"
+            class="pagination-btn"
+            title="Last Page"
+          >
+            <i class="fas fa-angle-double-right"></i>
+          </button>
+        </div>
+        
+        <div class="items-per-page">
+          <label>
+            Show:
+            <select v-model="itemsPerPage" @change="currentPage = 1">
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+            per page
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Participant Modal -->
+    <div v-if="showAddModal" class="modal-overlay" @click="closeModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-user-plus"></i>
+            Add New Participant
+          </h3>
+          <button @click="closeModal" class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <form @submit.prevent="submitNewParticipant" class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="firstName">First Name *</label>
+              <input
+                v-model="newParticipant.first_name"
+                type="text"
+                id="firstName"
+                class="form-input"
+                maxlength="50"
+                required
+              />
+              <small class="field-hint">Maximum 50 characters ({{ newParticipant.first_name.length }}/50)</small>
+            </div>
+            <div class="form-group">
+              <label for="lastName">Last Name *</label>
+              <input
+                v-model="newParticipant.last_name"
+                type="text"
+                id="lastName"
+                class="form-input"
+                maxlength="50"
+                required
+              />
+              <small class="field-hint">Maximum 50 characters ({{ newParticipant.last_name.length }}/50)</small>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input
+                v-model="newParticipant.email"
+                type="email"
+                id="email"
+                class="form-input"
+                maxlength="100"
+              />
+              <small class="field-hint">Maximum 100 characters ({{ newParticipant.email.length }}/100)</small>
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <input
+                v-model="newParticipant.phone"
+                type="tel"
+                id="phone"
+                class="form-input"
+                maxlength="20"
+                placeholder="e.g., +61 400 123 456"
+              />
+              <small class="field-hint">Maximum 20 characters ({{ newParticipant.phone.length }}/20)</small>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ndisNumber">NDIS Number</label>
+              <input
+                v-model="newParticipant.ndis_number"
+                type="text"
+                id="ndisNumber"
+                class="form-input"
+                maxlength="10"
+                placeholder="123456789"
+                @input="validateNdisNumber"
+                pattern="[0-9]*"
+              />
+              <small class="field-hint">Maximum 10 characters ({{ newParticipant.ndis_number.length }}/10)</small>
+            </div>
+            <div class="form-group">
+              <label for="dateOfBirth">Date of Birth</label>
+              <input
+                v-model="newParticipant.date_of_birth"
+                type="date"
+                id="dateOfBirth"
+                class="form-input"
+              />
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="address">Address</label>
+            <textarea
+              v-model="newParticipant.address"
+              id="address"
+              class="form-textarea"
+              rows="3"
+              maxlength="255"
+              placeholder="Street address, suburb, state, postcode"
+            ></textarea>
+            <small class="field-hint">Maximum 255 characters ({{ newParticipant.address.length }}/255)</small>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" @click="closeModal" class="btn btn-outline-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              <i v-if="isSubmitting" class="fas fa-spinner fa-spin"></i>
+              <i v-else class="fas fa-plus"></i>
+              {{ isSubmitting ? 'Adding...' : 'Add Participant' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- View Participant Modal -->
+    <div v-if="showViewModal && selectedParticipant" class="modal-overlay" @click="closeViewModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-eye"></i>
+            Participant Details
+          </h3>
+          <button @click="closeViewModal" class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="participant-details">
+            <div class="detail-section">
+              <h4>Personal Information</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Full Name</label>
+                  <span>{{ selectedParticipant.first_name }} {{ selectedParticipant.last_name }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>Date of Birth</label>
+                  <span>{{ selectedParticipant.date_of_birth ? new Date(selectedParticipant.date_of_birth).toLocaleDateString() : 'Not provided' }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>NDIS Number</label>
+                  <span>{{ selectedParticipant.ndis_number || 'Not provided' }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>Status</label>
+                  <span :class="['status-badge', selectedParticipant.is_active ? 'active' : 'inactive']">
+                    {{ selectedParticipant.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Contact Information</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Email</label>
+                  <span>{{ selectedParticipant.email || 'Not provided' }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>Phone</label>
+                  <span>{{ selectedParticipant.phone || 'Not provided' }}</span>
+                </div>
+                <div class="detail-item full-width">
+                  <label>Address</label>
+                  <span>{{ selectedParticipant.address || 'Not provided' }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>System Information</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Created</label>
+                  <span>{{ selectedParticipant.created_at ? new Date(selectedParticipant.created_at).toLocaleDateString() : 'Unknown' }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>Last Updated</label>
+                  <span>{{ selectedParticipant.updated_at ? new Date(selectedParticipant.updated_at).toLocaleDateString() : 'Unknown' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-actions">
+            <button @click="editParticipant(selectedParticipant); closeViewModal()" class="btn btn-primary">
+              <i class="fas fa-edit"></i>
+              Edit Participant
+            </button>
+            <button @click="closeViewModal" class="btn btn-outline-secondary">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Participant Modal -->
+    <div v-if="showEditModal && editParticipantData" class="modal-overlay" @click="closeEditModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-edit"></i>
+            Edit Participant
+          </h3>
+          <button @click="closeEditModal" class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <form @submit.prevent="submitEditParticipant" class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="editFirstName">First Name *</label>
+              <input
+                id="editFirstName"
+                v-model="editParticipantData.first_name"
+                type="text"
+                class="form-control"
+                placeholder="Enter first name"
+                maxlength="50"
+                required
+              >
+              <small class="field-hint">Maximum 50 characters ({{ editParticipantData.first_name?.length || 0 }}/50)</small>
+            </div>
+            <div class="form-group">
+              <label for="editLastName">Last Name *</label>
+              <input
+                id="editLastName"
+                v-model="editParticipantData.last_name"
+                type="text"
+                class="form-control"
+                placeholder="Enter last name"
+                maxlength="50"
+                required
+              >
+              <small class="field-hint">Maximum 50 characters ({{ editParticipantData.last_name?.length || 0 }}/50)</small>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="editEmail">Email Address</label>
+              <input
+                id="editEmail"
+                v-model="editParticipantData.email"
+                type="email"
+                class="form-control"
+                placeholder="Enter email address"
+                maxlength="255"
+              >
+              <small class="field-hint">Maximum 255 characters ({{ editParticipantData.email?.length || 0 }}/255)</small>
+            </div>
+            <div class="form-group">
+              <label for="editPhone">Phone Number</label>
+              <input
+                id="editPhone"
+                v-model="editParticipantData.phone"
+                type="tel"
+                class="form-control"
+                placeholder="Enter phone number"
+                maxlength="20"
+              >
+              <small class="field-hint">Maximum 20 characters ({{ editParticipantData.phone?.length || 0 }}/20)</small>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="editNdisNumber">NDIS Number</label>
+              <input
+                id="editNdisNumber"
+                v-model="editParticipantData.ndis_number"
+                type="text"
+                class="form-control"
+                placeholder="Enter NDIS number (digits only)"
+                maxlength="10"
+                @input="editParticipantData.ndis_number = editParticipantData.ndis_number.replace(/[^0-9]/g, '')"
+              >
+              <small class="field-hint">Maximum 10 digits ({{ editParticipantData.ndis_number?.length || 0 }}/10)</small>
+            </div>
+            <div class="form-group">
+              <label for="editDateOfBirth">Date of Birth</label>
+              <input
+                id="editDateOfBirth"
+                v-model="editParticipantData.date_of_birth"
+                type="date"
+                class="form-control"
+              >
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="editAddress">Address</label>
+            <textarea
+              id="editAddress"
+              v-model="editParticipantData.address"
+              class="form-control"
+              placeholder="Enter full address"
+              rows="3"
+              maxlength="255"
+            ></textarea>
+            <small class="field-hint">Maximum 255 characters ({{ editParticipantData.address?.length || 0 }}/255)</small>
+          </div>
+          
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                v-model="editParticipantData.is_active"
+                type="checkbox"
+                class="form-checkbox"
+              >
+              <span class="checkmark"></span>
+              Active Participant
+            </label>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" @click="closeEditModal" class="btn btn-outline-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              <i v-if="isSubmitting" class="fas fa-spinner fa-spin"></i>
+              <i v-else class="fas fa-save"></i>
+              {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -243,9 +655,13 @@ import { useParticipantsStore } from '../stores/participants'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationContextStore } from '../stores/organizationContext'
 import { showErrorNotification, showSuccessNotification } from '../utils/errorHandler'
+import GlobalModal from '../components/GlobalModal.vue'
 
 export default {
   name: 'ParticipantsView',
+  components: {
+    GlobalModal
+  },
   data() {
     return {
       filteredParticipants: [],
@@ -255,7 +671,21 @@ export default {
       currentPage: 1,
       itemsPerPage: 25,
       showAddModal: false,
-      isSubmitting: false
+      showViewModal: false,
+      showEditModal: false,
+      isSubmitting: false,
+      selectedParticipant: null,
+      editParticipantData: {},
+      newParticipant: {
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        ndis_number: '',
+        date_of_birth: '',
+        address: '',
+        is_active: true
+      }
     }
   },
   computed: {
@@ -304,6 +734,38 @@ export default {
       const start = (this.currentPage - 1) * this.itemsPerPage
       const end = start + this.itemsPerPage
       return this.filteredParticipants.slice(start, end)
+    },
+    totalPages() {
+      return Math.ceil(this.filteredParticipants.length / this.itemsPerPage)
+    },
+    visiblePages() {
+      const total = this.totalPages
+      const current = this.currentPage
+      const delta = 2 // Show 2 pages before and after current page
+      
+      if (total <= 7) {
+        // Show all pages if total is 7 or fewer
+        return Array.from({ length: total }, (_, i) => i + 1)
+      }
+      
+      let start = Math.max(1, current - delta)
+      let end = Math.min(total, current + delta)
+      
+      // Adjust start and end to show exactly 5 pages when possible
+      if (end - start < 4) {
+        if (start === 1) {
+          end = Math.min(total, start + 4)
+        } else if (end === total) {
+          start = Math.max(1, end - 4)
+        }
+      }
+      
+      const pages = []
+      for (let i = start; i <= end; i++) {
+        pages.push(i)
+      }
+      
+      return pages
     }
   },
   watch: {
@@ -316,7 +778,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(useParticipantsStore, ['fetchParticipants', 'updateParticipant']),
+    ...mapActions(useParticipantsStore, ['fetchParticipants', 'updateParticipant', 'createParticipant']),
     ...mapActions(useOrganizationContextStore, ['fetchOrganizations', 'setCurrentOrganization']),
     async loadParticipants() {
       try {
@@ -403,13 +865,158 @@ export default {
       }
     },
     viewParticipant(participant) {
-      console.log('View participant:', participant)
+      this.selectedParticipant = participant
+      this.showViewModal = true
     },
     editParticipant(participant) {
-      console.log('Edit participant:', participant)
+      this.selectedParticipant = participant
+      this.editParticipantData = { ...participant }
+      // Format date for input field
+      if (this.editParticipantData.date_of_birth) {
+        const date = new Date(this.editParticipantData.date_of_birth)
+        this.editParticipantData.date_of_birth = date.toISOString().split('T')[0]
+      }
+      this.showEditModal = true
     },
-    deleteParticipant(participant) {
-      console.log('Delete participant:', participant)
+    async deleteParticipantWithConfirm(participant) {
+      const confirmed = confirm(
+        `Are you sure you want to delete ${participant.first_name} ${participant.last_name}?\n\nThis action cannot be undone.`
+      )
+      
+      if (!confirmed) {
+        return
+      }
+      
+      try {
+        await this.deleteParticipant(participant.id)
+        showSuccessNotification('Participant deleted successfully!')
+        await this.loadParticipants()
+      } catch (error) {
+        console.error('Error deleting participant:', error)
+        showErrorNotification(error, 'Failed to delete participant. Please try again.')
+      }
+    },
+    
+    goToPage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page
+        // Scroll to top of participants list for better UX
+        const container = document.querySelector('.participants-container')
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+    },
+    
+    closeModal() {
+      // Force close modal and reset form
+      this.showAddModal = false
+      this.isSubmitting = false
+      this.resetNewParticipant()
+      
+      // Use nextTick to ensure DOM updates
+      this.$nextTick(() => {
+        console.log('Modal closed, showAddModal:', this.showAddModal)
+      })
+    },
+    
+    closeViewModal() {
+      this.showViewModal = false
+      this.selectedParticipant = null
+    },
+    
+    closeEditModal() {
+      this.showEditModal = false
+      this.selectedParticipant = null
+      this.editParticipantData = {}
+      this.isSubmitting = false
+    },
+    
+    async submitEditParticipant() {
+      this.isSubmitting = true
+      
+      try {
+        // Format the data for the API
+        const participantData = {
+          ...this.editParticipantData,
+          // Format date_of_birth for backend
+          date_of_birth: this.editParticipantData.date_of_birth 
+            ? new Date(this.editParticipantData.date_of_birth + 'T00:00:00Z').toISOString()
+            : null
+        }
+        
+        await this.updateParticipant(this.editParticipantData.id, participantData)
+        
+        // Close modal first
+        this.closeEditModal()
+        
+        // Show success and reload
+        showSuccessNotification('Participant updated successfully!')
+        await this.loadParticipants()
+        
+      } catch (error) {
+        console.error('Error updating participant:', error)
+        showErrorNotification(error, 'Failed to update participant. Please try again.')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+    
+    resetNewParticipant() {
+      this.newParticipant = {
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        ndis_number: '',
+        date_of_birth: '',
+        address: '',
+        is_active: true
+      }
+    },
+    
+    validateNdisNumber(event) {
+      // Only allow numbers
+      const value = event.target.value.replace(/[^0-9]/g, '')
+      this.newParticipant.ndis_number = value
+    },
+    
+    async submitNewParticipant() {
+      if (!this.newParticipant.first_name || !this.newParticipant.last_name) {
+        showErrorNotification(null, 'First name and last name are required')
+        return
+      }
+      
+      this.isSubmitting = true
+      
+      try {
+        // Add organization_id for non-super admins and format date_of_birth
+        const participantData = {
+          ...this.newParticipant,
+          organization_id: this.isSuperAdmin && this.currentOrganization 
+            ? this.currentOrganization.id 
+            : this.user?.organization_id,
+          // Format date_of_birth for backend - convert YYYY-MM-DD to ISO string
+          date_of_birth: this.newParticipant.date_of_birth 
+            ? new Date(this.newParticipant.date_of_birth + 'T00:00:00Z').toISOString()
+            : null
+        }
+        
+        await this.createParticipant(participantData)
+        
+        // Close modal first
+        this.closeModal()
+        
+        // Show success notification and reload data
+        showSuccessNotification('Participant added successfully!')
+        await this.loadParticipants()
+        
+      } catch (error) {
+        console.error('Error creating participant:', error)
+        showErrorNotification(error, 'Failed to add participant. Please try again.')
+      } finally {
+        this.isSubmitting = false
+      }
     }
   },
   async mounted() {
@@ -455,7 +1062,7 @@ export default {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   flex: 1;
@@ -564,15 +1171,19 @@ export default {
   line-height: 1;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .stat-content h3 {
-    color: #1f2937;
-  }
-  
-  .stat-content p {
-    color: #6b7280;
-  }
+/* Dark theme styling for stat cards */
+[data-theme="dark"] .stat-card {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .stat-content h3 {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .stat-content p {
+  color: #9ca3af;
 }
 
 .stat-content p {
@@ -591,10 +1202,20 @@ export default {
   align-items: center;
   margin-bottom: 1.5rem;
   padding: 1.5rem 2rem;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   position: relative;
   overflow: hidden;
+}
+
+[data-theme="dark"] .page-header {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .page-header::before {
@@ -618,18 +1239,18 @@ export default {
   font-size: 2.25rem;
   font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #1f2937;
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
+[data-theme="dark"] .header-content h1 {
+  color: #f3f4f6;
+}
+
 .header-content h1 i {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #3b82f6;
   font-size: 2rem;
 }
 
@@ -639,30 +1260,47 @@ export default {
   margin: 0.5rem 0 0 0;
 }
 
+[data-theme="dark"] .header-content p {
+  color: #9ca3af;
+}
+
 
 /* Filters */
 .filters-section {
-  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-bottom: 1rem;
+}
+
+[data-theme="dark"] .filters-section {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .filters-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   flex-wrap: nowrap;
   justify-content: space-between;
+  width: 100%;
+}
+
+.search-section {
+  flex: 1;
+  min-width: 280px;
+  max-width: 400px;
 }
 
 .search-box {
   position: relative;
-  flex: 1;
-  min-width: 200px;
-  max-width: 300px;
+  width: 100%;
 }
 
 .search-box i {
@@ -696,7 +1334,7 @@ export default {
 .filter-controls {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   flex-wrap: nowrap;
   flex-shrink: 0;
 }
@@ -708,13 +1346,14 @@ export default {
   font-size: 0.8125rem;
   background: rgba(255, 255, 255, 0.8);
   font-weight: 500;
-  min-width: 120px;
+  min-width: 110px;
+  width: 110px;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 14px;
-  padding-right: 32px;
+  background-position: right 8px center;
+  background-size: 12px;
+  padding-right: 28px;
 }
 
 .btn {
@@ -746,11 +1385,13 @@ export default {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
   border: 2px solid rgba(0, 0, 0, 0.08);
   color: #4a5568;
-  padding: 0.625rem 0.875rem;
+  padding: 0.625rem 0.75rem;
   border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s ease;
   font-size: 0.8125rem;
+  min-width: auto;
+  white-space: nowrap;
 }
 
 .btn-outline-elegant:hover {
@@ -763,9 +1404,10 @@ export default {
 .view-toggle {
   display: flex;
   border: 2px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
 }
 
 .view-btn-elegant {
@@ -780,6 +1422,7 @@ export default {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  width: 36px;
   min-width: 36px;
 }
 
@@ -797,16 +1440,48 @@ export default {
 
 /* Content */
 .content-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .content-card {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .loading-state, .empty-state {
   text-align: center;
   padding: 3rem;
+  color: #374151;
+}
+
+[data-theme="dark"] .loading-state,
+[data-theme="dark"] .empty-state {
+  color: #e5e7eb;
+}
+
+.empty-state h3 {
+  color: #1f2937;
+  margin: 1rem 0 0.5rem 0;
+}
+
+[data-theme="dark"] .empty-state h3 {
+  color: #f3f4f6;
+}
+
+.empty-state p {
+  color: #6b7280;
+  margin: 0 0 2rem 0;
+}
+
+[data-theme="dark"] .empty-state p {
+  color: #9ca3af;
 }
 
 .loading-spinner {
@@ -831,17 +1506,30 @@ export default {
 }
 
 .participant-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   border: 1px solid #e5e7eb;
+}
+
+[data-theme="dark"] .participant-card {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .participant-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .participant-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
 .participant-header {
@@ -875,10 +1563,18 @@ export default {
   font-size: 1.125rem;
 }
 
+[data-theme="dark"] .participant-info h3 {
+  color: #f3f4f6;
+}
+
 .participant-ndis {
   margin: 0;
   color: #6b7280;
   font-size: 0.875rem;
+}
+
+[data-theme="dark"] .participant-ndis {
+  color: #9ca3af;
 }
 
 .status-toggle {
@@ -981,6 +1677,10 @@ input:checked + .slider:before {
   font-size: 0.875rem;
 }
 
+[data-theme="dark"] .detail-row {
+  color: #9ca3af;
+}
+
 .participant-actions {
   display: flex;
   gap: 8px;
@@ -1027,10 +1727,19 @@ input:checked + .slider:before {
 
 /* List View */
 .participants-list {
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .participants-list {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .list-header {
@@ -1038,10 +1747,18 @@ input:checked + .slider:before {
   grid-template-columns: 2fr 1.5fr 2fr 1.5fr 1.2fr;
   gap: 16px;
   padding: 16px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
+  background: rgba(248, 250, 252, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.3);
   font-weight: 600;
   color: #374151;
+}
+
+[data-theme="dark"] .list-header {
+  background: rgba(31, 41, 55, 0.8);
+  border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+  color: #e5e7eb;
   font-size: 14px;
 }
 
@@ -1050,13 +1767,24 @@ input:checked + .slider:before {
   grid-template-columns: 2fr 1.5fr 2fr 1.5fr 1.2fr;
   gap: 16px;
   padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background-color 0.2s;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.3);
+  transition: all 0.2s ease;
   align-items: center;
 }
 
+[data-theme="dark"] .list-row {
+  border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+}
+
 .list-row:hover {
-  background: #f8fafc;
+  background: rgba(248, 250, 252, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateX(4px);
+}
+
+[data-theme="dark"] .list-row:hover {
+  background: rgba(31, 41, 55, 0.6);
 }
 
 .list-row:last-child {
@@ -1068,6 +1796,10 @@ input:checked + .slider:before {
   align-items: center;
   font-size: 14px;
   color: #374151;
+}
+
+[data-theme="dark"] .list-cell {
+  color: #e5e7eb;
 }
 
 .list-cell .participant-avatar {
@@ -1113,6 +1845,32 @@ input:checked + .slider:before {
 }
 
 @media (max-width: 768px) {
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .search-section {
+    min-width: auto;
+    max-width: none;
+  }
+  
+  .filter-controls {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
+  }
+  
+  .form-select {
+    min-width: 100px;
+    width: 100px;
+  }
+  
+  .btn-outline-elegant {
+    padding: 0.625rem 0.5rem;
+  }
+  
   .participants-grid {
     grid-template-columns: 1fr;
   }
@@ -1126,6 +1884,574 @@ input:checked + .slider:before {
     flex-direction: column;
     gap: 12px;
     padding: 16px;
+  }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 90vw;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+[data-theme="dark"] .modal-content {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .modal-header {
+  border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+[data-theme="dark"] .modal-header h3 {
+  color: #f3f4f6;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #374151;
+}
+
+[data-theme="dark"] .modal-close {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .modal-close:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e5e7eb;
+}
+
+.modal-body {
+  padding: 2rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+[data-theme="dark"] .form-group label {
+  color: #d1d5db;
+}
+
+.form-input, .form-textarea {
+  padding: 0.75rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  color: #374151;
+}
+
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="dark"] .form-input, 
+[data-theme="dark"] .form-textarea {
+  background: rgba(55, 65, 81, 0.8);
+  border: 2px solid rgba(75, 85, 99, 0.3);
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-textarea:focus {
+  background: rgba(55, 65, 81, 0.95);
+  border-color: #3b82f6;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .field-hint {
+  color: #9ca3af;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .modal-actions {
+  border-top: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-outline-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(107, 114, 128, 0.3);
+  color: #6b7280;
+}
+
+.btn-outline-secondary:hover {
+  background: rgba(107, 114, 128, 0.1);
+  border-color: #6b7280;
+  color: #374151;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  background: rgba(55, 65, 81, 0.8);
+  border: 2px solid rgba(107, 114, 128, 0.3);
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background: rgba(75, 85, 99, 0.3);
+  border-color: #9ca3af;
+  color: #d1d5db;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    width: 95vw;
+    margin: 1rem;
+  }
+  
+  .modal-header, .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+}
+
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .pagination-container {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .pagination-info {
+  color: #9ca3af;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagination-btn {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .pagination-btn:hover:not(:disabled) {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0.5rem;
+}
+
+.page-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #374151;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-number:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.page-number.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .page-number {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .page-number:hover {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .page-number.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.items-per-page label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[data-theme="dark"] .items-per-page label {
+  color: #9ca3af;
+}
+
+.items-per-page select {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.items-per-page select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .items-per-page select {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #d1d5db;
+}
+
+/* Mobile pagination styles */
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .pagination-info, .items-per-page {
+    text-align: center;
+  }
+  
+  .page-numbers {
+    margin: 0;
+  }
+  
+  .pagination-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-btn span {
+    display: none;
+  }
+  
+  .page-numbers {
+    display: none;
+  }
+  
+  .pagination-controls {
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  
+  .pagination-info {
+    font-size: 0.8rem;
+  }
+}
+
+/* Participant Detail View Styles */
+.participant-details {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-section {
+  margin-bottom: 2rem;
+}
+
+.detail-section h4 {
+  color: #374151;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  position: relative;
+}
+
+[data-theme="dark"] .detail-section h4 {
+  color: #f3f4f6;
+  border-bottom-color: rgba(75, 85, 99, 0.5);
+}
+
+.detail-section h4::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-item label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-theme="dark"] .detail-item label {
+  color: #9ca3af;
+}
+
+.detail-item span {
+  font-size: 1rem;
+  color: #374151;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+[data-theme="dark"] .detail-item span {
+  color: #f3f4f6;
+  background: rgba(31, 41, 55, 0.5);
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.detail-item span:empty::before {
+  content: 'Not provided';
+  color: #9ca3af;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .participant-details {
+    max-height: 50vh;
+  }
+  
+  .detail-section h4 {
+    font-size: 1rem;
+  }
+  
+  .detail-item span {
+    font-size: 0.875rem;
+    padding: 0.625rem;
   }
 }
 </style>

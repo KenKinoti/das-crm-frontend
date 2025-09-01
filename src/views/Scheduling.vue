@@ -1,5 +1,7 @@
 <template>
   <div class="container-fluid">
+    <!-- Add glassmorphism background overlay -->
+    <div class="page-overlay"></div>
     <div class="page-header">
       <div class="header-content">
         <h1>
@@ -2070,9 +2072,38 @@ export default {
 </script>
 
 <style scoped>
+.container-fluid {
+  position: relative;
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+.page-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(249, 250, 251, 0.95) 0%, 
+    rgba(243, 244, 246, 0.9) 50%, 
+    rgba(249, 250, 251, 0.95) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="dark"] .page-overlay {
+  background: linear-gradient(135deg, 
+    rgba(17, 24, 39, 0.95) 0%, 
+    rgba(31, 41, 55, 0.9) 50%, 
+    rgba(17, 24, 39, 0.95) 100%);
+}
+
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .page-header {
@@ -2080,23 +2111,68 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  padding: 1.5rem 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
 }
 
-.page-header h1 {
+[data-theme="dark"] .page-header {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.header-content h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+[data-theme="dark"] .header-content h1 {
+  color: #f3f4f6;
+}
+
+.header-content h1 i {
+  color: #3b82f6;
   font-size: 2rem;
-  font-weight: 600;
-  color: var(--text-dark);
 }
 
-/* Filters Section - Enhanced for Care Plans style */
-/* Participants-style filters */
+.header-content p {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0.5rem 0 0 0;
+}
+
+[data-theme="dark"] .header-content p {
+  color: #9ca3af;
+}
+
+/* Filters Section */
 .filters-section {
-  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-bottom: 1rem;
+}
+
+[data-theme="dark"] .filters-section {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .filters-row {
@@ -2602,19 +2678,34 @@ export default {
 }
 
 .stat-card {
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1.5rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 1rem;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .stat-card {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] .stat-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
 /* Stat card colors matching icon colors */
@@ -2659,14 +2750,28 @@ export default {
 }
 
 .stat-number {
-  font-size: 1.8rem;
+  font-size: 2.25rem;
   font-weight: 700;
-  color: var(--text-dark);
+  color: #1f2937;
+  margin: 0;
+  line-height: 1;
+}
+
+[data-theme="dark"] .stat-number {
+  color: #f3f4f6;
 }
 
 .stat-label {
-  font-size: 0.9rem;
-  color: var(--text-medium);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0.25rem 0 0 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-theme="dark"] .stat-label {
+  color: #9ca3af;
 }
 
 .filters-section {
@@ -3838,6 +3943,19 @@ export default {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-shift {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.btn-shift:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
 }
 
 /* View Modal Styles */

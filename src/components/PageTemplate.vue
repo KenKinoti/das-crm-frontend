@@ -84,8 +84,8 @@
       </div>
     </div>
 
-    <!-- Content Card -->
-    <div class="content-card">
+    <!-- Content Container -->
+    <div class="dashboard-content">
       <slot name="content">
         <!-- Default loading/empty states -->
         <div v-if="isLoading" class="loading-state">
@@ -314,20 +314,9 @@ export default {
 .stat-content h3 {
   font-size: 2.25rem;
   font-weight: 700;
-  color: #1f2937;
+  color: #374151;
   margin: 0;
   line-height: 1;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .stat-content h3 {
-    color: #1f2937;
-  }
-  
-  .stat-content p {
-    color: #6b7280;
-  }
 }
 
 .stat-content p {
@@ -339,6 +328,33 @@ export default {
   letter-spacing: 0.5px;
 }
 
+/* Dark theme - proper dark cards with light text */
+[data-theme="dark"] .stat-card {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .stat-content h3 {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .stat-content p {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .stat-icon.info-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+[data-theme="dark"] .stat-icon.success-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+[data-theme="dark"] .stat-icon.warning-icon {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
 /* Page Header */
 .page-header {
   display: flex;
@@ -346,10 +362,19 @@ export default {
   align-items: center;
   margin-bottom: 1.5rem;
   padding: 1.5rem 2rem;
-  background: #fafafa;
+  background: rgba(250, 250, 250, 0.95);
   border-radius: 12px;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .page-header {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .page-header::before {
@@ -373,18 +398,18 @@ export default {
   font-size: 2.25rem;
   font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #1e293b;
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
+[data-theme="dark"] .header-content h1 {
+  color: #f3f4f6;
+}
+
 .header-content h1 i {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #3b82f6;
   font-size: 2rem;
 }
 
@@ -392,6 +417,10 @@ export default {
   font-size: 1rem;
   color: #64748b;
   margin: 0.5rem 0 0 0;
+}
+
+[data-theme="dark"] .header-content p {
+  color: #9ca3af;
 }
 
 /* Filters */
@@ -550,12 +579,12 @@ export default {
 }
 
 /* Content */
-.content-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+.dashboard-content {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  border: none;
 }
 
 .loading-state, .empty-state {

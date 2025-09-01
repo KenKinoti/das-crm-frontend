@@ -121,43 +121,42 @@ router.beforeEach(async (to, from, next) => {
     timestamp: new Date().toISOString()
   })
   
-  console.log('🛡️ ROUTER DEBUG: Auth state check:', { 
-    isAuthenticated: authStore.isAuthenticated,
-    hasToken: !!authStore.token,
-    hasUser: !!authStore.user,
-    tokenValue: authStore.token ? authStore.token.substring(0, 30) + '...' : 'null',
-    userEmail: authStore.user?.email || 'null'
-  })
-  
-  // Save current route (except login) for refresh persistence
-  if (to.name && to.name !== 'Login' && to.path !== '/') {
-    localStorage.setItem('lastRoute', to.path)
-  }
-  
-  // If going to login page
-  if (to.name === 'Login') {
-    // Only check existing auth state, don't initialize if no token
-    if (authStore.token && !authStore.user) {
-      console.log('Has token but no user, initializing...')
-      await authStore.initializeAuth()
-    }
-    
-    // If authenticated, redirect to dashboard
-    if (authStore.isAuthenticated) {
-      console.log('User already authenticated, redirecting to dashboard')
-      next('/dashboard')
-      return
-    }
-    next()
-    return
-  }
-  
-  // For protected routes
+  // For protected routes, ensure we initialize auth properly
   if (to.meta.requiresAuth !== false) {
+    // Save current route for refresh persistence BEFORE any redirects
+    if (to.name && to.name !== 'Login' && to.path !== '/') {
+      localStorage.setItem('lastRoute', to.path)
+      localStorage.setItem('lastRouteName', to.name)
+    }
     
-    // Initialize auth state if not authenticated
-    if (!authStore.isAuthenticated) {
-      console.log('Initializing auth state...')
+    // Always try to initialize auth state from localStorage first
+    if (!authStore.token) {
+      // Check if we have stored auth data
+      const storedToken = localStorage.getItem('auth_token')
+      const storedUser = localStorage.getItem('current_user')
+      
+      if (storedToken && storedUser) {
+        console.log('🔄 Restoring auth state from localStorage...')
+        try {
+          authStore.token = storedToken
+          authStore.user = JSON.parse(storedUser)
+        } catch (error) {
+          console.error('Error parsing stored auth data:', error)
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('current_user')
+          next('/login')
+          return
+        }
+      } else {
+        console.log('No stored auth data, redirecting to login')
+        next('/login')
+        return
+      }
+    }
+    
+    // If we have token but no user, initialize auth
+    if (authStore.token && !authStore.user) {
+      console.log('Token exists but no user data, initializing...')
       const isInitialized = await authStore.initializeAuth()
       
       if (!isInitialized) {
@@ -167,10 +166,9 @@ router.beforeEach(async (to, from, next) => {
       }
     }
     
-    // Final check - ensure we have both token and user
-    if (!authStore.isAuthenticated || !authStore.user) {
+    // Final validation - must have both token and user
+    if (!authStore.token || !authStore.user) {
       console.log('Authentication incomplete, redirecting to login')
-      authStore.logout() // Clear invalid state
       next('/login')
       return
     }
@@ -182,9 +180,20 @@ router.beforeEach(async (to, from, next) => {
       return
     }
     
-    console.log('Auth guard passed, proceeding to:', to.path)
+    console.log('✅ Auth guard passed, proceeding to:', to.path)
     next()
     return
+  }
+  
+  // If going to login page
+  if (to.name === 'Login') {
+    // If already authenticated, redirect away from login
+    if (authStore.token && authStore.user) {
+      const lastRoute = localStorage.getItem('lastRoute') || '/dashboard'
+      console.log('Already authenticated, redirecting to:', lastRoute)
+      next(lastRoute)
+      return
+    }
   }
   
   next()
