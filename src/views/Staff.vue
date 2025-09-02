@@ -226,7 +226,7 @@
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="pagination-section">
         <div class="pagination-info">
-          Showing {{ startIndex + 1 }}-{{ Math.min(endIndex, filteredStaff.length) }} of {{ filteredStaff.length }} staff members
+          Showing {{ startIndex + 1 }}-{{ Math.min(endIndex, allFilteredStaff.length) }} of {{ allFilteredStaff.length }} staff members
         </div>
         
         <div class="pagination-controls">
@@ -309,13 +309,64 @@ export default {
         phone: '',
         role: 'care_worker',
         is_active: true
-      }
+      },
+      // Pagination
+      itemsPerPage: 25,
+      currentPage: 1
     }
   },
   computed: {
-    ...mapState(useUsersStore, ['staff', 'isLoading']),
+    ...mapState(useUsersStore, ['users', 'isLoading']),
+    
+    // Map users to staff for compatibility
+    staff() {
+      return this.users || []
+    },
     ...mapState(useAuthStore, ['user', 'isAdmin', 'isSuperAdmin']),
     ...mapState(useOrganizationContextStore, ['currentOrganization']),
+    
+    // Pagination computed properties
+    totalPages() {
+      return Math.ceil(this.allFilteredStaff.length / this.itemsPerPage)
+    },
+    
+    startIndex() {
+      return (this.currentPage - 1) * this.itemsPerPage
+    },
+    
+    endIndex() {
+      return this.startIndex + this.itemsPerPage
+    },
+    
+    visiblePages() {
+      const pages = []
+      const maxVisible = 5
+      const start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2))
+      const end = Math.min(this.totalPages, start + maxVisible - 1)
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i)
+      }
+      return pages
+    },
+    
+    allFilteredStaff() {
+      return this.staff.filter(s => {
+        const query = this.searchQuery.toLowerCase()
+        const matchesSearch = !query || 
+          `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase().includes(query) ||
+          (s.email && s.email.toLowerCase().includes(query)) ||
+          (s.phone && s.phone.includes(query))
+        
+        const matchesStatus = !this.statusFilter || 
+          (this.statusFilter === 'active' && s.is_active !== false) ||
+          (this.statusFilter === 'inactive' && s.is_active === false)
+        
+        const matchesRole = !this.roleFilter || s.role === this.roleFilter
+        
+        return matchesSearch && matchesStatus && matchesRole
+      })
+    },
 
     statsCards() {
       return [
@@ -359,21 +410,8 @@ export default {
     },
 
     filteredStaff() {
-      return this.staff.filter(s => {
-        const query = this.searchQuery.toLowerCase()
-        const matchesSearch = !query || 
-          `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase().includes(query) ||
-          (s.email && s.email.toLowerCase().includes(query)) ||
-          (s.phone && s.phone.includes(query))
-        
-        const matchesStatus = !this.statusFilter || 
-          (this.statusFilter === 'active' && s.is_active !== false) ||
-          (this.statusFilter === 'inactive' && s.is_active === false)
-        
-        const matchesRole = !this.roleFilter || s.role === this.roleFilter
-        
-        return matchesSearch && matchesStatus && matchesRole
-      })
+      // Return paginated results
+      return this.allFilteredStaff.slice(this.startIndex, this.endIndex)
     }
   },
   methods: {
@@ -450,6 +488,45 @@ export default {
       } finally {
         this.isSubmitting = false
       }
+    },
+    
+    // Missing methods
+    viewStaff(member) {
+      // Navigate to staff detail page or show modal
+      console.log('Viewing staff member:', member)
+      // TODO: Implement staff detail view
+    },
+    
+    scheduleStaff(member) {
+      // Navigate to scheduling page or show modal
+      console.log('Scheduling staff member:', member)
+      // TODO: Implement staff scheduling
+    },
+    
+    editStaff(member) {
+      // Open edit modal or navigate to edit page
+      console.log('Editing staff member:', member)
+      // TODO: Implement staff editing
+    },
+    
+    formatDate(date) {
+      if (!date) return 'N/A'
+      return new Date(date).toLocaleDateString('en-AU', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })
+    },
+    
+    // Pagination methods
+    goToPage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page
+      }
+    },
+    
+    handlePerPageChange() {
+      this.currentPage = 1
     }
   },
   async mounted() {

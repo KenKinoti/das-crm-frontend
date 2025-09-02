@@ -474,17 +474,15 @@ export default {
 /* Main Layout */
 .login-page {
   min-height: 100vh;
-  height: 100vh;
-  width: 100vw;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 1rem;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow: hidden;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .background-pattern {
@@ -511,6 +509,7 @@ export default {
   max-width: 450px;
   z-index: 1;
   position: relative;
+  margin: 2rem auto;
 }
 
 .login-card {
@@ -523,9 +522,9 @@ export default {
     0 25px 50px rgba(0, 0, 0, 0.15),
     0 15px 35px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  padding: 2.5rem;
+  padding: 2rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   animation: slideUp 0.6s ease-out;
   width: 100%;
   margin: 0 auto;
@@ -1173,89 +1172,275 @@ export default {
   color: #00a1f1;
 }
 
+/* Small screens (max-height: 700px) */
+@media (max-height: 700px) {
+  .login-card {
+    padding: 1rem;
+  }
+  
+  .login-header {
+    margin-bottom: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+  
+  .test-accounts-section {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .login-page {
-    padding: 1rem;
+    padding: 0.5rem;
+    align-items: flex-start;
+    padding-top: 1rem;
   }
   
   .login-container {
     max-width: 100%;
-  }
-  
-  .login-card {
-    padding: 2rem;
-    border-radius: 16px;
     margin: 0 auto;
-  }
-  
-  .logo-container {
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .logo-brand {
-    text-align: center;
-  }
-  
-  .brand-name {
-    font-size: 1.75rem;
-  }
-  
-  .social-buttons {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .test-account-cards {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  
-  .test-account-card {
-    padding: 0.75rem;
-    min-height: 70px;
-  }
-}
-
-@media (max-width: 480px) {
-  .login-page {
-    padding: 0.25rem;
   }
   
   .login-card {
     padding: 1.5rem;
     border-radius: 16px;
+    margin: 0 auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .logo-container {
+    flex-direction: row;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .logo-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 1.4rem;
+  }
+  
+  .logo-brand {
+    text-align: left;
   }
   
   .brand-name {
     font-size: 1.5rem;
   }
   
-  .welcome-text h2 {
-    font-size: 1.3rem;
-  }
-  
-  .form-input {
-    padding: 14px 16px 14px 45px;
-  }
-  
-  .login-button, .emergency-button {
-    padding: 14px 20px;
-  }
-  
-  .account-role {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
-  }
-  
-  .account-email {
+  .brand-tagline {
     font-size: 0.75rem;
   }
   
-  .account-description {
+  .welcome-text h2 {
+    font-size: 1.25rem;
+  }
+  
+  .welcome-text p {
+    font-size: 0.85rem;
+  }
+  
+  .form-input {
+    padding: 12px 16px 12px 45px;
+    font-size: 0.95rem;
+  }
+  
+  .input-icon {
+    left: 14px;
+    font-size: 1rem;
+  }
+  
+  .login-button {
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+  
+  .emergency-button {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  
+  .social-buttons {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  
+  .social-button {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .social-button span {
+    display: none;
+  }
+  
+  .test-accounts-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+  
+  .test-accounts-toggle {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .test-accounts-list h4 {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .test-accounts-note {
     font-size: 0.7rem;
+    padding: 0.35rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .test-account-cards {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+  
+  .test-account-card {
+    padding: 0.5rem;
+    min-height: 55px;
+  }
+  
+  .account-role {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.35rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .account-email {
+    font-size: 0.7rem;
+  }
+  
+  .account-description {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 0.25rem;
+    padding-top: 0.5rem;
+  }
+  
+  .login-card {
+    padding: 1.25rem;
+    border-radius: 16px;
+  }
+  
+  .login-header {
+    margin-bottom: 1.25rem;
+  }
+  
+  .logo-container {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  
+  .brand-name {
+    font-size: 1.3rem;
+  }
+  
+  .brand-tagline {
+    display: none;
+  }
+  
+  .welcome-text h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.15rem;
+  }
+  
+  .welcome-text p {
+    font-size: 0.8rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+  
+  .form-input {
+    padding: 11px 14px 11px 40px;
+    font-size: 0.9rem;
+  }
+  
+  .input-icon {
+    left: 12px;
+    font-size: 0.9rem;
+  }
+  
+  .password-toggle {
+    right: 12px;
+    padding: 6px;
+  }
+  
+  .form-options {
+    margin-bottom: 1rem;
+  }
+  
+  .checkbox-label {
+    font-size: 0.8rem;
+  }
+  
+  .forgot-link {
+    font-size: 0.8rem;
+    padding: 2px 6px;
+  }
+  
+  .login-button {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .emergency-button {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .divider span {
+    font-size: 0.75rem;
+    padding: 0 0.75rem;
+  }
+  
+  .social-buttons {
+    margin-bottom: 1rem;
+  }
+  
+  .alert {
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  
+  .alert-title {
+    font-size: 0.85rem;
+  }
+  
+  .alert-message {
+    font-size: 0.75rem;
   }
 }
 
@@ -1388,8 +1573,8 @@ export default {
 
 .test-account-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
 }
 
 .test-account-card {
