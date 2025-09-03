@@ -87,7 +87,7 @@ A world-class, production-ready NDIS CRM platform designed specifically for disa
 - **Progressive Web App** ready architecture
 - **Offline capabilities** for critical functions
 
----
+--- 
 
 ## 📈 **Market Position & Competitive Analysis**
 
