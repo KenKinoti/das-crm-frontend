@@ -68,7 +68,7 @@
             type="text" 
             placeholder="Search participants..." 
             class="form-input"
-            @input="filterParticipants"
+            @input="filterItems"
           />
         </div>
         
@@ -79,9 +79,9 @@
             <option value="inactive">Inactive</option>
           </select>
           
-          <button @click="clearFilters" class="btn btn-outline-elegant">
+          <button @click="clearFilters" class="btn btn-outline-elegant" title="Clear">
             <i class="fas fa-times"></i>
-            Clear Filters
+            Clear
           </button>
           
           <!-- View Toggle -->

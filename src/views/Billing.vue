@@ -64,39 +64,34 @@
         
         <div class="filter-controls">
           <select v-model="statusFilter" @change="filterBills" class="form-select">
-            <option value="pending">Pending Invoices</option>
-            <option value="overdue">Overdue Invoices</option>
-            <option value="paid">Paid Invoices</option>
-            <option value="cancelled">Cancelled Invoices</option>
-            <option value="">All Invoices</option>
-          </select>
-          
-          <select v-model="participantFilter" @change="filterBills" class="form-select">
-            <option value="">All Participants</option>
-            <option v-for="participant in participants" :key="participant.id" :value="participant.id">
-              {{ participant.first_name }} {{ participant.last_name }}
-            </option>
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="overdue">Overdue</option>
+            <option value="paid">Paid</option>
+            <option value="cancelled">Cancelled</option>
           </select>
           
           <input 
             v-model="dateFromFilter" 
             type="date" 
-            class="form-input"
+            class="form-select"
             @change="filterBills"
-            placeholder="From Date"
+            title="From Date"
+            placeholder="From"
           />
           
           <input 
             v-model="dateToFilter" 
             type="date" 
-            class="form-input"
+            class="form-select"
             @change="filterBills"
-            placeholder="To Date"
+            title="To Date"
+            placeholder="To"
           />
           
-          <button @click="clearFilters" class="btn btn-outline-elegant">
+          <button @click="clearFilters" class="btn btn-outline-elegant" title="Clear">
             <i class="fas fa-times"></i>
-            Clear Filters
+            Clear
           </button>
         </div>
       </div>
@@ -378,10 +373,6 @@ export default {
         }
       }
 
-      if (this.participantFilter) {
-        filtered = filtered.filter(bill => bill.participant_id == this.participantFilter)
-      }
-
       if (this.dateFromFilter) {
         filtered = filtered.filter(bill => new Date(bill.issue_date) >= new Date(this.dateFromFilter))
       }
@@ -599,11 +590,19 @@ export default {
 </script>
 
 <style scoped>
+/* Import shared styles for consistent layout */
+@import url('../assets/styles/participants-common.css');
+
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 1.5rem;
   min-height: 100vh;
+}
+
+[data-theme="dark"] .page-container {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f3f4f6;
 }
 
 .page-header {
@@ -770,6 +769,12 @@ export default {
   padding: 2rem;
 }
 
+[data-theme="dark"] .content-card {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 .billing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
@@ -781,6 +786,12 @@ export default {
   border-radius: var(--border-radius);
   padding: 1.5rem;
   transition: all 0.3s ease;
+  background: white;
+}
+
+[data-theme="dark"] .billing-card {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.3);
 }
 
 .billing-card:hover {
@@ -991,6 +1002,12 @@ export default {
   max-width: 700px;
   max-height: 90vh;
   overflow: auto;
+}
+
+[data-theme="dark"] .modal-content {
+  background: rgba(31, 41, 55, 0.98);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
 .modal-header {
@@ -1221,6 +1238,12 @@ export default {
   border: 1px solid #e2e8f0;
 }
 
+[data-theme="dark"] .filters-section {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 .filters-row {
   display: flex;
   align-items: center;
@@ -1243,6 +1266,10 @@ export default {
   z-index: 2;
 }
 
+[data-theme="dark"] .search-box i {
+  color: #9ca3af;
+}
+
 .form-input {
   width: 100%;
   padding: 12px 12px 12px 40px;
@@ -1253,6 +1280,17 @@ export default {
   transition: all 0.3s ease;
   -webkit-appearance: none;
   -moz-appearance: textfield;
+  color: #1f2937;
+}
+
+[data-theme="dark"] .form-input {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .form-input::placeholder {
+  color: #9ca3af;
 }
 
 .form-input:focus {
@@ -1286,6 +1324,14 @@ export default {
   background-position: right 12px center;
   background-size: 16px;
   padding-right: 40px;
+  color: #1f2937;
+}
+
+[data-theme="dark"] .form-select {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 .form-select:focus {
@@ -1308,6 +1354,12 @@ export default {
   align-items: center;
   gap: 8px;
   font-size: 14px;
+}
+
+[data-theme="dark"] .btn-outline-elegant {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
 }
 
 .btn-outline-elegant:hover {

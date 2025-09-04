@@ -1,24 +1,77 @@
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <h1>Super Admin - Organization Management</h1>
+  <div class="participants-container">
+    <!-- Header -->
+    <div id="superadmin-header" class="page-header">
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-building"></i>
+          Organization Management
+        </h1>
+        <p>Manage organizations, subscriptions, and billing across the platform</p>
+      </div>
       <button @click="showCreateModal = true" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Create Organization
+        <i class="fas fa-plus"></i>
+        Create Organization
       </button>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+      <div class="stat-card info">
+        <div class="stat-icon info-icon">
+          <i class="fas fa-building"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ organizations.length }}</h3>
+          <p>Total Organizations</p>
+        </div>
+      </div>
+      
+      <div class="stat-card success">
+        <div class="stat-icon success-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ organizations.filter(o => getSubscriptionStatus(o) === 'active').length }}</h3>
+          <p>Active</p>
+        </div>
+      </div>
+      
+      <div class="stat-card warning">
+        <div class="stat-icon warning-icon">
+          <i class="fas fa-pause-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ organizations.filter(o => getSubscriptionStatus(o) === 'suspended').length }}</h3>
+          <p>Suspended</p>
+        </div>
+      </div>
+      
+      <div class="stat-card danger">
+        <div class="stat-icon danger-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ organizations.filter(o => getSubscriptionStatus(o) === 'cancelled').length }}</h3>
+          <p>Cancelled</p>
+        </div>
+      </div>
     </div>
 
     <!-- Search and Filters -->
     <div class="filters-section">
       <div class="filters-row">
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input 
-            v-model="searchQuery" 
-            @input="handleSearch" 
-            placeholder="Search organizations..." 
-            class="form-input"
-            type="text"
-          />
+        <div class="search-section">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Search organizations..." 
+              class="form-input"
+              @input="handleSearch"
+            />
+          </div>
         </div>
         
         <div class="filter-controls">
@@ -29,10 +82,28 @@
             <option value="cancelled">Cancelled</option>
           </select>
           
-          <button @click="clearFilters" class="btn btn-outline-elegant">
+          <button @click="handleClearFilters" class="btn btn-outline-elegant">
             <i class="fas fa-times"></i>
-            Clear Filters
+            Clear
           </button>
+          
+          <!-- View Toggle -->
+          <div class="view-toggle">
+            <button 
+              @click="currentView = 'list'" 
+              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              title="List View"
+            >
+              <i class="fas fa-list"></i>
+            </button>
+            <button 
+              @click="currentView = 'grid'" 
+              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
+              title="Grid View"
+            >
+              <i class="fas fa-th"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -50,90 +121,150 @@
           <p>No organizations found</p>
         </div>
 
-        <div v-else class="organizations-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Organization</th>
-                <th>Contact</th>
-                <th>Subscription</th>
-                <th>Status</th>
-                <th>Users</th>
-                <th>Participants</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="org in organizations" :key="org.id">
-                <td>
-                  <div class="org-info">
-                    <strong>{{ org.name }}</strong>
-                    <div class="org-details">
-                      <span v-if="org.abn">ABN: {{ org.abn }}</span>
-                      <span v-if="org.website">{{ org.website }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="contact-info">
-                    <div v-if="org.email">{{ org.email }}</div>
-                    <div v-if="org.phone">{{ org.phone }}</div>
-                  </div>
-                </td>
-                <td>
-                  <div class="subscription-info">
-                    <span class="plan-name">{{ getSubscriptionPlan(org) }}</span>
-                    <span class="subscription-status" :class="getSubscriptionStatus(org)">
-                      {{ getSubscriptionStatus(org) }}
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <span class="status-badge" :class="`status-${getSubscriptionStatus(org)}`">
-                    {{ formatStatus(getSubscriptionStatus(org)) }}
-                  </span>
-                  <button @click="editStatus(org)" class="btn btn-xs btn-edit-status" title="Edit Status">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                </td>
-                <td>{{ org.users?.length || 0 }}</td>
-                <td>{{ org.participants?.length || 0 }}</td>
-                <td>{{ formatDate(org.created_at) }}</td>
-                <td>
-                  <div class="action-buttons">
-                    <button @click="viewOrganization(org)" class="btn btn-sm btn-info">
-                      <i class="fas fa-eye"></i>
-                      View
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- List View -->
+        <div v-if="currentView === 'list'" class="participants-list">
+          <div class="list-header">
+            <div class="header-cell">Organization</div>
+            <div class="header-cell">Contact</div>
+            <div class="header-cell">Subscription</div>
+            <div class="header-cell">Status</div>
+            <div class="header-cell">Users/Participants</div>
+            <div class="header-cell">Created</div>
+            <div class="header-cell">Actions</div>
+          </div>
+          <div v-for="org in organizations" :key="org.id" class="list-row">
+            <div class="list-cell">
+              <div class="participant-avatar org-avatar">
+                {{ org.name.substring(0, 2).toUpperCase() }}
+              </div>
+              <div class="participant-name">
+                <span class="name">{{ org.name }}</span>
+                <span class="email" v-if="org.abn">ABN: {{ org.abn }}</span>
+              </div>
+            </div>
+            <div class="list-cell">
+              <div class="contact-info">
+                <div v-if="org.email"><i class="fas fa-envelope"></i> {{ org.email }}</div>
+                <div v-if="org.phone"><i class="fas fa-phone"></i> {{ org.phone }}</div>
+              </div>
+            </div>
+            <div class="list-cell">
+              <div class="subscription-info">
+                <span class="plan-badge">{{ getSubscriptionPlan(org) }}</span>
+              </div>
+            </div>
+            <div class="list-cell">
+              <span :class="['status-badge', getSubscriptionStatus(org)]">{{ formatStatus(getSubscriptionStatus(org)) }}</span>
+            </div>
+            <div class="list-cell">
+              <div class="counts-info">
+                <span><i class="fas fa-users"></i> {{ org.users?.length || 0 }}</span>
+                <span><i class="fas fa-user"></i> {{ org.participants?.length || 0 }}</span>
+              </div>
+            </div>
+            <div class="list-cell">{{ formatDate(org.created_at) }}</div>
+            <div class="list-cell">
+              <div class="action-buttons">
+                <button @click="viewOrganization(org)" class="action-btn view-btn" title="View Details">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button @click="editStatus(org)" class="action-btn edit-btn" title="Edit Status">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button @click="confirmDeleteOrganization(org)" class="action-btn delete-btn" title="Delete Organization">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid View -->
+        <div v-else-if="currentView === 'grid'" class="organizations-grid">
+          <div v-for="org in organizations" :key="org.id" class="organization-card">
+            <div class="org-header">
+              <div class="participant-avatar org-avatar">
+                {{ org.name.substring(0, 2).toUpperCase() }}
+              </div>
+              <div class="org-info">
+                <h3>{{ org.name }}</h3>
+                <p v-if="org.abn" class="org-abn">ABN: {{ org.abn }}</p>
+              </div>
+              <span :class="['status-badge', getSubscriptionStatus(org)]">
+                {{ formatStatus(getSubscriptionStatus(org)) }}
+              </span>
+            </div>
+            
+            <div class="org-details">
+              <div class="detail-row" v-if="org.email">
+                <i class="fas fa-envelope"></i>
+                <span>{{ org.email }}</span>
+              </div>
+              <div class="detail-row" v-if="org.phone">
+                <i class="fas fa-phone"></i>
+                <span>{{ org.phone }}</span>
+              </div>
+              <div class="detail-row">
+                <i class="fas fa-calendar"></i>
+                <span>{{ formatDate(org.created_at) }}</span>
+              </div>
+            </div>
+
+            <div class="org-stats">
+              <div class="stat-item">
+                <i class="fas fa-users"></i>
+                <span>{{ org.users?.length || 0 }} Users</span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-user"></i>
+                <span>{{ org.participants?.length || 0 }} Participants</span>
+              </div>
+            </div>
+
+            <div class="org-subscription">
+              <span class="plan-badge">{{ getSubscriptionPlan(org) }}</span>
+            </div>
+            
+            <div class="org-actions">
+              <button @click="viewOrganization(org)" class="action-btn view-btn" title="View Details">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button @click="editStatus(org)" class="action-btn edit-btn" title="Edit Status">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button @click="confirmDeleteOrganization(org)" class="action-btn delete-btn" title="Delete Organization">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Pagination -->
-        <div v-if="pagination.total_pages > 1" class="pagination">
+        <div v-if="pagination.total_pages > 1" class="pagination-controls">
           <button 
             @click="changePage(pagination.page - 1)" 
             :disabled="pagination.page === 1"
-            class="btn btn-sm"
+            class="pagination-btn"
           >
+            <i class="fas fa-chevron-left"></i>
             Previous
           </button>
           
-          <span class="page-info">
-            Page {{ pagination.page }} of {{ pagination.total_pages }}
-            ({{ pagination.total }} total)
-          </span>
+          <div class="pagination-info">
+            <span>Page</span>
+            <select @change="changePage($event.target.value)" v-model="pagination.page" class="page-select">
+              <option v-for="n in pagination.total_pages" :key="n" :value="n">{{ n }}</option>
+            </select>
+            <span>of {{ pagination.total_pages }}</span>
+          </div>
 
           <button 
             @click="changePage(pagination.page + 1)" 
             :disabled="pagination.page === pagination.total_pages"
-            class="btn btn-sm"
+            class="pagination-btn"
           >
             Next
+            <i class="fas fa-chevron-right"></i>
           </button>
         </div>
     </div>
@@ -470,6 +601,7 @@ export default {
     const loading = ref(false)
     const searchQuery = ref('')
     const statusFilter = ref('')
+    const currentView = ref('list')
     const pagination = ref({
       page: 1,
       limit: 20,
@@ -647,6 +779,13 @@ export default {
       fetchOrganizations()
     }
 
+    const handleClearFilters = () => {
+      searchQuery.value = ''
+      statusFilter.value = ''
+      pagination.value.page = 1
+      fetchOrganizations()
+    }
+
     const changePage = (page) => {
       if (page >= 1 && page <= pagination.value.total_pages) {
         pagination.value.page = page
@@ -745,6 +884,7 @@ export default {
       loading,
       searchQuery,
       statusFilter,
+      currentView,
       pagination,
       showCreateModal,
       showStatusModal,
@@ -765,6 +905,7 @@ export default {
       confirmDelete,
       deleteOrganization,
       handleSearch,
+      handleClearFilters,
       changePage,
       viewOrganization,
       editStatus,
@@ -777,31 +918,257 @@ export default {
 }
 </script>
 
-<style scoped>
+<style>
+/* Use consistent styling with Participants page */
+.participants-container {
+  padding: 0;
+  background: transparent;
+}
+
+/* Override global page-header styles completely */
+.participants-container .page-header {
+  all: unset !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 1.5rem !important;
+  padding: 1.5rem 2rem !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 16px !important;
+  position: relative !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Alternative selector with higher specificity */
+.participants-container div.page-header {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+/* Highest specificity with ID */
+#superadmin-header {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+#superadmin-header::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 50%, #3b82f6 100%) !important;
+  background-size: 200% 100% !important;
+  animation: shimmer 3s ease-in-out infinite !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.participants-container .page-header::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 50%, #3b82f6 100%) !important;
+  background-size: 200% 100% !important;
+  animation: shimmer 3s ease-in-out infinite !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.header-content h1 {
+  font-size: 1.75rem;
+  margin: 0;
+  color: var(--primary-gradient-start);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-content p {
+  margin: 0.5rem 0 0;
+  color: var(--text-medium);
+  font-size: 0.875rem;
+}
+
+/* Stats Overview */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.6);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, transparent, rgba(102,126,234,0.1), transparent);
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+
+.stat-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+
+.stat-card:hover::after {
+  opacity: 1;
+  animation: shimmer 0.6s;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.stat-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stat-card:hover .stat-icon {
+  transform: rotate(5deg) scale(1.1);
+}
+
+.stat-icon::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(45deg, currentColor, transparent);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.stat-card:hover .stat-icon::before {
+  opacity: 0.5;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.info-icon {
+  background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.1));
+  color: #3b82f6;
+  box-shadow: 0 4px 15px rgba(59,130,246,0.2);
+}
+
+.success-icon {
+  background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.1));
+  color: #22c55e;
+  box-shadow: 0 4px 15px rgba(34,197,94,0.2);
+}
+
+.warning-icon {
+  background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.1));
+  color: #f59e0b;
+  box-shadow: 0 4px 15px rgba(245,158,11,0.2);
+}
+
+.danger-icon {
+  background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.1));
+  color: #ef4444;
+  box-shadow: 0 4px 15px rgba(239,68,68,0.2);
+}
+
+.stat-content h3 {
+  font-size: 1.75rem;
+  margin: 0;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-content p {
+  margin: 0.25rem 0 0;
+  color: var(--text-medium);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 /* Component-specific styles that extend the global theme */
 
-/* Participants-style filters */
+/* Filters section - matching Participants style */
 .filters-section {
-  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  margin-bottom: 1rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.5);
+  margin-bottom: 2rem;
 }
 
 .filters-row {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.search-section {
+  flex: 1;
+  max-width: 400px;
+  min-width: 250px;
 }
 
 .search-box {
   position: relative;
-  flex: 1;
-  min-width: 300px;
-  max-width: 400px;
+  width: 100%;
 }
 
 .search-box i {
@@ -810,6 +1177,7 @@ export default {
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
+  font-size: 0.875rem;
 }
 
 .form-input {
@@ -836,7 +1204,8 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .form-select {
@@ -849,6 +1218,8 @@ export default {
   transition: all 0.3s ease;
   font-weight: 500;
   min-width: 140px;
+  width: 140px;
+  flex-shrink: 0;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
@@ -865,84 +1236,531 @@ export default {
   transform: translateY(-1px);
 }
 
+.btn {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  color: white;
+  box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+}
+
 .btn-outline-elegant {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  color: #4a5568;
-  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  color: var(--text-medium);
+  padding: 0.625rem 1rem;
   border-radius: 10px;
   font-weight: 600;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-outline-elegant:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--primary-gradient-start);
+  color: var(--primary-gradient-start);
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(102, 126, 234, 0.04) 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
-.org-info strong {
-  display: block;
-  margin-bottom: 0.25rem;
-  color: var(--gray-800);
+/* View Toggle - matching Participants style */
+.view-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.7);
+  border-radius: 10px;
+  padding: 2px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.view-btn-elegant {
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-medium);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  font-size: 0.875rem;
+}
+
+.view-btn-elegant.active {
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  color: white;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+  transform: translateY(-1px);
+}
+
+.view-btn-elegant:hover:not(.active) {
+  background: rgba(102,126,234,0.1);
+  color: var(--primary-gradient-start);
+}
+
+/* Content card - matching Participants */
+.content-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.99) 100%);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(255,255,255,0.8);
+  position: relative;
+}
+
+.content-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(164,88,234,0.2));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.loading-state,
+.empty-state {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--text-medium);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(102,126,234,0.1);
+  border-top-color: var(--primary-gradient-start);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state i {
+  font-size: 3rem;
+  color: var(--primary-gradient-start);
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+  color: var(--text-dark);
+}
+
+.empty-state p {
+  margin: 0 0 1.5rem;
+  color: var(--text-medium);
+}
+
+/* List and Grid view styles - matching Participants */
+.participants-list {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Grid View Styles */
+.organizations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+}
+
+.organization-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.6);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.organization-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, transparent, rgba(102,126,234,0.1), transparent);
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+
+.organization-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+
+.organization-card:hover::before {
+  opacity: 1;
+  animation: shimmer 0.6s;
+}
+
+.org-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.org-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.org-info h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-abn {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-medium);
+  font-weight: 500;
 }
 
 .org-details {
-  font-size: var(--font-size-sm);
-  color: var(--gray-600);
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.org-details span {
-  display: block;
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-medium);
 }
 
-.contact-info div {
-  margin-bottom: 0.25rem;
-  font-size: var(--font-size-sm);
+.detail-row i {
+  font-size: 0.75rem;
+  color: var(--primary-gradient-start);
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-.subscription-info {
+.detail-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.875rem;
+  background: linear-gradient(135deg, rgba(102,126,234,0.08) 0%, rgba(102,126,234,0.04) 100%);
+  border-radius: 10px;
+  border: 1px solid rgba(102,126,234,0.1);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-medium);
+  font-weight: 500;
+}
+
+.stat-item i {
+  color: var(--primary-gradient-start);
+  font-size: 0.75rem;
+}
+
+.org-subscription {
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.org-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 0.8fr 1fr 1fr 1fr;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f3f4f6 100%);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-dark);
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.header-cell {
+  padding: 0.5rem;
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 0.8fr 1fr 1fr 1fr;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  align-items: center;
+  position: relative;
+}
+
+.list-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  transform: scaleY(0);
+  transition: transform 0.3s;
+  border-radius: 0 4px 4px 0;
+}
+
+.list-row:hover {
+  background: linear-gradient(135deg, rgba(102,126,234,0.05), rgba(164,88,234,0.02));
+  transform: translateX(8px);
+  box-shadow: 0 2px 10px rgba(102,126,234,0.1);
+}
+
+.list-row:hover::before {
+  transform: scaleY(1);
+}
+
+.list-cell {
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.participant-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.org-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.participant-name {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.plan-name {
+.participant-name .name {
   font-weight: 600;
-  text-transform: capitalize;
-  color: var(--gray-800);
+  color: var(--text-dark);
+  font-size: 0.9rem;
 }
 
-.subscription-status {
-  font-size: var(--font-size-xs);
+.participant-name .email {
+  font-size: 0.75rem;
+  color: var(--text-medium);
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-medium);
+}
+
+.contact-info div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.contact-info i {
+  font-size: 0.75rem;
+  color: var(--primary-gradient-start);
+}
+
+.subscription-info {
+  display: flex;
+  align-items: center;
+}
+
+.plan-badge {
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(102,126,234,0.05));
+  border: 1px solid rgba(102,126,234,0.2);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary-gradient-start);
   text-transform: capitalize;
+}
+
+.status-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.status-badge.active {
+  background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05));
+  color: #16a34a;
+  border: 1px solid rgba(34,197,94,0.2);
+}
+
+.status-badge.suspended {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05));
+  color: #d97706;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+.status-badge.cancelled {
+  background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
+  color: #dc2626;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.counts-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-medium);
+}
+
+.counts-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.counts-info i {
+  color: var(--primary-gradient-start);
+  font-size: 0.75rem;
 }
 
 .action-buttons {
   display: flex;
-  gap: var(--space-xs);
+  gap: 0.5rem;
 }
 
-.btn-edit-status {
-  margin-left: var(--space-xs);
-  background: transparent;
-  border: 1px solid var(--gray-300);
-  color: var(--gray-600);
-  transition: var(--transition-fast);
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
 }
 
-.btn-edit-status:hover {
-  background: var(--primary-500);
+.view-btn {
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05));
+  color: #3b82f6;
+  border: 1px solid rgba(59,130,246,0.2);
+}
+
+.view-btn:hover {
+  background: #3b82f6;
   color: white;
-  border-color: var(--primary-500);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
 }
 
-.status-filter {
-  min-width: 150px;
+.edit-btn {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05));
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+.edit-btn:hover {
+  background: #f59e0b;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.delete-btn:hover {
+  background: #ef4444;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239,68,68,0.3);
 }
 
 .details-grid {
@@ -1019,19 +1837,66 @@ export default {
   text-transform: capitalize;
 }
 
-.pagination {
+/* Pagination styles - matching Participants */
+.pagination-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-xl);
-  padding-top: var(--space-lg);
-  border-top: 1px solid var(--gray-200);
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.5rem 0;
 }
 
-.page-info {
-  font-size: var(--font-size-sm);
-  color: var(--gray-600);
+.pagination-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+  border: 2px solid rgba(102,126,234,0.1);
+  border-radius: 10px;
+  font-weight: 500;
+  color: var(--primary-gradient-start);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-medium);
+}
+
+.page-select {
+  padding: 0.375rem 0.75rem;
+  border: 2px solid rgba(102,126,234,0.1);
+  border-radius: 8px;
+  background: white;
+  color: var(--text-dark);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.page-select:focus {
+  outline: none;
+  border-color: var(--primary-gradient-start);
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
 }
 
 .form-row {
@@ -1041,6 +1906,217 @@ export default {
   margin-bottom: var(--space-md);
 }
 
+/* Dark Theme Support */
+[data-theme="dark"] .participants-container {
+  background: var(--gray-900);
+}
+
+[data-theme="dark"] .participants-container .page-header,
+[data-theme="dark"] #superadmin-header {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%) !important;
+  border: 1px solid rgba(75, 85, 99, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .header-content h1 {
+  color: white;
+}
+
+[data-theme="dark"] .header-content p {
+  color: rgba(255,255,255,0.85);
+}
+
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(40,40,50,0.95) 100%);
+  color: white;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: rgba(40,40,50,1);
+}
+
+[data-theme="dark"] .stat-card {
+  background: linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(40,40,50,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] .stat-content h3 {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .stat-content p {
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .filters-section {
+  background: linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(40,40,50,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select {
+  background: rgba(20,20,30,0.8);
+  border: 2px solid rgba(255,255,255,0.1);
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-select:focus {
+  border-color: #667eea;
+  background: rgba(20,20,30,0.95);
+}
+
+[data-theme="dark"] .btn-outline-elegant {
+  background: linear-gradient(135deg, rgba(30,30,40,0.9) 0%, rgba(40,40,50,0.9) 100%);
+  border: 2px solid rgba(102,126,234,0.3);
+  color: var(--gray-300);
+}
+
+[data-theme="dark"] .btn-outline-elegant:hover {
+  background: linear-gradient(135deg, rgba(102,126,234,0.2) 0%, rgba(102,126,234,0.1) 100%);
+  border-color: #667eea;
+  color: white;
+}
+
+[data-theme="dark"] .content-card {
+  background: linear-gradient(135deg, rgba(30,30,40,0.98) 0%, rgba(40,40,50,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .participants-list {
+  background: rgba(20,20,30,0.95);
+}
+
+[data-theme="dark"] .list-header {
+  background: linear-gradient(135deg, rgba(40,40,50,0.95) 0%, rgba(50,50,60,0.95) 100%);
+  color: var(--gray-200);
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .list-row {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+[data-theme="dark"] .list-row:hover {
+  background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(102,126,234,0.05));
+}
+
+[data-theme="dark"] .participant-name .name {
+  color: var(--gray-100);
+}
+
+[data-theme="dark"] .participant-name .email {
+  color: var(--gray-500);
+}
+
+[data-theme="dark"] .contact-info {
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .counts-info {
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .pagination-btn {
+  background: linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(40,40,50,0.95) 100%);
+  border: 2px solid rgba(102,126,234,0.3);
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] .pagination-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: transparent;
+}
+
+[data-theme="dark"] .pagination-info {
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .page-select {
+  background: rgba(20,20,30,0.9);
+  border: 2px solid rgba(102,126,234,0.3);
+  color: var(--gray-200);
+}
+
+/* Dark theme for grid view */
+[data-theme="dark"] .organizations-grid .organization-card {
+  background: linear-gradient(135deg, rgba(30,30,40,0.98) 0%, rgba(40,40,50,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] .organizations-grid .organization-card:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .org-info h3 {
+  color: var(--gray-100);
+}
+
+[data-theme="dark"] .org-abn {
+  color: var(--gray-500);
+}
+
+[data-theme="dark"] .detail-row {
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .detail-row i {
+  color: #667eea;
+}
+
+[data-theme="dark"] .org-stats {
+  background: linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(102,126,234,0.08) 100%);
+  border: 1px solid rgba(102,126,234,0.2);
+}
+
+[data-theme="dark"] .stat-item {
+  color: var(--gray-300);
+}
+
+[data-theme="dark"] .stat-item i {
+  color: #667eea;
+}
+
+[data-theme="dark"] .org-actions {
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .modal-content {
+  background: var(--gray-800);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .modal-header {
+  background: linear-gradient(135deg, rgba(40,40,50,0.95) 0%, rgba(50,50,60,0.95) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: white;
+}
+
+[data-theme="dark"] .modal-body {
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: rgba(20,20,30,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #667eea;
+  background: rgba(20,20,30,0.95);
+}
+
 @media (max-width: 768px) {
   .form-row {
     grid-template-columns: 1fr;
@@ -1048,6 +2124,83 @@ export default {
 
   .details-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .list-header,
+  .list-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .list-cell {
+    padding: 0.75rem;
+  }
+
+  /* Mobile grid view styles */
+  .organizations-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .organization-card {
+    padding: 1.25rem;
+  }
+
+  .org-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .org-info h3 {
+    font-size: 1rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .org-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .filters-row {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .filter-controls {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .search-section {
+    max-width: 100%;
+    min-width: 200px;
+    flex: 1 1 60%;
+  }
+
+  .form-select,
+  .btn-outline-elegant {
+    min-width: auto;
+    flex: 0 0 auto;
   }
 }
 </style>

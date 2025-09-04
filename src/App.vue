@@ -6,11 +6,20 @@
       Route: {{ $route.path }}<br>
       Token: {{ authStore.token ? 'Present' : 'None' }}<br>
       User: {{ authStore.user ? 'Present' : 'None' }}<br>
-      ShowAuth: {{ isAuthenticated }}
+      ShowAuth: {{ isAuthenticated }}<br>
+      Initialized: {{ authInitialized }}
+    </div>
+    
+    <!-- Loading state during auth initialization -->
+    <div v-if="!authInitialized" class="auth-loading">
+      <div class="loading-spinner">
+        <i class="fas fa-heart-pulse"></i>
+        <p>Initializing DASYIN CRM...</p>
+      </div>
     </div>
     
     <!-- Show full layout only when authenticated -->
-    <div v-if="isAuthenticated" class="app-container">
+    <div v-else-if="isAuthenticated" class="app-container">
       <!-- Sidebar Component (only show when authenticated) -->
       <Sidebar 
         :is-open="sidebarOpen"
@@ -73,7 +82,8 @@ export default {
   data() {
     return {
       currentPage: 'dashboard',
-      sidebarOpen: true
+      sidebarOpen: true,
+      authInitialized: false
     }
   },
   computed: {
@@ -135,6 +145,17 @@ export default {
     }
   },
   async mounted() {
+    // Initialize authentication first
+    try {
+      console.log('🔄 App mounted: Initializing authentication...')
+      await this.authStore.initializeAuth()
+      this.authInitialized = true
+      console.log('✅ Authentication initialized:', this.authStore.isAuthenticated)
+    } catch (error) {
+      console.error('❌ Authentication initialization failed:', error)
+      this.authInitialized = true // Still mark as initialized to avoid infinite loading
+    }
+    
     // Set initial page based on current route
     const routeName = this.$route.name?.toLowerCase() || 'dashboard'
     this.currentPage = routeName
@@ -186,5 +207,41 @@ export default {
   font-family: var(--font-family);
   border-radius: 0 0 0 8px;
   box-shadow: var(--shadow-medium);
+}
+
+.auth-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.loading-spinner {
+  text-align: center;
+  color: white;
+}
+
+.loading-spinner i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: pulse 2s infinite;
+}
+
+.loading-spinner p {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 0;
+  font-family: var(--font-family);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
 }
 </style>

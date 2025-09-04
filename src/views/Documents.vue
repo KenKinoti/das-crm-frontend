@@ -109,9 +109,9 @@
             <option value="expired">Expired</option>
           </select>
           
-          <button @click="clearFilters" class="btn btn-outline-elegant">
+          <button @click="clearFilters" class="btn btn-outline-elegant" title="Clear">
             <i class="fas fa-times"></i>
-            Clear Filters
+            Clear
           </button>
           
           <!-- View Toggle -->
@@ -926,9 +926,19 @@ export default {
 </script>
 
 <style scoped>
+/* Import shared styles for consistent layout */
+@import url('../assets/styles/participants-common.css');
+
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+[data-theme="dark"] .page-container {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f3f4f6;
 }
 
 /* Participants-style filters */
@@ -963,6 +973,10 @@ export default {
   color: #9ca3af;
 }
 
+[data-theme="dark"] .search-box i {
+  color: #6b7280;
+}
+
 .form-input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 2.5rem;
@@ -973,6 +987,17 @@ export default {
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
   font-weight: 500;
+  color: #1f2937;
+}
+
+[data-theme="dark"] .form-input {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .form-input::placeholder {
+  color: #9ca3af;
 }
 
 .form-input:focus {
@@ -1006,6 +1031,14 @@ export default {
   background-position: right 12px center;
   background-size: 16px;
   padding-right: 40px;
+  color: #1f2937;
+}
+
+[data-theme="dark"] .form-select {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 .form-select:focus {
@@ -1028,6 +1061,12 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
+[data-theme="dark"] .btn-outline-elegant {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+}
+
 .btn-outline-elegant:hover {
   border-color: #667eea;
   color: #667eea;
@@ -1043,6 +1082,11 @@ export default {
   overflow: hidden;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .view-toggle {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
 }
 
 .view-btn-elegant {
@@ -1085,6 +1129,19 @@ export default {
   color: var(--text-dark);
 }
 
+[data-theme="dark"] .page-header h1 {
+  color: #f3f4f6;
+}
+
+.header-content p {
+  color: #6b7280;
+  margin: 0.5rem 0 0 0;
+}
+
+[data-theme="dark"] .header-content p {
+  color: #9ca3af;
+}
+
 .header-actions {
   display: flex;
   gap: 1rem;
@@ -1104,6 +1161,12 @@ export default {
   flex-wrap: wrap;
 }
 
+[data-theme="dark"] .filters-section {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 .search-box {
   position: relative;
   flex: 1;
@@ -1116,6 +1179,10 @@ export default {
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
+}
+
+[data-theme="dark"] .search-box i {
+  color: #6b7280;
 }
 
 .search-box input {
@@ -1147,6 +1214,12 @@ export default {
   margin-bottom: 2rem;
   box-shadow: var(--shadow-sm);
   border-left: 4px solid var(--primary-500);
+}
+
+[data-theme="dark"] .cloud-storage-status {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .cloud-provider-info {
@@ -1186,6 +1259,10 @@ export default {
   margin: 0 0 0.25rem 0;
   color: var(--gray-800);
   font-size: var(--font-size-lg);
+}
+
+[data-theme="dark"] .provider-details h4 {
+  color: #f3f4f6;
 }
 
 .storage-quota {
@@ -1400,6 +1477,12 @@ export default {
   gap: 1rem;
 }
 
+[data-theme="dark"] .stat-card {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 .stat-icon {
   width: 48px;
   height: 48px;
@@ -1430,9 +1513,17 @@ export default {
   color: var(--text-dark);
 }
 
+[data-theme="dark"] .stat-number {
+  color: #f3f4f6;
+}
+
 .stat-label {
   font-size: 0.9rem;
   color: var(--text-medium);
+}
+
+[data-theme="dark"] .stat-label {
+  color: #9ca3af;
 }
 
 .filters-section {
@@ -1480,6 +1571,12 @@ export default {
   padding: 2rem;
 }
 
+[data-theme="dark"] .content-card {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 .documents-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
@@ -1491,6 +1588,12 @@ export default {
   border-radius: var(--border-radius);
   padding: 1.5rem;
   transition: all 0.3s ease;
+  background: white;
+}
+
+[data-theme="dark"] .document-card {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.3);
 }
 
 .document-card:hover {
@@ -1524,10 +1627,18 @@ export default {
   margin: 0 0 0.25rem 0;
 }
 
+[data-theme="dark"] .document-name {
+  color: #f3f4f6;
+}
+
 .document-meta {
   font-size: 0.9rem;
   color: var(--text-medium);
   margin: 0;
+}
+
+[data-theme="dark"] .document-meta {
+  color: #9ca3af;
 }
 
 .document-status {
@@ -1580,10 +1691,18 @@ export default {
   color: var(--text-medium);
 }
 
+[data-theme="dark"] .detail-item {
+  color: #d1d5db;
+}
+
 .detail-item i {
   width: 16px;
   color: var(--text-light);
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .detail-item i {
+  color: #9ca3af;
 }
 
 .detail-item.description {
@@ -1592,6 +1711,10 @@ export default {
   padding: 0.75rem;
   border-radius: var(--border-radius-sm);
   margin-top: 0.5rem;
+}
+
+[data-theme="dark"] .detail-item.description {
+  background: rgba(55, 65, 81, 0.5);
 }
 
 .document-actions {
@@ -1659,14 +1782,34 @@ export default {
   margin-bottom: 1rem;
 }
 
+[data-theme="dark"] .empty-state i {
+  color: #6b7280;
+}
+
 .empty-state h3 {
   color: var(--text-dark);
   margin-bottom: 0.5rem;
 }
 
+[data-theme="dark"] .empty-state h3 {
+  color: #f3f4f6;
+}
+
 .empty-state p {
   color: var(--text-medium);
   margin-bottom: 2rem;
+}
+
+[data-theme="dark"] .empty-state p {
+  color: #9ca3af;
+}
+
+.loading-state p {
+  color: var(--text-medium);
+}
+
+[data-theme="dark"] .loading-state p {
+  color: #9ca3af;
 }
 
 /* Modal styles */

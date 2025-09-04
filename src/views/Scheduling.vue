@@ -145,9 +145,9 @@
             <option value="next_week">Next Week</option>
           </select>
           
-          <button @click="clearFilters" class="btn btn-outline-elegant">
+          <button @click="clearFilters" class="btn btn-outline-elegant" title="Clear">
             <i class="fas fa-times"></i>
-            Clear Filters
+            Clear
           </button>
           
           <!-- View Toggle -->
@@ -202,90 +202,69 @@
       </div>
 
       <!-- Grid View -->
-      <div v-if="currentView === 'grid'" class="shifts-grid">
-        <div v-for="shift in filteredShifts" :key="shift.id" :class="['shift-card', `shift-${shift.status}`, getUrgencyClass(shift)]">
-          <div class="shift-header">
-            <div class="shift-time">
-              <div class="time-main">{{ formatTime(shift.start_time) }} - {{ formatTime(shift.end_time) }}</div>
-              <div class="time-date">{{ formatDate(shift.start_time) }}</div>
+      <div v-if="currentView === 'grid'" class="participants-grid">
+        <div v-for="shift in filteredShifts" :key="shift.id" :class="['participant-card', `shift-${shift.status}`, getUrgencyClass(shift)]">
+          <div class="participant-header">
+            <div class="participant-avatar">
+              <i class="fas fa-calendar-alt"></i>
             </div>
-            <div class="shift-status">
-              <div v-if="getUrgencyLevel(shift) !== 'normal'" class="urgency-indicator" :class="getUrgencyLevel(shift)">
-                <i :class="getUrgencyIcon(shift)"></i>
-                <span>{{ getUrgencyText(shift) }}</span>
-              </div>
-              <span :class="['status-badge', shift.status]">
+            <div class="participant-info">
+              <h3>{{ formatTime(shift.start_time) }} - {{ formatTime(shift.end_time) }}</h3>
+              <p class="participant-ndis">{{ formatDate(shift.start_time) }}</p>
+            </div>
+            <div class="participant-status">
+              <span :class="['status-badge', getStatusClass(shift.status)]">
                 {{ formatStatus(shift.status) }}
               </span>
             </div>
           </div>
           
-          <div class="shift-details">
+          <div class="participant-details">
             <div class="detail-row">
-              <div class="detail-item">
-                <i class="fas fa-user"></i>
-                <span><strong>Participant:</strong> {{ getParticipantName(shift.participant_id) }}</span>
-              </div>
-              <div class="detail-item">
-                <i class="fas fa-user-nurse"></i>
-                <span><strong>Staff:</strong> {{ getStaffName(shift.staff_id) }}</span>
-              </div>
+              <i class="fas fa-user"></i>
+              <span>{{ getParticipantName(shift.participant_id) }}</span>
             </div>
             <div class="detail-row">
-              <div class="detail-item">
-                <i class="fas fa-heart"></i>
-                <span><strong>Service:</strong> {{ shift.service_type }}</span>
-              </div>
-              <div class="detail-item">
-                <i class="fas fa-map-marker-alt"></i>
-                <span><strong>Location:</strong> {{ shift.location }}</span>
-              </div>
+              <i class="fas fa-user-nurse"></i>
+              <span>{{ getStaffName(shift.staff_id) }}</span>
             </div>
             <div class="detail-row">
-              <div class="detail-item">
-                <i class="fas fa-clock"></i>
-                <span><strong>Duration:</strong> {{ calculateDuration(shift.start_time, shift.end_time) }}</span>
-              </div>
-              <div class="detail-item">
-                <i class="fas fa-dollar-sign"></i>
-                <span><strong>Rate:</strong> ${{ shift.hourly_rate }}/hr</span>
-              </div>
+              <i class="fas fa-heart"></i>
+              <span>{{ shift.service_type }}</span>
             </div>
-            <div v-if="shift.notes" class="detail-item notes">
-              <i class="fas fa-sticky-note"></i>
-              <span><strong>Notes:</strong> {{ shift.notes }}</span>
+            <div class="detail-row">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>{{ shift.location }}</span>
             </div>
           </div>
 
-          <div class="shift-actions">
-            <button @click="viewShift(shift)" class="btn-small btn-info">
-              View
+          <div class="participant-actions">
+            <button @click="viewShift(shift)" class="action-btn view-btn" title="View Details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button @click="editShift(shift)" class="action-btn edit-btn" title="Edit Shift">
+              <i class="fas fa-edit"></i>
             </button>
             <button 
               v-if="shift.status === 'scheduled'" 
               @click="startShift(shift)" 
-              class="btn-small btn-shift"
+              class="action-btn schedule-btn"
+              title="Start Shift"
               :disabled="isSubmitting"
             >
               <i class="fas fa-play"></i>
-              Start Shift
             </button>
             <button 
               v-if="shift.status === 'in_progress'" 
               @click="showCompleteShiftModal(shift)" 
-              class="btn-small btn-complete"
+              class="action-btn approve-btn"
+              title="Complete Shift"
               :disabled="isSubmitting"
             >
-              <i class="fas fa-check-circle"></i>
-              Complete Shift
+              <i class="fas fa-check"></i>
             </button>
-            <button @click="editShift(shift)" class="btn-small btn-edit">
-              <i class="fas fa-edit"></i>
-              Edit
-            </button>
-            <button v-if="canCancelShifts" @click="showCancelShiftModal(shift)" class="btn-small btn-cancel">
+            <button v-if="canCancelShifts" @click="showCancelShiftModal(shift)" class="action-btn delete-btn" title="Cancel Shift">
               <i class="fas fa-times"></i>
-              Cancel
             </button>
           </div>
         </div>
@@ -1782,6 +1761,17 @@ export default {
       return statusMap[status] || status
     },
 
+    getStatusClass(status) {
+      const classes = {
+        'scheduled': 'scheduled',
+        'in_progress': 'active',
+        'completed': 'completed',
+        'cancelled': 'cancelled',
+        'no_show': 'expired'
+      }
+      return classes[status] || 'scheduled'
+    },
+
     formatServiceType(serviceType) {
       const serviceMap = {
         'support_work': 'Support',
@@ -2072,6 +2062,9 @@ export default {
 </script>
 
 <style scoped>
+/* Import shared styles for consistent layout */
+@import url('../assets/styles/participants-common.css');
+
 .container-fluid {
   position: relative;
   padding: 1.5rem;

@@ -30,6 +30,7 @@ export async function autoAuthenticate() {
       headers: {
         'Content-Type': 'application/json'
       },
+      mode: 'cors',
       body: JSON.stringify({
         email: 'admin@dasyin.com.au',
         password: 'password'

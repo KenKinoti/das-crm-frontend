@@ -395,7 +395,7 @@ export default {
 <style scoped>
 .header {
   background: var(--white);
-  padding: 1.5rem 2rem;
+  padding: 0.75rem 2rem;
   box-shadow: var(--shadow-soft);
   display: flex;
   justify-content: space-between;
@@ -447,12 +447,13 @@ export default {
 }
 
 .search-input {
-  padding: 12px 40px 12px 16px;
+  padding: 8px 40px 8px 16px;
   border: 2px solid #e2e8f0;
-  border-radius: 25px;
-  width: 300px;
-  font-size: 0.9rem;
+  border-radius: 20px;
+  width: 280px;
+  font-size: 0.85rem;
   transition: all 0.3s ease;
+  height: 36px;
 }
 
 .search-input:focus {
@@ -577,11 +578,11 @@ export default {
 .user-menu {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: rgba(102, 126, 234, 0.1);
-  border-radius: 25px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -592,8 +593,8 @@ export default {
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: var(--primary-gradient);
   border-radius: 50%;
   display: flex;
@@ -601,7 +602,7 @@ export default {
   justify-content: center;
   color: white;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .user-dropdown {
@@ -655,15 +656,16 @@ export default {
 .org-display {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   background: rgba(102, 126, 234, 0.1);
   border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--text-dark);
   font-weight: 500;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .org-display:hover {
@@ -818,7 +820,7 @@ export default {
   }
 
   .header {
-    padding: 1rem;
+    padding: 0.5rem 1rem;
   }
 
   .page-title {
