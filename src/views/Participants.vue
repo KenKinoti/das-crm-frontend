@@ -605,6 +605,7 @@
               This action cannot be undone. All participant data including shifts, notes, and medical information will be permanently deleted.
             </p>
           </div>
+        </div>
         <div class="modal-actions">
           <button @click="closeDeleteModal" class="btn btn-view">
             <i class="fas fa-times"></i>
