@@ -1452,7 +1452,8 @@ export default {
         console.log('🔑 Auth token:', localStorage.getItem('auth_token')?.substring(0, 10) + '...')
         
         // Use direct fetch for maximum debugging visibility
-        const response = await fetch(`http://localhost:8080/api/v1/shifts/${this.shiftToStart.id}/status`, {
+        const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-567187485284.us-central1.run.app/api/v1'
+        const response = await fetch(`${baseURL}/shifts/${this.shiftToStart.id}/status`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

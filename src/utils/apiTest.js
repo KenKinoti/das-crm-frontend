@@ -26,15 +26,18 @@ export const testAPIConnection = async () => {
     
   } catch (error) {
     console.log('❌ API Connection test failed:', error.message)
-    console.log('💡 Make sure your GoFiber backend is running on http://localhost:8080')
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-567187485284.us-central1.run.app/api/v1'
+    console.log(`💡 Make sure your backend is accessible at ${baseURL}`)
     return false
   }
 }
 
 export const logAPIStatus = () => {
+  const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-ug5fk2kuxq-uc.a.run.app/api/v1'
+  const healthURL = baseURL.replace('/api/v1', '/health')
   console.log('📡 API Configuration:')
-  console.log('  - Base URL: http://localhost:8080/api/v1')
-  console.log('  - Health Check: http://localhost:8080/health')
+  console.log(`  - Base URL: ${baseURL}`)
+  console.log(`  - Health Check: ${healthURL}`)
   console.log('  - Auth Token:', localStorage.getItem('auth_token') ? 'Present' : 'None')
   console.log('  - Refresh Token:', localStorage.getItem('refresh_token') ? 'Present' : 'None')
 }

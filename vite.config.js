@@ -62,9 +62,9 @@ export default defineConfig({
     // Proxy API requests to backend
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://das-crm-backend-567187485284.us-central1.run.app',
         changeOrigin: true,
-        secure: false
+        secure: true
       }
     }
   },

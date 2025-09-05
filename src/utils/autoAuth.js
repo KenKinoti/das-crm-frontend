@@ -25,7 +25,8 @@ export async function autoAuthenticate() {
     }
     
     // Login with backend credentials
-    const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-567187485284.us-central1.run.app/api/v1'
+    const response = await fetch(`${baseURL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
