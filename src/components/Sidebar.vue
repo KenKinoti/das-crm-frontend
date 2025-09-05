@@ -1,7 +1,7 @@
 <template>
   <nav class="sidebar" :class="{ 'collapsed': !isOpen, 'open': isOpen }">
     <div class="sidebar-header">
-      <div class="logo">
+      <div class="logo" @click="goToDashboard" role="button" tabindex="0" @keydown.enter="goToDashboard" @keydown.space.prevent="goToDashboard">
         <div class="logo-icon">
           <i class="fas fa-heart-pulse"></i>
         </div>
@@ -121,6 +121,9 @@ export default {
   methods: {
     navigate(page) {
       this.$emit('navigate', page)
+    },
+    goToDashboard() {
+      this.$emit('navigate', 'dashboard')
     }
   }
 }
@@ -172,6 +175,20 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  margin: -8px;
+}
+
+.logo:hover {
+  background: rgba(102, 126, 234, 0.08);
+  transform: translateY(-1px);
+}
+
+.logo:active {
+  transform: translateY(0);
 }
 
 .logo-icon {
