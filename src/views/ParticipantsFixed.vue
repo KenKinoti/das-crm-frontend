@@ -1002,27 +1002,59 @@ export default {
     },
     
     async submitNewParticipant() {
+      console.log('🔥 SUBMIT PARTICIPANT: Starting validation')
       if (!this.newParticipant.first_name || !this.newParticipant.last_name) {
+        console.log('❌ SUBMIT PARTICIPANT: Validation failed - missing required fields')
         await showError('Required Fields', 'First name and last name are required')
         return
       }
       
+      console.log('✅ SUBMIT PARTICIPANT: Validation passed')
+      console.log('🔧 DIAGNOSTIC INFO:', {
+        isSuperAdmin: this.isSuperAdmin,
+        currentOrganization: this.currentOrganization,
+        userOrgId: this.user?.organization_id,
+        newParticipantData: this.newParticipant
+      })
+      
       this.isSubmitting = true
       
       try {
-        // Add organization_id for non-super admins and format date_of_birth
+        // Add organization_id - always use user's organization_id as fallback
         const participantData = {
           ...this.newParticipant,
-          organization_id: this.isSuperAdmin && this.currentOrganization 
+          organization_id: (this.isSuperAdmin && this.currentOrganization 
             ? this.currentOrganization.id 
-            : this.user?.organization_id,
+            : this.user?.organization_id) || 'org_default',
           // Format date_of_birth for backend - convert YYYY-MM-DD to ISO string
           date_of_birth: this.newParticipant.date_of_birth 
             ? new Date(this.newParticipant.date_of_birth + 'T00:00:00Z').toISOString()
-            : null
+            : null,
+          // Convert address string to address object for backend
+          address: this.newParticipant.address ? {
+            street: this.newParticipant.address,
+            suburb: '',
+            state: '',
+            postcode: '',
+            country: 'Australia'
+          } : null
         }
         
-        await this.createParticipant(participantData)
+        console.log('🚀 SUBMIT PARTICIPANT: Prepared data for API:', participantData)
+        
+        // Clean the data - remove empty strings and convert to proper types
+        const cleanedData = Object.keys(participantData).reduce((acc, key) => {
+          const value = participantData[key]
+          if (value === '' || value === null || value === undefined) {
+            return acc // Skip empty values
+          }
+          acc[key] = value
+          return acc
+        }, {})
+        
+        console.log('🧹 SUBMIT PARTICIPANT: Cleaned data for API:', cleanedData)
+        await this.createParticipant(cleanedData)
+        console.log('✅ SUBMIT PARTICIPANT: API call successful')
         
         // Close modal first
         this.closeModal()
@@ -1032,17 +1064,25 @@ export default {
         await this.loadParticipants()
         
       } catch (error) {
-        console.error('Error creating participant:', error)
-        await showError('Add Failed', 'Failed to add participant. Please try again.')
+        console.error('❌ SUBMIT PARTICIPANT: Error occurred:', error)
+        console.error('❌ SUBMIT PARTICIPANT: Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config,
+          responseText: error.response?.statusText
+        })
+        await showError('Add Failed', `Failed to add participant: ${error.response?.data?.message || error.message}`)
       } finally {
         this.isSubmitting = false
       }
     },
 
     handleNewParticipantAddressSelected(addressData) {
+      console.log('🏠 PARTICIPANTS: handleNewParticipantAddressSelected called with:', addressData)
       // Store the selected address and optionally its components
       this.newParticipant.address = addressData.fullAddress
-      console.log('New participant address selected:', addressData)
+      console.log('🏠 PARTICIPANTS: New participant address set to:', this.newParticipant.address)
     },
 
     handleEditParticipantAddressSelected(addressData) {

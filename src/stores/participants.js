@@ -50,18 +50,44 @@ export const useParticipantsStore = defineStore('participants', {
     },
 
     async createParticipant(participant) {
+      console.log('🏪 STORE: createParticipant called with data:', participant)
       this.isLoading = true
       this.error = null
       
       try {
+        console.log('🏪 STORE: Calling participantsService.create')
         const response = await participantsService.create(participant)
+        console.log('🏪 STORE: Service call successful, response:', response)
+        
         this.participants.unshift(response.data)
+        console.log('🏪 STORE: Participant added to store, new count:', this.participants.length)
         return response
       } catch (error) {
+        console.error('🏪 STORE: Error in createParticipant:', error)
+        console.error('🏪 STORE: Full error details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+          url: error.config?.url,
+          method: error.config?.method,
+          requestData: error.config?.data
+        })
+        
+        // Log the backend error message specifically
+        if (error.response?.data) {
+          console.error('🚨 BACKEND ERROR MESSAGE:', JSON.stringify(error.response.data, null, 2))
+        }
+        
+        // Also log what we sent to help debug
+        if (error.config?.data) {
+          console.error('📤 DATA SENT TO API:', JSON.stringify(JSON.parse(error.config.data), null, 2))
+        }
         this.error = error.response?.data?.message || 'Failed to create participant'
         throw error
       } finally {
         this.isLoading = false
+        console.log('🏪 STORE: createParticipant completed, loading state reset')
       }
     },
 

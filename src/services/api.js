@@ -109,9 +109,11 @@ api.interceptors.response.use(
         console.error('Token refresh failed:', refreshError)
       }
 
-      // Logout and redirect to login
-      const authStore = useAuthStore()
-      await authStore.logout()
+      // Clear tokens and redirect to login (avoid API call loop)
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('current_user')
+      localStorage.removeItem('user_data')
       window.location.href = '/login'
     }
 

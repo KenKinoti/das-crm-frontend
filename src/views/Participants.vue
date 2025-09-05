@@ -860,9 +860,19 @@ export default {
     },
 
     async addParticipant() {
+      console.log('🔥 ADD PARTICIPANT: Starting validation')
       if (!this.validateParticipantForm()) {
+        console.log('❌ ADD PARTICIPANT: Validation failed')
         return
       }
+      
+      console.log('✅ ADD PARTICIPANT: Validation passed, preparing data')
+      console.log('🔧 DIAGNOSTIC INFO:', {
+        apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
+        hasAuthToken: !!localStorage.getItem('auth_token'),
+        userOrganization: this.user?.organization_id,
+        isSuperAdmin: this.isSuperAdmin
+      })
       
       try {
         // Validate and prepare data
@@ -892,13 +902,22 @@ export default {
           participantData.date_of_birth = participantData.date_of_birth + 'T00:00:00Z'
         }
         
-        console.log('Creating participant with data:', participantData)
-        await this.createParticipant(participantData)
+        console.log('🚀 ADD PARTICIPANT: Sending data to API:', participantData)
+        const result = await this.createParticipant(participantData)
+        console.log('✅ ADD PARTICIPANT: API call successful:', result)
+        
         this.filterParticipants()
         this.closeModal()
         showSuccessNotification('Participant added successfully!')
+        console.log('✅ ADD PARTICIPANT: Complete success!')
       } catch (error) {
-        console.error('Error adding participant:', error)
+        console.error('❌ ADD PARTICIPANT: Error occurred:', error)
+        console.error('❌ ADD PARTICIPANT: Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config
+        })
         showErrorNotification(error, 'Error adding participant. Please try again.')
       }
     },

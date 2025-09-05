@@ -10,6 +10,8 @@ export const participantsService = {
   },
 
   create(participant) {
+    console.log('📡 SERVICE: Creating participant with data:', participant)
+    console.log('📡 SERVICE: Making POST request to /participants')
     return api.post('/participants', participant)
   },
 

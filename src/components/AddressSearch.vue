@@ -1,23 +1,22 @@
 <template>
-  <div class="address-search-container">
-    <div class="form-group">
-      <label :for="fieldId">{{ label }}</label>
-      <div class="address-input-wrapper">
-        <input
-          :id="fieldId"
-          v-model="searchQuery"
-          type="text"
-          class="form-input address-input"
-          :placeholder="placeholder"
-          @input="handleInput"
-          @focus="showDropdown = true"
-          @blur="handleBlur"
-          @keydown="handleKeydown"
-          autocomplete="off"
-        />
-        <i v-if="isLoading" class="fas fa-spinner fa-spin loading-icon"></i>
-        <i v-else class="fas fa-map-marker-alt address-icon"></i>
-      </div>
+  <div class="form-group">
+    <label :for="fieldId">{{ label }}</label>
+    <div class="address-input-wrapper">
+      <input
+        :id="fieldId"
+        v-model="searchQuery"
+        type="text"
+        class="form-input"
+        :placeholder="placeholder"
+        @input="handleInput"
+        @focus="showDropdown = true"
+        @blur="handleBlur"
+        @keydown="handleKeydown"
+        autocomplete="off"
+      />
+      <i v-if="isLoading" class="fas fa-spinner fa-spin loading-icon"></i>
+      <i v-else class="fas fa-map-marker-alt address-icon"></i>
+    </div>
       
       <!-- Address Suggestions Dropdown -->
       <div v-if="showDropdown && suggestions.length > 0" class="address-dropdown">
@@ -103,6 +102,8 @@
 </template>
 
 <script>
+import { googlePlacesService } from '../services/googlePlaces'
+
 export default {
   name: 'AddressSearch',
   props: {
@@ -153,6 +154,7 @@ export default {
   },
   methods: {
     handleInput() {
+      console.log('🔍 ADDRESS SEARCH: handleInput called, searchQuery:', this.searchQuery)
       // Clear existing timeout
       if (this.searchTimeout) {
         clearTimeout(this.searchTimeout)
@@ -165,6 +167,7 @@ export default {
       
       // Debounce search
       this.searchTimeout = setTimeout(() => {
+        console.log('🔍 ADDRESS SEARCH: Search timeout triggered, query length:', this.searchQuery.length)
         if (this.searchQuery.length >= 3) {
           this.searchAddresses()
         } else {
@@ -175,33 +178,85 @@ export default {
     },
     
     async searchAddresses() {
+      console.log('🔍 ADDRESS SEARCH: searchAddresses called with query:', this.searchQuery)
       if (!this.searchQuery.trim()) {
+        console.log('🔍 ADDRESS SEARCH: Empty query, returning early')
         return
       }
       
       this.isLoading = true
+      console.log('🔍 ADDRESS SEARCH: Loading started')
       
       try {
-        // For demo purposes, using mock Australian addresses
-        // In production, this would integrate with Google Places API or similar
-        const mockSuggestions = this.getMockAustralianAddresses(this.searchQuery)
-        
-        setTimeout(() => {
+        // Check if Google Places API is configured
+        if (googlePlacesService.isConfigured()) {
+          console.log('🔍 ADDRESS SEARCH: Using Google Places API')
+          const suggestions = await googlePlacesService.getAddressSuggestions(this.searchQuery)
+          console.log('🔍 ADDRESS SEARCH: Google Places suggestions:', suggestions.length, 'results')
+          
+          this.suggestions = suggestions
+          this.showDropdown = true
+          this.isLoading = false
+          this.selectedIndex = -1
+          console.log('🔍 ADDRESS SEARCH: Dropdown shown with', this.suggestions.length, 'suggestions')
+        } else {
+          console.log('🔍 ADDRESS SEARCH: Google Places API not configured, using mock data')
+          // Fallback to mock data if API is not configured
+          const mockSuggestions = this.getMockAustralianAddresses(this.searchQuery)
+          console.log('🔍 ADDRESS SEARCH: Mock suggestions generated:', mockSuggestions.length, 'results')
+          
           this.suggestions = mockSuggestions
           this.showDropdown = true
           this.isLoading = false
           this.selectedIndex = -1
-        }, 500) // Simulate API delay
+          console.log('🔍 ADDRESS SEARCH: Dropdown shown with', this.suggestions.length, 'suggestions')
+        }
         
       } catch (error) {
-        console.error('Address search error:', error)
+        console.error('🔍 ADDRESS SEARCH: Error in searchAddresses:', error)
+        console.log('🔍 ADDRESS SEARCH: Falling back to mock data due to error')
+        
+        // Fallback to mock data on error
+        try {
+          const mockSuggestions = this.getMockAustralianAddresses(this.searchQuery)
+          this.suggestions = mockSuggestions
+          this.showDropdown = true
+          console.log('🔍 ADDRESS SEARCH: Fallback mock data shown with', this.suggestions.length, 'suggestions')
+        } catch (mockError) {
+          console.error('🔍 ADDRESS SEARCH: Even mock data failed:', mockError)
+          this.suggestions = []
+        }
+        
         this.isLoading = false
-        this.suggestions = []
       }
     },
     
     getMockAustralianAddresses(query) {
-      const australianAddresses = [
+      // Generate dynamic suggestions based on user input
+      const suggestions = []
+      const lowerQuery = query.toLowerCase().trim()
+      
+      // If query contains parts of an address, generate suggestions
+      if (lowerQuery.length >= 3) {
+        // Try to parse if it looks like a unit/street number pattern
+        const unitMatch = lowerQuery.match(/^(\d+\/\d+|\d+)\s*(.*)/)
+        
+        if (unitMatch) {
+          const numberPart = unitMatch[1]
+          const streetPart = unitMatch[2] || ''
+          
+          // Generate suggestions based on the partial street name
+          const streetSuggestions = this.generateStreetSuggestions(streetPart, numberPart)
+          suggestions.push(...streetSuggestions)
+        } else {
+          // General text search - generate suggestions based on street or suburb names
+          const generalSuggestions = this.generateGeneralSuggestions(lowerQuery)
+          suggestions.push(...generalSuggestions)
+        }
+      }
+      
+      // Add some static popular addresses as fallback
+      const staticAddresses = [
         {
           mainText: '123 Collins Street',
           secondaryText: 'Melbourne VIC 3000, Australia',
@@ -213,7 +268,7 @@ export default {
             postcode: '3000',
             country: 'Australia'
           },
-          placeId: 'mock_1'
+          placeId: 'static_1'
         },
         {
           mainText: '456 George Street',
@@ -226,66 +281,174 @@ export default {
             postcode: '2000',
             country: 'Australia'
           },
-          placeId: 'mock_2'
-        },
-        {
-          mainText: '789 Queen Street',
-          secondaryText: 'Brisbane QLD 4000, Australia',
-          fullAddress: '789 Queen Street, Brisbane QLD 4000',
-          components: {
-            street: '789 Queen Street',
-            suburb: 'Brisbane',
-            state: 'QLD',
-            postcode: '4000',
-            country: 'Australia'
-          },
-          placeId: 'mock_3'
-        },
-        {
-          mainText: '321 King William Street',
-          secondaryText: 'Adelaide SA 5000, Australia',
-          fullAddress: '321 King William Street, Adelaide SA 5000',
-          components: {
-            street: '321 King William Street',
-            suburb: 'Adelaide',
-            state: 'SA',
-            postcode: '5000',
-            country: 'Australia'
-          },
-          placeId: 'mock_4'
-        },
-        {
-          mainText: '654 Murray Street',
-          secondaryText: 'Perth WA 6000, Australia',
-          fullAddress: '654 Murray Street, Perth WA 6000',
-          components: {
-            street: '654 Murray Street',
-            suburb: 'Perth',
-            state: 'WA',
-            postcode: '6000',
-            country: 'Australia'
-          },
-          placeId: 'mock_5'
+          placeId: 'static_2'
         }
       ]
       
-      const lowerQuery = query.toLowerCase()
-      return australianAddresses.filter(addr => 
+      // Filter static addresses that match
+      const matchingStatic = staticAddresses.filter(addr => 
         addr.mainText.toLowerCase().includes(lowerQuery) ||
         addr.secondaryText.toLowerCase().includes(lowerQuery)
-      ).slice(0, 5)
+      )
+      
+      suggestions.push(...matchingStatic)
+      
+      return suggestions.slice(0, 5)
     },
     
-    selectAddress(address) {
+    generateStreetSuggestions(streetPart, numberPart) {
+      const suggestions = []
+      const streetNames = [
+        'BROUGHTON AVENUE', 'BROUGHTON STREET', 'BROUGHTON ROAD', 'BROUGHTON PLACE',
+        'BRIDGE STREET', 'BRIDGE ROAD', 'BRICK STREET', 'BROADWAY',
+        'BROWN STREET', 'BRUNSWICK STREET', 'BURKE STREET', 'BURNLEY STREET'
+      ]
+      
+      const suburbs = [
+        { name: 'Adelaide', state: 'SA', postcode: '5000' },
+        { name: 'North Adelaide', state: 'SA', postcode: '5006' },
+        { name: 'Norwood', state: 'SA', postcode: '5067' },
+        { name: 'Prospect', state: 'SA', postcode: '5082' },
+        { name: 'Fitzroy', state: 'VIC', postcode: '3065' },
+        { name: 'Richmond', state: 'VIC', postcode: '3121' }
+      ]
+      
+      // Find streets that match the partial input
+      const matchingStreets = streetNames.filter(street => 
+        street.toLowerCase().includes(streetPart.toLowerCase()) ||
+        streetPart.toLowerCase().includes(street.toLowerCase().substring(0, streetPart.length))
+      )
+      
+      // Generate suggestions for matching streets
+      matchingStreets.forEach((street, index) => {
+        const suburb = suburbs[index % suburbs.length]
+        const fullAddress = `${numberPart} ${street}`
+        
+        suggestions.push({
+          mainText: fullAddress,
+          secondaryText: `${suburb.name} ${suburb.state} ${suburb.postcode}, Australia`,
+          fullAddress: `${fullAddress}, ${suburb.name} ${suburb.state} ${suburb.postcode}`,
+          components: {
+            street: fullAddress,
+            suburb: suburb.name,
+            state: suburb.state,
+            postcode: suburb.postcode,
+            country: 'Australia'
+          },
+          placeId: `generated_street_${index}`
+        })
+      })
+      
+      return suggestions
+    },
+    
+    generateGeneralSuggestions(query) {
+      const suggestions = []
+      const commonAddresses = [
+        { street: 'Main Street', numbers: [12, 45, 78, 123] },
+        { street: 'High Street', numbers: [5, 23, 67, 89] },
+        { street: 'Church Street', numbers: [15, 34, 56, 91] },
+        { street: 'King Street', numbers: [8, 27, 49, 72] },
+        { street: 'Queen Street', numbers: [11, 33, 55, 88] }
+      ]
+      
+      const suburbs = [
+        { name: 'Melbourne', state: 'VIC', postcode: '3000' },
+        { name: 'Sydney', state: 'NSW', postcode: '2000' },
+        { name: 'Brisbane', state: 'QLD', postcode: '4000' },
+        { name: 'Adelaide', state: 'SA', postcode: '5000' },
+        { name: 'Perth', state: 'WA', postcode: '6000' }
+      ]
+      
+      // Generate suggestions based on query matching street names or suburb names
+      commonAddresses.forEach((addressInfo, streetIndex) => {
+        if (addressInfo.street.toLowerCase().includes(query)) {
+          const suburb = suburbs[streetIndex % suburbs.length]
+          const number = addressInfo.numbers[0]
+          
+          suggestions.push({
+            mainText: `${number} ${addressInfo.street}`,
+            secondaryText: `${suburb.name} ${suburb.state} ${suburb.postcode}, Australia`,
+            fullAddress: `${number} ${addressInfo.street}, ${suburb.name} ${suburb.state} ${suburb.postcode}`,
+            components: {
+              street: `${number} ${addressInfo.street}`,
+              suburb: suburb.name,
+              state: suburb.state,
+              postcode: suburb.postcode,
+              country: 'Australia'
+            },
+            placeId: `generated_general_${streetIndex}`
+          })
+        }
+      })
+      
+      // Also check suburbs
+      suburbs.forEach((suburb, suburbIndex) => {
+        if (suburb.name.toLowerCase().includes(query)) {
+          const addressInfo = commonAddresses[0]
+          const number = addressInfo.numbers[suburbIndex % addressInfo.numbers.length]
+          
+          suggestions.push({
+            mainText: `${number} ${addressInfo.street}`,
+            secondaryText: `${suburb.name} ${suburb.state} ${suburb.postcode}, Australia`,
+            fullAddress: `${number} ${addressInfo.street}, ${suburb.name} ${suburb.state} ${suburb.postcode}`,
+            components: {
+              street: `${number} ${addressInfo.street}`,
+              suburb: suburb.name,
+              state: suburb.state,
+              postcode: suburb.postcode,
+              country: 'Australia'
+            },
+            placeId: `generated_suburb_${suburbIndex}`
+          })
+        }
+      })
+      
+      return suggestions
+    },
+    
+    async selectAddress(address) {
+      console.log('🔍 ADDRESS SEARCH: selectAddress called with:', address)
       this.searchQuery = address.fullAddress
       this.showDropdown = false
       this.selectedIndex = -1
       
-      // Emit address selection event with full address data
-      this.$emit('address-selected', {
-        fullAddress: address.fullAddress,
-        components: address.components
-      })
+      try {
+        let addressData = {
+          fullAddress: address.fullAddress,
+          components: address.components
+        }
+        
+        // If this is a Google Places result and we don't have components yet, fetch them
+        if (googlePlacesService.isConfigured() && address.placeId && !address.components) {
+          console.log('🔍 ADDRESS SEARCH: Fetching place details for:', address.placeId)
+          const placeDetails = await googlePlacesService.getPlaceDetails(address.placeId)
+          addressData = {
+            fullAddress: placeDetails.fullAddress,
+            components: placeDetails.components
+          }
+          console.log('🔍 ADDRESS SEARCH: Place details fetched:', placeDetails)
+        }
+        
+        console.log('🔍 ADDRESS SEARCH: Emitting address-selected event with:', addressData)
+        this.$emit('address-selected', addressData)
+        
+      } catch (error) {
+        console.error('🔍 ADDRESS SEARCH: Error fetching place details:', error)
+        // Still emit the basic address data even if details fetch fails
+        const basicAddressData = {
+          fullAddress: address.fullAddress,
+          components: address.components || {
+            street: address.fullAddress,
+            suburb: '',
+            state: '',
+            postcode: '',
+            country: 'Australia'
+          }
+        }
+        console.log('🔍 ADDRESS SEARCH: Emitting basic address data due to error:', basicAddressData)
+        this.$emit('address-selected', basicAddressData)
+      }
     },
     
     selectManualEntry() {
@@ -365,15 +528,11 @@ export default {
 </script>
 
 <style scoped>
-.address-search-container {
-  position: relative;
-}
-
 .address-input-wrapper {
   position: relative;
 }
 
-.address-input {
+.form-input {
   padding-right: 2.5rem;
 }
 
