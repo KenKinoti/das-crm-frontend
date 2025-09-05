@@ -2535,41 +2535,326 @@ export default {
   justify-content: flex-end;
 }
 
+/* Mobile Responsive Design */
+@media (max-width: 1024px) {
+  .page-header {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .table-cards {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
   .page-container {
     padding: 1rem;
   }
   
   .page-header {
+    padding: 1rem;
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
   
-  .stats-row {
-    grid-template-columns: 1fr;
+  .header-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+    text-align: center;
+  }
+  
+  .stat-icon {
+    margin: 0 auto 0.75rem;
+  }
+  
+  .stat-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .stat-detail {
+    justify-content: center;
+  }
+  
+  /* Actions section mobile */
+  .actions-section {
+    padding: 1rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
   }
   
   .actions-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .action-card {
+    padding: 1.25rem;
+  }
+  
+  .action-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  
+  .action-icon {
+    margin: 0 auto;
+  }
+  
+  .action-content {
+    text-align: center;
+  }
+  
+  .action-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  /* Database tables section mobile */
+  .tables-section {
+    padding: 1rem;
   }
   
   .table-cards {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .table-card {
+    padding: 1.25rem;
+  }
+  
+  .table-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  
+  .table-info h3 {
+    text-align: center;
+  }
+  
+  .table-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .table-stats {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
   
   .filters-section {
-    padding: 1.5rem;
+    padding: 1rem;
   }
   
   .filter-controls {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
   }
   
   .form-select {
     min-width: auto;
     width: 100%;
+  }
+  
+  /* Modal mobile improvements */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .modal-actions {
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Seed sections mobile */
+  .seed-section {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .seed-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .seed-controls .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-content h3 {
+    font-size: 1.25rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .action-buttons .btn {
+    width: 100%;
+  }
+  
+  .table-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .table-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Modal improvements for small screens */
+  .modal-content {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+  
+  /* Seed section mobile */
+  .seed-section h4 {
+    font-size: 1rem;
+    text-align: center;
+  }
+  
+  .seed-description {
+    text-align: center;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: 0.75rem;
+  }
+  
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content p {
+    font-size: 0.875rem;
+  }
+  
+  .actions-section,
+  .tables-section {
+    padding: 0.75rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .action-card,
+  .table-card {
+    padding: 1rem;
+  }
+  
+  .action-icon,
+  .table-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+  }
+  
+  .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .seed-section {
+    padding: 0.75rem;
+  }
+  
+  .filters-section {
+    padding: 0.75rem;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
   }
 }
 

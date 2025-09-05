@@ -204,7 +204,7 @@
           <div class="header-cell">Actions</div>
         </div>
         <div v-for="plan in paginatedCarePlans" :key="plan.id" class="list-row">
-          <div class="list-cell">
+          <div class="list-cell" data-label="Participant">
             <div class="user-info">
               <div class="participant-avatar">
                 <i class="fas fa-clipboard-list"></i>
@@ -215,19 +215,19 @@
               </div>
             </div>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Plan Type">
             <span class="plan-type-badge">{{ formatPlanType(plan.plan_type) }}</span>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Period">
             <div class="date-range">
               <div><i class="fas fa-calendar-check"></i> {{ formatDate(plan.start_date) }}</div>
               <div><i class="fas fa-calendar-times"></i> {{ formatDate(plan.end_date) }}</div>
             </div>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Budget">
             ${{ formatCurrency(plan.budget_amount) }}
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Progress">
             <div class="progress-inline">
               <div class="progress-bar-small">
                 <div class="progress-fill" :style="{ width: calculateProgress(plan) + '%' }"></div>
@@ -235,12 +235,12 @@
               <span class="progress-text">{{ calculateProgress(plan) }}%</span>
             </div>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Status">
             <span :class="['status-badge', getStatusClass(plan.status)]">
               {{ getStatusLabel(plan.status) }}
             </span>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Actions">
             <div class="action-buttons">
               <button @click="viewCarePlan(plan)" class="action-btn view-btn" title="View Details">
                 <i class="fas fa-eye"></i>
@@ -1637,5 +1637,353 @@ export default {
   font-size: 0.875rem;
   line-height: 1.5;
   margin: 0;
+}
+
+/* Mobile Responsive Design */
+@media (max-width: 1024px) {
+  .large-modal {
+    max-width: 95vw;
+    margin: 1rem;
+  }
+  
+  .page-header {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .header-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .content-card {
+    padding: 1.5rem;
+  }
+  
+  /* List view mobile improvements */
+  .list-header {
+    display: none;
+  }
+  
+  .list-row {
+    flex-direction: column;
+    padding: 1rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    gap: 0.75rem;
+  }
+  
+  [data-theme="dark"] .list-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .list-cell {
+    flex-direction: column;
+    align-items: flex-start !important;
+    width: 100%;
+  }
+  
+  .list-cell:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  
+  [data-theme="dark"] .list-cell:before {
+    color: #9ca3af;
+  }
+  
+  /* Mobile card improvements */
+  .participants-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .participant-card {
+    padding: 1.25rem;
+  }
+  
+  .participant-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .participant-info {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+  
+  .participant-status {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  
+  /* Modal mobile improvements */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .large-modal {
+    max-width: calc(100vw - 2rem);
+    margin: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1.25rem;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .participant-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .full-width {
+    grid-column: span 1;
+  }
+  
+  /* Goal items mobile */
+  .goal-item {
+    padding: 0.75rem;
+  }
+  
+  .goal-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .goal-title {
+    flex: 1 1 100%;
+    order: 1;
+  }
+  
+  .goal-number {
+    order: 0;
+  }
+  
+  .goal-category-badge {
+    order: 2;
+  }
+  
+  /* Progress inline mobile */
+  .progress-inline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .progress-text {
+    text-align: left;
+  }
+  
+  /* Pagination mobile */
+  .pagination-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .pagination {
+    order: 1;
+  }
+  
+  .pagination-info {
+    order: 2;
+    font-size: 0.875rem;
+  }
+  
+  .per-page-selector {
+    order: 3;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .participant-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .action-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .action-btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Modal improvements for small screens */
+  .modal-content {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .large-modal {
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem);
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+  
+  .modal-actions {
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Form sections mobile */
+  .form-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-section h4 {
+    font-size: 1rem;
+  }
+  
+  /* Goals list mobile */
+  .goal-item .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .btn-icon-delete {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content p {
+    font-size: 0.875rem;
+  }
+  
+  .content-card {
+    padding: 1rem;
+  }
+  
+  .filters-section {
+    padding: 0.75rem;
+  }
+  
+  .search-box {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .participant-card {
+    padding: 1rem;
+  }
+  
+  .participant-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .goal-item {
+    padding: 0.75rem;
+  }
+  
+  .goal-display-item {
+    padding: 0.75rem;
+  }
+  
+  .goal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .goal-number,
+  .goal-category-badge {
+    align-self: flex-start;
+  }
 }
 </style>

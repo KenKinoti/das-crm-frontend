@@ -323,17 +323,22 @@ p {
    ACTION BUTTON SYSTEM
    ============================================ */
 
+/* Default action buttons - excludes Dashboard quick actions */
 .action-btn {
-  padding: var(--space-2) var(--space-3);
   border: none;
-  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-size: 0.75rem;
   font-weight: var(--font-weight-medium);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Size restrictions only for non-dashboard action buttons */
+.action-btn:not(.quick-actions *) {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
   min-width: 32px;
   height: 32px;
 }
@@ -428,67 +433,10 @@ p {
 }
 
 /* ============================================
-   THEME TOGGLE
+   THEME TOGGLE - MOVED TO HEADER COMPONENT
    ============================================ */
 
-.theme-toggle {
-  position: relative;
-  width: 60px;
-  height: 30px;
-  background: var(--border-medium);
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.theme-toggle.dark {
-  background: var(--primary-500);
-}
-
-.theme-toggle::before {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 24px;
-  height: 24px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-full);
-  transition: all var(--transition-normal);
-  box-shadow: var(--shadow-sm);
-}
-
-.theme-toggle.dark::before {
-  transform: translateX(30px);
-}
-
-.theme-toggle-icon {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.75rem;
-  transition: all var(--transition-normal);
-}
-
-.theme-toggle .sun {
-  left: 8px;
-  color: var(--warning-500);
-  opacity: 1;
-}
-
-.theme-toggle .moon {
-  right: 8px;
-  color: var(--text-inverse);
-  opacity: 0;
-}
-
-.theme-toggle.dark .sun {
-  opacity: 0;
-}
-
-.theme-toggle.dark .moon {
-  opacity: 1;
-}
+/* Theme toggle styles are now defined in Header.vue component */
 
 /* ============================================
    MODAL SYSTEM

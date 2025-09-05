@@ -133,7 +133,7 @@
             <div class="header-cell">Actions</div>
           </div>
           <div v-for="org in organizations" :key="org.id" class="list-row">
-            <div class="list-cell">
+            <div class="list-cell" data-label="Organization">
               <div class="participant-avatar org-avatar">
                 {{ org.name.substring(0, 2).toUpperCase() }}
               </div>
@@ -142,28 +142,28 @@
                 <span class="email" v-if="org.abn">ABN: {{ org.abn }}</span>
               </div>
             </div>
-            <div class="list-cell">
+            <div class="list-cell" data-label="Contact">
               <div class="contact-info">
                 <div v-if="org.email"><i class="fas fa-envelope"></i> {{ org.email }}</div>
                 <div v-if="org.phone"><i class="fas fa-phone"></i> {{ org.phone }}</div>
               </div>
             </div>
-            <div class="list-cell">
+            <div class="list-cell" data-label="Subscription">
               <div class="subscription-info">
                 <span class="plan-badge">{{ getSubscriptionPlan(org) }}</span>
               </div>
             </div>
-            <div class="list-cell">
+            <div class="list-cell" data-label="Status">
               <span :class="['status-badge', getSubscriptionStatus(org)]">{{ formatStatus(getSubscriptionStatus(org)) }}</span>
             </div>
-            <div class="list-cell">
+            <div class="list-cell" data-label="Users/Participants">
               <div class="counts-info">
                 <span><i class="fas fa-users"></i> {{ org.users?.length || 0 }}</span>
                 <span><i class="fas fa-user"></i> {{ org.participants?.length || 0 }}</span>
               </div>
             </div>
-            <div class="list-cell">{{ formatDate(org.created_at) }}</div>
-            <div class="list-cell">
+            <div class="list-cell" data-label="Created">{{ formatDate(org.created_at) }}</div>
+            <div class="list-cell" data-label="Actions">
               <div class="action-buttons">
                 <button @click="viewOrganization(org)" class="action-btn view-btn" title="View Details">
                   <i class="fas fa-eye"></i>
@@ -2117,39 +2117,114 @@ export default {
   background: rgba(20,20,30,0.95);
 }
 
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .details-grid {
-    grid-template-columns: 1fr;
-  }
-  
+/* Mobile Responsive Design */
+@media (max-width: 1024px) {
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
   }
   
   .header-content h1 {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
   
   .stats-overview {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .organizations-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+    align-items: stretch;
+  }
+  
+  .header-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
   
-  .list-header,
-  .list-row {
-    grid-template-columns: 1fr;
+  .stat-card {
+    padding: 1.25rem;
+    flex-direction: column;
+    text-align: center;
     gap: 0.75rem;
   }
   
+  .stat-icon {
+    align-self: center;
+  }
+  
+  /* Filters section mobile */
+  .filters-section {
+    padding: 1rem;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .search-section {
+    max-width: 100%;
+    min-width: auto;
+    flex: none;
+  }
+
+  .filter-controls {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  /* List view mobile improvements */
+  .list-header {
+    display: none;
+  }
+  
+  .list-row {
+    flex-direction: column;
+    padding: 1rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    gap: 0.75rem;
+  }
+  
+  [data-theme="dark"] .list-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
   .list-cell {
-    padding: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start !important;
+    width: 100%;
+    padding: 0;
+  }
+  
+  .list-cell:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  
+  [data-theme="dark"] .list-cell:before {
+    color: #9ca3af;
   }
 
   /* Mobile grid view styles */
@@ -2163,44 +2238,171 @@ export default {
   }
 
   .org-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 0.75rem;
+  }
+  
+  .org-info {
+    flex: 1 1 100%;
+    text-align: center;
   }
 
   .org-info h3 {
-    font-size: 1rem;
+    font-size: 1.125rem;
     white-space: normal;
     word-break: break-word;
   }
-
-  .org-stats {
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem;
+  
+  .org-status {
+    flex: 1 1 100%;
+    justify-content: center;
   }
 
-  .filters-row {
+  .org-stats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  
+  .org-actions {
+    justify-content: center;
     flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
     gap: 1rem;
   }
 
-  .filter-controls {
-    justify-content: flex-start;
-    flex-wrap: wrap;
+  .details-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Modal mobile improvements */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .modal-actions {
+    padding: 1rem;
+    flex-direction: column-reverse;
     gap: 0.75rem;
   }
-
-  .search-section {
-    max-width: 100%;
-    min-width: 200px;
-    flex: 1 1 60%;
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
+}
 
-  .form-select,
-  .btn-outline-elegant {
-    min-width: auto;
-    flex: 0 0 auto;
+@media (max-width: 640px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .form-select {
+    width: 100%;
+  }
+  
+  .view-toggle {
+    align-self: center;
+  }
+  
+  .org-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .action-btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Modal improvements for small screens */
+  .modal-content {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content p {
+    font-size: 0.875rem;
+  }
+  
+  .filters-section {
+    padding: 0.75rem;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .organization-card {
+    padding: 1rem;
+  }
+  
+  .org-info h3 {
+    font-size: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+  }
+  
+  .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
   }
 }
 </style>

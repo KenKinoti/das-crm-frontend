@@ -1,19 +1,22 @@
 <template>
-  <header class="header">
+  <header class="header" :class="{ expanded: !sidebarOpen }">
     <div class="header-left">
       <button class="menu-toggle" @click.stop="$emit('toggle-sidebar')">
         <i class="fas fa-bars"></i>
       </button>
-      <h1 class="page-title">{{ pageTitle }}</h1>
     </div>
     
     <div class="header-right">
       <!-- Theme Toggle -->
       <div class="theme-toggle-container">
-        <button class="theme-toggle" :class="{ dark: isDarkMode }" @click="toggleTheme">
-          <i class="fas fa-sun theme-toggle-icon sun"></i>
-          <i class="fas fa-moon theme-toggle-icon moon"></i>
-        </button>
+<div class="theme-toggle" :class="{ 'dark': isDarkMode }" @click="toggleTheme" :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+          <div class="switch-track">
+            <div class="switch-thumb">
+              <i class="fas fa-sun" v-if="!isDarkMode"></i>
+              <i class="fas fa-moon" v-if="isDarkMode"></i>
+            </div>
+          </div>
+        </div>
       </div>
       
       <div class="search-box">
@@ -397,18 +400,24 @@ export default {
   background: var(--white);
   padding: 0.75rem 2rem;
   box-shadow: var(--shadow-soft);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 240px;
+  right: 0;
+  height: 70px;
+  z-index: 90;
+  transition: var(--transition-smooth);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: flex-start;
+  min-width: 60px;
 }
 
 .menu-toggle {
@@ -430,11 +439,6 @@ export default {
   color: var(--primary-color);
 }
 
-.page-title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: var(--text-dark);
-}
 
 .header-right {
   display: flex;
@@ -682,14 +686,16 @@ export default {
   position: absolute;
   top: 100%;
   right: 0;
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.98);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  min-width: 300px;
+  min-width: 280px;
   z-index: 1000;
-  margin-top: 8px;
+  margin-top: 6px;
   overflow: hidden;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .org-dropdown .dropdown-header {
@@ -753,61 +759,88 @@ export default {
   margin-top: 2px;
 }
 
-/* Theme Toggle Styles */
+/* Theme Toggle Styles - Beautiful Switch */
 .theme-toggle-container {
-  margin-right: 0.5rem;
+  margin-right: 0.875rem;
 }
 
 .theme-toggle {
-  position: relative;
-  width: 60px;
-  height: 30px;
-  background: var(--primary-gradient);
-  border-radius: 15px;
-  border: none;
+  width: 50px;
+  height: 26px;
   cursor: pointer;
-  transition: var(--transition-smooth);
-  outline: none;
-  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.theme-toggle::after {
-  content: '';
+.switch-track {
+  width: 100%;
+  height: 100%;
+  background: #e5e7eb;
+  border-radius: 13px;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle.dark .switch-track {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 12px rgba(79, 70, 229, 0.3);
+}
+
+.switch-thumb {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 24px;
-  height: 24px;
-  background: white;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: #ffffff;
   border-radius: 50%;
-  transition: var(--transition-smooth);
-  box-shadow: var(--shadow-soft);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  transform: translateX(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.theme-toggle.dark::after {
-  transform: translateX(30px);
+.theme-toggle.dark .switch-thumb {
+  transform: translateX(24px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.theme-toggle:hover {
-  transform: scale(1.05);
-  box-shadow: var(--shadow-medium);
+.switch-thumb i {
+  font-size: 10px;
+  transition: all 0.3s ease;
 }
 
-.theme-toggle-icon {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  color: white;
-  transition: var(--transition-fast);
+.switch-thumb .fa-sun {
+  color: #f59e0b;
 }
 
-.theme-toggle-icon.sun {
-  left: 8px;
+.switch-thumb .fa-moon {
+  color: #e5e7eb;
 }
 
-.theme-toggle-icon.moon {
-  right: 8px;
+.theme-toggle:hover .switch-track {
+  transform: translateY(-1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle.dark:hover .switch-track {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 16px rgba(79, 70, 229, 0.4), 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle:active .switch-thumb {
+  width: 24px;
+}
+
+.theme-toggle.dark:active .switch-thumb {
+  transform: translateX(22px);
+  width: 24px;
+}
+
+.header.expanded {
+  left: 0;
 }
 
 @media (max-width: 768px) {
@@ -821,16 +854,159 @@ export default {
 
   .header {
     padding: 0.5rem 1rem;
+    left: 0;
+    position: fixed;
   }
 
-  .page-title {
-    font-size: 1.4rem;
-  }
 }
 
 @media (max-width: 480px) {
   .search-box {
     display: none;
   }
+
+  .header {
+    padding: 0.5rem 1rem;
+  }
+
+  .header-right {
+    gap: 0.5rem;
+  }
+
+  .theme-toggle-container {
+    margin-right: 0.5rem;
+  }
+  
+  .theme-toggle {
+    width: 46px;
+    height: 24px;
+  }
+  
+  .switch-thumb {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .theme-toggle.dark .switch-thumb {
+    transform: translateX(22px);
+  }
+  
+  .theme-toggle.dark:active .switch-thumb {
+    transform: translateX(20px);
+    width: 22px;
+  }
+  
+  .switch-thumb i {
+    font-size: 9px;
+  }
+
+  .org-selector {
+    margin-right: 0.5rem;
+  }
+
+  .org-display {
+    min-width: 100px;
+    font-size: 0.75rem;
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  
+  .org-display i {
+    font-size: 0.75rem;
+  }
+  
+  .org-selector .org-dropdown {
+    min-width: 260px;
+    margin-top: 4px;
+  }
+
+  .user-menu {
+    padding: 4px 8px;
+  }
+
+  .user-menu span {
+    display: none;
+  }
+}
+/* Extra small mobile optimization */
+@media (max-width: 480px) {
+  .theme-toggle {
+    width: 42px;
+    height: 22px;
+  }
+  
+  .switch-thumb {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .theme-toggle.dark .switch-thumb {
+    transform: translateX(20px);
+  }
+  
+  .theme-toggle.dark:active .switch-thumb {
+    transform: translateX(18px);
+    width: 20px;
+  }
+  
+  .switch-thumb i {
+    font-size: 8px;
+  }
+  
+  .org-selector {
+    margin-right: 0.375rem;
+  }
+  
+  .org-display {
+    min-width: 80px;
+    font-size: 0.7rem;
+    padding: 3px 5px;
+    gap: 3px;
+  }
+  
+  .org-display span {
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .org-display i {
+    font-size: 0.7rem;
+  }
+  
+  .org-selector .org-dropdown {
+    min-width: 240px;
+    right: -20px;
+  }
+  
+  .user-menu {
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Dark theme support for improved styles */
+[data-theme="dark"] .org-selector .org-dropdown {
+  background: rgba(31, 41, 55, 0.98);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .org-display {
+  background: rgba(102, 126, 234, 0.15);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: var(--text-light);
+}
+
+[data-theme="dark"] .org-display:hover {
+  background: rgba(102, 126, 234, 0.25);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 </style>

@@ -20,6 +20,13 @@
     
     <!-- Show full layout only when authenticated -->
     <div v-else-if="isAuthenticated" class="app-container">
+      <!-- Mobile overlay when sidebar is open -->
+      <div 
+        v-if="sidebarOpen && isMobile"
+        class="sidebar-overlay"
+        @click="sidebarOpen = false"
+      ></div>
+      
       <!-- Sidebar Component (only show when authenticated) -->
       <Sidebar 
         :is-open="sidebarOpen"
@@ -83,7 +90,8 @@ export default {
     return {
       currentPage: 'dashboard',
       sidebarOpen: true,
-      authInitialized: false
+      authInitialized: false,
+      windowWidth: window.innerWidth
     }
   },
   computed: {
@@ -113,6 +121,9 @@ export default {
         database: 'Database Management'
       }
       return titles[this.currentPage] || 'Dashboard'
+    },
+    isMobile() {
+      return this.windowWidth <= 1024
     }
   },
   methods: {
@@ -120,11 +131,27 @@ export default {
       // Immediately respond to avoid double-click issues
       this.sidebarOpen = !this.sidebarOpen
     },
-    setCurrentPage(page) {
-      this.currentPage = page
-      this.$router.push(`/${page}`)
-      if (window.innerWidth <= 768) {
-        this.sidebarOpen = false
+    async setCurrentPage(page) {
+      try {
+        // Prevent duplicate navigation to same route
+        if (this.$route.path === `/${page}`) {
+          console.log('Already on page:', page)
+          return
+        }
+        
+        console.log('Navigating to page:', page)
+        this.currentPage = page
+        
+        await this.$router.push(`/${page}`)
+        
+        if (this.isMobile) {
+          this.sidebarOpen = false
+        }
+      } catch (error) {
+        // Handle navigation errors gracefully (like duplicate navigation)
+        if (error.name !== 'NavigationDuplicated') {
+          console.error('Navigation error:', error)
+        }
       }
     },
     handleModalConfirm() {
@@ -179,7 +206,8 @@ export default {
     console.log('🚀 App mounted on route:', this.$route.path)
 
     const handleResize = () => {
-      if (window.innerWidth <= 768) {
+      this.windowWidth = window.innerWidth
+      if (window.innerWidth <= 1024) {
         this.sidebarOpen = false
       } else {
         this.sidebarOpen = true
@@ -243,5 +271,17 @@ export default {
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
 }
 </style>

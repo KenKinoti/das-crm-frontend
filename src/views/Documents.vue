@@ -2024,43 +2024,323 @@ export default {
   }
 }
 
+/* Mobile Responsive Design */
+@media (max-width: 1024px) {
+  .page-header {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-row {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .cloud-storage-status {
+    padding: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
   .page-header {
+    padding: 1rem;
     flex-direction: column;
     gap: 1rem;
+    text-align: center;
     align-items: stretch;
+  }
+  
+  .header-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .header-actions {
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .stat-icon {
+    align-self: center;
+  }
+  
+  /* Cloud storage status mobile */
+  .cloud-storage-status {
+    padding: 1rem;
+  }
+  
+  .cloud-provider-info {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .provider-details {
+    text-align: center;
+  }
+  
+  .provider-actions {
+    justify-content: center;
   }
 
   .filters-section {
+    padding: 1rem;
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    gap: 1rem;
   }
 
   .search-box {
     max-width: none;
   }
-
-  /* Filter controls responsive styles handled by global CSS */
+  
+  .filter-controls {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
 
   .documents-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .document-card {
+    padding: 1.25rem;
+  }
+  
+  .document-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .document-info {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+  
+  .document-status {
+    flex: 1 1 100%;
+    justify-content: center;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .storage-options {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .modal-body {
+    padding: 1.25rem;
   }
 
   .modal-actions {
-    flex-direction: column;
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .document-actions {
     justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .detail-row {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .detail-item i {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .provider-actions {
+    flex-direction: column;
     gap: 0.5rem;
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .form-select {
+    width: 100%;
+  }
+  
+  .view-toggle {
+    align-self: center;
+  }
+  
+  .document-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .btn-small {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Modal improvements for small screens */
+  .modal-content {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+  
+  /* File preview mobile */
+  .file-preview {
+    padding: 0.75rem;
+    text-align: center;
+  }
+  
+  /* Storage options mobile */
+  .storage-label {
+    padding: 0.75rem;
+    text-align: center;
+  }
+  
+  .storage-label small {
+    display: block;
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content p {
+    font-size: 0.875rem;
+  }
+  
+  .content-card {
+    padding: 1rem;
+  }
+  
+  .filters-section {
+    padding: 0.75rem;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .document-card {
+    padding: 1rem;
+  }
+  
+  .document-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  
+  .document-name {
+    font-size: 1rem;
+  }
+  
+  .document-meta {
+    font-size: 0.75rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+  }
+  
+  .cloud-storage-status {
+    padding: 0.75rem;
+  }
+  
+  .provider-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
   }
 }
 </style>

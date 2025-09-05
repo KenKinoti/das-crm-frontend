@@ -209,7 +209,7 @@
           <div class="header-cell">Actions</div>
         </div>
         <div v-for="member in paginatedStaff" :key="member.id" class="list-row">
-          <div class="list-cell">
+          <div class="list-cell" data-label="Name">
             <div class="user-info">
               <div class="participant-avatar">
                 {{ getInitials(member.first_name, member.last_name) }}
@@ -220,19 +220,19 @@
               </div>
             </div>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Role">
             <span class="role-badge" :class="'role-' + member.role">{{ formatRole(member.role) }}</span>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Contact">
             <div class="contact-info">
               <div><i class="fas fa-envelope"></i> {{ member.email || 'No email' }}</div>
               <div><i class="fas fa-phone"></i> {{ member.phone || 'No phone' }}</div>
             </div>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Organization">
             {{ member.organization || 'Not assigned' }}
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Status">
             <div class="status-toggle">
               <label class="toggle-switch">
                 <input 
@@ -248,7 +248,7 @@
               </span>
             </div>
           </div>
-          <div class="list-cell">
+          <div class="list-cell" data-label="Actions">
             <div class="action-buttons">
               <button @click="viewStaffMember(member)" class="action-btn view-btn" title="View Details">
                 <i class="fas fa-eye"></i>
@@ -1650,10 +1650,255 @@ export default {
   font-size: 0.75rem;
 }
 
+/* Mobile Responsive Design */
+@media (max-width: 1024px) {
+  .page-header {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
+  .page-header {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .header-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .content-card {
+    padding: 1.5rem;
+  }
+  
+  /* List view mobile improvements */
+  .list-header {
+    display: none;
+  }
+  
+  .list-row {
+    flex-direction: column;
+    padding: 1rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    gap: 0.75rem;
+  }
+  
+  [data-theme="dark"] .list-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .list-cell {
+    flex-direction: column;
+    align-items: flex-start !important;
+    width: 100%;
+  }
+  
+  .list-cell:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  
+  [data-theme="dark"] .list-cell:before {
+    color: #9ca3af;
+  }
+  
+  /* Mobile card improvements */
+  .participants-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .participant-card {
+    padding: 1.25rem;
+  }
+  
+  .participant-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .participant-info {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+  
+  .participant-status {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  
+  /* Modal mobile improvements */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .modal-body {
+    padding: 1.25rem;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
   .participant-detail-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+  
+  /* Pagination mobile */
+  .pagination-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .pagination {
+    order: 1;
+  }
+  
+  .pagination-info {
+    order: 2;
+    font-size: 0.875rem;
+  }
+  
+  .per-page-selector {
+    order: 3;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .participant-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .action-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .action-btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Modal improvements for small screens */
+  .modal-content {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+  
+  .modal-actions {
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content p {
+    font-size: 0.875rem;
+  }
+  
+  .content-card {
+    padding: 1rem;
+  }
+  
+  .filters-section {
+    padding: 0.75rem;
+  }
+  
+  .search-box {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .participant-card {
+    padding: 1rem;
+  }
+  
+  .participant-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
   }
 }
 </style>

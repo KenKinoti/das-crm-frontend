@@ -1482,27 +1482,142 @@ export default {
   }
 }
 
+/* Mobile Responsive Design */
+@media (max-width: 1024px) {
+  .page-header {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-row {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .reports-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
   .page-header {
+    padding: 1rem;
     flex-direction: column;
     gap: 1rem;
+    text-align: center;
     align-items: stretch;
   }
-
+  
+  .header-content h1 {
+    font-size: 1.75rem;
+  }
+  
   .header-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .period-select {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  /* Stats section mobile */
+  .stats-section {
+    padding: 1rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  
+  .real-time-indicator {
     justify-content: center;
   }
 
   .stats-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+    text-align: center;
+  }
+  
+  .stat-icon {
+    margin: 0 auto 0.75rem;
+  }
+  
+  .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  /* Custom date range mobile */
+  .filters-section {
+    padding: 1rem;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .date-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .date-label {
+    font-weight: 600;
+    color: var(--text-medium);
+    font-size: 0.875rem;
+  }
+  
+  .date-input {
+    width: 100%;
   }
 
   .reports-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .report-card {
+    padding: 1.25rem;
+  }
+  
+  .report-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  
+  .report-title {
+    flex: 1 1 100%;
+  }
+  
+  .report-actions {
+    flex: 1 1 100%;
+    justify-content: center;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .chart-summary,
@@ -1510,23 +1625,229 @@ export default {
   .staff-metrics,
   .billing-summary {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .metric-item {
+    text-align: center;
+    padding: 1rem;
+  }
+  
+  .metric-value {
+    font-size: 1.25rem;
   }
 
   .quick-actions {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .action-btn-full {
+    width: 100%;
+    justify-content: center;
   }
 
   .checkbox-group {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .checkbox-item {
+    padding: 0.75rem;
+    text-align: center;
   }
 
   .date-inputs {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
+  }
+
+  /* Modal mobile improvements */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .modal-body {
+    padding: 1.25rem;
   }
 
   .modal-actions {
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Chart containers mobile */
+  .chart-container {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+  
+  .chart-wrapper {
+    min-width: 300px;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-number {
+    font-size: 1.25rem;
+  }
+  
+  .header-actions {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .period-select {
+    max-width: none;
+  }
+  
+  .report-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .report-actions .btn-small {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  .btn-small {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Modal improvements for small screens */
+  .modal-content {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+  
+  /* Chart mobile optimizations */
+  .chart-container {
+    padding: 0.75rem;
+  }
+  
+  .chart-wrapper {
+    min-width: 280px;
+  }
+  
+  /* Metric grid mobile */
+  .billing-summary,
+  .engagement-metrics,
+  .staff-metrics {
+    gap: 0.75rem;
+  }
+  
+  .metric-item {
+    padding: 0.75rem;
+  }
+  
+  .metric-label {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content p {
+    font-size: 0.875rem;
+  }
+  
+  .stats-section {
+    padding: 0.75rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .live-text {
+    font-size: 0.75rem;
+  }
+  
+  .report-card {
+    padding: 1rem;
+  }
+  
+  .report-title h3 {
+    font-size: 1rem;
+  }
+  
+  .report-description {
+    font-size: 0.875rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+  }
+  
+  .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  
+  .chart-container {
+    padding: 0.5rem;
+  }
+  
+  .chart-wrapper {
+    min-width: 250px;
+  }
+  
+  .metric-item {
+    padding: 0.5rem;
+  }
+  
+  .metric-value {
+    font-size: 1rem;
   }
 }
 </style>
