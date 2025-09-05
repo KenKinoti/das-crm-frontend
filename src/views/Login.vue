@@ -3,10 +3,23 @@
     <!-- Background Pattern -->
     <div class="background-pattern"></div>
     
+    
     <div class="login-container">
       <div class="login-card">
         <!-- Header -->
         <div class="login-header">
+          <!-- Theme Toggle -->
+          <div class="theme-toggle-container">
+            <button 
+              type="button" 
+              @click="toggleTheme" 
+              class="theme-toggle"
+              :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+            >
+              <i :class="isDarkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
+            </button>
+          </div>
+          
           <div class="logo-container">
             <div class="logo-icon">
               <i class="fas fa-heart-pulse"></i>
@@ -235,7 +248,8 @@ export default {
       },
       isResetting: false,
       resetError: null,
-      resetSuccess: null
+      resetSuccess: null,
+      isDarkMode: false
     }
   },
   setup() {
@@ -422,6 +436,22 @@ export default {
       this.form.password = 'password'
       this.error = null
       this.successMessage = null
+    },
+
+    toggleTheme() {
+      this.isDarkMode = !this.isDarkMode
+      const theme = this.isDarkMode ? 'dark' : 'light'
+      
+      // Apply theme to document
+      document.documentElement.setAttribute('data-theme', theme)
+      localStorage.setItem('theme', theme)
+      
+      // Update login page class for specific styling
+      if (this.isDarkMode) {
+        document.querySelector('.login-page').classList.add('dark-theme')
+      } else {
+        document.querySelector('.login-page').classList.remove('dark-theme')
+      }
     }
   },
   
@@ -436,17 +466,32 @@ export default {
     })
     console.log('🚀 LOGIN DEBUG: Available test emails:', ['admin@dasyin.com.au', 'kennedy@dasyin.com.au', 'manager@dasyin.com.au', 'coordinator@dasyin.com.au'])
     
+    // Initialize theme from localStorage or default to light
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    this.isDarkMode = savedTheme === 'dark'
+    
+    // Apply the theme
+    document.documentElement.setAttribute('data-theme', savedTheme)
+    if (this.isDarkMode) {
+      document.querySelector('.login-page').classList.add('dark-theme')
+    }
+    
     // If already authenticated, redirect to dashboard
     if (this.authStore.isAuthenticated) {
       console.log('🚀 LOGIN DEBUG: Already authenticated, redirecting...')
       this.$router.push('/dashboard')
     }
+  },
+  
+  beforeUnmount() {
+    // Clean up theme class if needed
+    document.querySelector('.login-page')?.classList.remove('dark-theme')
   }
 }
 </script>
 
 <style scoped>
-/* Main Layout - Enhanced Modern Design */
+/* Main Layout - Beautiful Purple Gradient with Floating Grids */
 .login-page {
   min-height: 100vh;
   width: 100%;
@@ -454,9 +499,9 @@ export default {
   align-items: center;
   justify-content: center;
   background: 
-    linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%),
-    radial-gradient(circle at top left, rgba(102, 126, 234, 0.8), transparent 50%),
-    radial-gradient(circle at bottom right, rgba(118, 75, 162, 0.8), transparent 50%);
+    linear-gradient(135deg, #8b9dfc 0%, #9b7bc2 50%, #8b9dfc 100%),
+    radial-gradient(circle at top left, rgba(139, 157, 252, 0.4), transparent 50%),
+    radial-gradient(circle at bottom right, rgba(155, 123, 194, 0.4), transparent 50%);
   background-size: 300% 300%, 100% 100%, 100% 100%;
   animation: gradientShift 15s ease infinite;
   padding: 1rem;
@@ -483,13 +528,31 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 25% 75%, rgba(255, 255, 255, 0.15) 0%, transparent 45%),
-    radial-gradient(circle at 75% 25%, rgba(255, 255, 255, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.03) 50%, transparent 70%);
-  background-size: 300px 300px, 400px 400px, 500px 500px, 200% 200%;
-  animation: float 25s ease-in-out infinite, shimmerMove 20s linear infinite;
+  background: transparent;
+  pointer-events: none;
+}
+
+@keyframes smoothOrbs {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1);
+    background-position: 25% 75%, 75% 25%, 50% 50%, 10% 90%, 90% 10%;
+    opacity: 0.8;
+  }
+  25% { 
+    transform: translate(-10px, -5px) scale(1.05);
+    background-position: 35% 65%, 65% 35%, 40% 60%, 20% 80%, 80% 20%;
+    opacity: 0.9;
+  }
+  50% { 
+    transform: translate(5px, -8px) scale(0.98);
+    background-position: 45% 55%, 55% 45%, 60% 40%, 30% 70%, 70% 30%;
+    opacity: 0.7;
+  }
+  75% { 
+    transform: translate(-3px, 6px) scale(1.02);
+    background-position: 15% 85%, 85% 15%, 30% 70%, 40% 60%, 60% 40%;
+    opacity: 1;
+  }
 }
 
 @keyframes float {
@@ -516,61 +579,62 @@ export default {
   }
 }
 
+
 .login-container {
   width: 100%;
   max-width: 450px;
   z-index: 1;
   position: relative;
   margin: 2rem auto;
+  padding-top: 3rem; /* Add top padding to lower the form */
 }
 
 .login-card {
-  background: 
-    linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
   box-shadow: 
-    0 32px 64px rgba(0, 0, 0, 0.12),
-    0 16px 32px rgba(0, 0, 0, 0.08),
-    0 8px 16px rgba(0, 0, 0, 0.04),
-    inset 0 1px 2px rgba(255, 255, 255, 0.9),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.02);
-  padding: 2.5rem;
+    0 10px 40px rgba(0, 0, 0, 0.08),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+  padding: 3rem;
   position: relative;
-  overflow: hidden;
-  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: visible;
+  animation: elegantEntry 1s cubic-bezier(0.165, 0.84, 0.44, 1);
   width: 100%;
   margin: 0 auto;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .login-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
+  top: -1px;
+  left: 30%;
+  right: 30%;
+  height: 1px;
   background: linear-gradient(90deg, 
     transparent, 
-    rgba(102, 126, 234, 0.6), 
-    rgba(118, 75, 162, 0.6), 
-    rgba(102, 126, 234, 0.6), 
+    #667eea, 
     transparent);
-  border-radius: 24px 24px 0 0;
+  opacity: 0.6;
 }
 
 .login-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: 
-    0 40px 80px rgba(0, 0, 0, 0.16),
-    0 20px 40px rgba(0, 0, 0, 0.12),
-    0 10px 20px rgba(0, 0, 0, 0.08),
-    inset 0 1px 2px rgba(255, 255, 255, 0.95),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.02);
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 5px 20px rgba(0, 0, 0, 0.06);
+}
+
+@keyframes elegantEntry {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
@@ -584,10 +648,56 @@ export default {
   }
 }
 
+/* Theme Toggle */
+.theme-toggle-container {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.theme-toggle i {
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover i {
+  transform: scale(1.1);
+}
+
 /* Header Styles */
 .login-header {
   text-align: center;
   margin-bottom: 2rem;
+  position: relative;
 }
 
 .logo-container {
@@ -599,26 +709,19 @@ export default {
 }
 
 .logo-icon {
-  width: 64px;
-  height: 64px;
-  background: 
-    linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%),
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent 50%);
-  border-radius: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.9rem;
-  box-shadow: 
-    0 12px 40px rgba(102, 126, 234, 0.4),
-    0 6px 16px rgba(102, 126, 234, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
-  animation: logoFloat 3s ease-in-out infinite;
+  font-size: 1.6rem;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
   position: relative;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
 }
 
 .logo-icon::before {
@@ -630,53 +733,41 @@ export default {
   height: 200%;
   background: linear-gradient(45deg, 
     transparent, 
-    rgba(255, 255, 255, 0.1), 
+    rgba(255, 255, 255, 0.2), 
     transparent);
   animation: logoShine 4s ease-in-out infinite;
   transform: rotate(-45deg);
 }
 
-.logo-icon:hover {
-  transform: scale(1.08) rotate(3deg);
-  box-shadow: 
-    0 20px 60px rgba(102, 126, 234, 0.5),
-    0 8px 20px rgba(102, 126, 234, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.4),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes logoFloat {
-  0%, 100% { 
-    transform: translateY(0px) scale(1); 
-    box-shadow: 
-      0 12px 40px rgba(102, 126, 234, 0.4),
-      0 6px 16px rgba(102, 126, 234, 0.2),
-      inset 0 1px 2px rgba(255, 255, 255, 0.3),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.1);
-  }
-  50% { 
-    transform: translateY(-4px) scale(1.02); 
-    box-shadow: 
-      0 16px 50px rgba(102, 126, 234, 0.5),
-      0 8px 20px rgba(102, 126, 234, 0.3),
-      inset 0 1px 2px rgba(255, 255, 255, 0.4),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.12);
-  }
-}
-
 @keyframes logoShine {
-  0% { 
-    transform: translateX(-100%) translateY(-100%) rotate(-45deg); 
+  0%, 100% {
+    transform: rotate(-45deg) translate(-100%, -100%);
     opacity: 0;
   }
-  50% { 
-    transform: translateX(0%) translateY(0%) rotate(-45deg); 
+  50% {
+    transform: rotate(-45deg) translate(50%, 50%);
     opacity: 1;
   }
-  100% { 
-    transform: translateX(100%) translateY(100%) rotate(-45deg); 
-    opacity: 0;
+}
+
+.logo-icon {
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
   }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 30px rgba(102, 126, 234, 0.4);
+  }
+}
+
+.logo-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(102, 126, 234, 0.3);
 }
 
 .logo-brand {
@@ -684,34 +775,34 @@ export default {
 }
 
 .brand-name {
-  font-size: 2rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #111827;
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.025em;
 }
 
 .brand-tagline {
-  color: #64748b;
-  font-size: 0.85rem;
-  margin: 0;
-  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  margin: 2px 0 0 0;
+  font-weight: 400;
+  letter-spacing: 0.025em;
 }
 
 .welcome-text h2 {
-  color: #1e293b;
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 0.25rem 0;
+  color: #111827;
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 0 0 0.375rem 0;
+  letter-spacing: -0.025em;
 }
 
 .welcome-text p {
-  color: #64748b;
-  font-size: 0.95rem;
+  color: #6b7280;
+  font-size: 0.875rem;
   margin: 0;
+  font-weight: 400;
 }
 
 /* Form Styles */
@@ -748,49 +839,29 @@ export default {
 
 .form-input {
   width: 100%;
-  padding: 16px 20px 16px 52px;
-  border: 2px solid #e2e8f0;
-  border-radius: 14px;
-  font-size: 1rem;
-  background: 
-    linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #1e293b;
+  padding: 14px 16px 14px 48px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  color: #111827;
   font-family: inherit;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.5;
   box-sizing: border-box;
-  position: relative;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .form-input:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 
-    0 0 0 4px rgba(102, 126, 234, 0.15),
-    0 8px 25px rgba(102, 126, 234, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  background: 
-    linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%),
-    linear-gradient(145deg, rgba(102, 126, 234, 0.02), rgba(118, 75, 162, 0.02));
-  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: #ffffff;
 }
 
 .form-input:hover:not(:focus):not(:disabled) {
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  background: 
-    linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border-color: #d1d5db;
+  background: #fafafa;
 }
 
 .form-input:disabled {
@@ -901,76 +972,44 @@ export default {
   background: rgba(102, 126, 234, 0.1);
 }
 
-/* Enhanced Premium Buttons */
+/* Professional Login Button */
 .login-button {
   width: 100%;
-  padding: 18px 28px;
-  background: 
-    linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%),
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 50%);
-  background-size: 200% 100%, 100% 100%;
+  padding: 14px 24px;
+  background: #667eea;
   color: white;
   border: none;
-  border-radius: 16px;
-  font-size: 1.05rem;
-  font-weight: 600;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  box-shadow: 
-    0 8px 32px rgba(102, 126, 234, 0.4),
-    0 4px 16px rgba(102, 126, 234, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.2),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.25);
   position: relative;
   overflow: hidden;
-  letter-spacing: 0.5px;
-}
-
-.login-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.2), 
-    transparent);
-  transition: left 0.5s ease;
+  letter-spacing: 0.025em;
 }
 
 .login-button:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.02);
-  background-position: 100% 0%, 0% 0%;
-  box-shadow: 
-    0 16px 50px rgba(102, 126, 234, 0.5),
-    0 8px 25px rgba(102, 126, 234, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.login-button:hover:not(:disabled)::before {
-  left: 100%;
+  background: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
 }
 
 .login-button:active {
-  transform: translateY(-1px) scale(1.01);
-  transition: all 0.1s ease;
+  transform: translateY(0);
 }
 
 .login-button:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  background: #94a3b8;
-  box-shadow: 
-    0 2px 8px rgba(148, 163, 184, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+  background: #9ca3af;
+  box-shadow: none;
 }
 
 .button-content {
@@ -1334,13 +1373,14 @@ export default {
 @media (max-width: 768px) {
   .login-page {
     padding: 0.5rem;
-    align-items: flex-start;
-    padding-top: 1rem;
+    align-items: center;
+    padding-top: 0;
   }
   
   .login-container {
     max-width: 100%;
     margin: 0 auto;
+    padding-top: 2rem; /* Slightly less padding on mobile */
   }
   
   .login-card {
@@ -1461,7 +1501,11 @@ export default {
 @media (max-width: 480px) {
   .login-page {
     padding: 0.25rem;
-    padding-top: 0.5rem;
+    padding-top: 0;
+  }
+  
+  .login-container {
+    padding-top: 1.5rem; /* Even less padding on small mobile */
   }
   
   .login-card {
@@ -1572,79 +1616,289 @@ export default {
   }
 }
 
-/* Dark theme support */
-@media (prefers-color-scheme: dark) {
+/* Dark Theme Support - Disabled for Login Page */
+@media (prefers-color-scheme: dark) and (max-width: 0px) {
+/* This media query will never match, effectively disabling dark theme for login */
+  /* Dynamic dark gradient background */
+  .login-page {
+    background: 
+      linear-gradient(135deg, #1e3a8a 0%, #7c3aed 35%, #ec4899 70%, #f97316 100%),
+      radial-gradient(circle at top left, rgba(59, 130, 246, 0.5), transparent 50%),
+      radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.5), transparent 50%),
+      #0f172a;
+    background-size: 400% 400%, 100% 100%, 100% 100%, 100% 100%;
+    animation: darkGradientShift 20s ease infinite;
+  }
+  
+  @keyframes darkGradientShift {
+    0%, 100% {
+      background-position: 0% 50%, 0% 0%, 100% 100%, 0% 0%;
+    }
+    25% {
+      background-position: 50% 30%, 20% 20%, 80% 80%, 0% 0%;
+    }
+    50% {
+      background-position: 100% 50%, 50% 50%, 50% 50%, 0% 0%;
+    }
+    75% {
+      background-position: 50% 70%, 80% 80%, 20% 20%, 0% 0%;
+    }
+  }
+  
+  .background-pattern {
+    background-image: 
+      radial-gradient(circle at 25% 75%, rgba(147, 197, 253, 0.2) 0%, transparent 45%),
+      radial-gradient(circle at 75% 25%, rgba(196, 181, 253, 0.2) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
+      linear-gradient(45deg, transparent 30%, rgba(236, 72, 153, 0.05) 50%, transparent 70%);
+  }
+  
   .login-card {
-    background: rgba(30, 41, 59, 0.95);
-    border-color: rgba(71, 85, 105, 0.3);
+    background: 
+      linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.9) 100%),
+      linear-gradient(145deg, rgba(59, 130, 246, 0.03), rgba(168, 85, 247, 0.03));
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    box-shadow: 
+      0 32px 64px rgba(0, 0, 0, 0.5),
+      0 16px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(148, 163, 184, 0.1),
+      inset 0 1px 0 rgba(148, 163, 184, 0.2);
   }
   
-  .form-input {
-    background: #1e293b;
-    border-color: #334155;
+  .login-card::before {
+    background: linear-gradient(90deg, 
+      transparent, 
+      rgba(59, 130, 246, 0.5), 
+      rgba(168, 85, 247, 0.5), 
+      rgba(236, 72, 153, 0.5), 
+      transparent);
+    height: 2px;
+  }
+  
+  .logo-icon {
+    background: 
+      linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%),
+      radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent 50%);
+    box-shadow: 
+      0 12px 40px rgba(96, 165, 250, 0.4),
+      0 6px 16px rgba(167, 139, 250, 0.3),
+      inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  }
+  
+  .brand-name {
+    background: linear-gradient(135deg, #93c5fd 0%, #c084fc 50%, #fbbf24 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(147, 197, 253, 0.3));
+  }
+  
+  .brand-tagline {
     color: #f1f5f9;
+    opacity: 0.9;
   }
   
-  .form-input:focus {
-    border-color: #667eea;
-    background: #1e293b;
-  }
-  
-  .form-input:hover:not(:focus):not(:disabled) {
-    border-color: #475569;
-    background: rgba(30, 41, 59, 0.95);
-  }
-  
-  .form-label {
-    color: #e2e8f0;
-  }
-  
-  .checkbox-text {
-    color: #cbd5e1;
-  }
-  
+  /* Enhanced welcome text visibility */
   .welcome-text h2 {
-    color: #f1f5f9;
+    color: #ffffff;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.025em;
   }
   
   .welcome-text p {
+    color: #e2e8f0;
+    font-weight: 500;
+    opacity: 0.95;
+  }
+  
+  .form-input {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(100, 116, 139, 0.5);
+    color: #f8fafc;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .form-input::placeholder {
     color: #94a3b8;
   }
   
-  .test-accounts-toggle {
+  .form-input:focus {
+    border-color: #60a5fa;
+    background: rgba(15, 23, 42, 0.7);
+    box-shadow: 
+      0 0 0 4px rgba(96, 165, 250, 0.15),
+      0 8px 25px rgba(96, 165, 250, 0.2),
+      inset 0 1px 0 rgba(148, 163, 184, 0.1);
+  }
+  
+  .form-input:hover:not(:focus):not(:disabled) {
+    border-color: #64748b;
+    background: rgba(15, 23, 42, 0.65);
+  }
+  
+  .form-label {
+    color: #f8fafc;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  
+  .input-icon {
     color: #cbd5e1;
   }
   
-  .test-accounts-toggle:hover {
-    background: #334155;
+  .password-toggle {
+    color: #cbd5e1;
+  }
+  
+  .password-toggle:hover:not(:disabled) {
+    color: #93c5fd;
+    background: rgba(147, 197, 253, 0.1);
+  }
+  
+  .checkbox-text {
     color: #f1f5f9;
+  }
+  
+  .forgot-link {
+    color: #93c5fd;
+  }
+  
+  .forgot-link:hover {
+    color: #60a5fa;
+    background: rgba(96, 165, 250, 0.1);
+  }
+  
+  .login-button {
+    background: 
+      linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%),
+      radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 50%);
+    box-shadow: 
+      0 8px 32px rgba(59, 130, 246, 0.4),
+      0 4px 16px rgba(139, 92, 246, 0.3),
+      inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  }
+  
+  .login-button:hover:not(:disabled) {
+    box-shadow: 
+      0 16px 50px rgba(59, 130, 246, 0.5),
+      0 8px 25px rgba(139, 92, 246, 0.4),
+      inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  }
+  
+  .divider span {
+    color: #e2e8f0;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(51, 65, 85, 0.95) 100%);
+  }
+  
+  .social-button {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(100, 116, 139, 0.5);
+    color: #f1f5f9;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .social-button:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: #60a5fa;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(96, 165, 250, 0.2);
+  }
+  
+  .social-button.google:hover:not(:disabled) {
+    border-color: #ef4444;
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.2);
+  }
+  
+  .social-button.microsoft:hover:not(:disabled) {
+    border-color: #3b82f6;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+  }
+  
+  .test-accounts-toggle {
+    color: #f1f5f9;
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(100, 116, 139, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .test-accounts-toggle:hover {
+    background: 
+      linear-gradient(145deg, rgba(59, 130, 246, 0.1) 0%, rgba(168, 85, 247, 0.08) 100%);
+    color: #ffffff;
+    border-color: rgba(96, 165, 250, 0.5);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
   }
   
   .test-accounts-list h4 {
-    color: #f1f5f9;
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   
   .test-accounts-note {
-    color: #94a3b8;
-    background: #334155;
+    color: #e2e8f0;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(100, 116, 139, 0.3);
   }
   
   .test-account-card {
-    background: #1e293b;
-    border-color: #475569;
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(100, 116, 139, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
   .test-account-card:hover {
-    border-color: #667eea;
-    background: #334155;
+    border-color: #60a5fa;
+    background: 
+      linear-gradient(145deg, rgba(59, 130, 246, 0.08) 0%, rgba(168, 85, 247, 0.06) 100%);
+    box-shadow: 
+      0 8px 25px rgba(96, 165, 250, 0.2),
+      0 4px 12px rgba(96, 165, 250, 0.15);
   }
   
   .account-email {
-    color: #f1f5f9;
+    color: #ffffff;
+    font-weight: 600;
   }
   
   .account-description {
-    color: #94a3b8;
+    color: #e2e8f0;
+  }
+  
+  .account-role.super-admin {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(236, 72, 153, 0.15));
+    color: #fca5a5;
+    border: 1px solid rgba(252, 165, 165, 0.3);
+  }
+  
+  .account-role.admin {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(96, 165, 250, 0.15));
+    color: #93c5fd;
+    border: 1px solid rgba(147, 197, 253, 0.3);
+  }
+  
+  .account-role.manager {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(196, 181, 253, 0.15));
+    color: #c084fc;
+    border: 1px solid rgba(192, 132, 252, 0.3);
+  }
+  
+  .account-role.coordinator {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(134, 239, 172, 0.15));
+    color: #86efac;
+    border: 1px solid rgba(134, 239, 172, 0.3);
+  }
+  
+  .account-role.care-worker {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2), rgba(251, 191, 36, 0.15));
+    color: #fde047;
+    border: 1px solid rgba(253, 224, 71, 0.3);
   }
 }
 
@@ -1865,5 +2119,123 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Dark Theme Styles */
+.login-page.dark-theme {
+  background: 
+    linear-gradient(135deg, #1a1f3a 0%, #2d1b3d 50%, #1a1f3a 100%),
+    radial-gradient(circle at top left, rgba(26, 31, 58, 0.8), transparent 50%),
+    radial-gradient(circle at bottom right, rgba(45, 27, 61, 0.8), transparent 50%);
+}
+
+.dark-theme .login-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(100, 116, 139, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.dark-theme .theme-toggle {
+  background: rgba(51, 65, 85, 0.7);
+  border-color: rgba(100, 116, 139, 0.5);
+  color: #e2e8f0;
+}
+
+.dark-theme .theme-toggle:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.dark-theme .brand-name {
+  color: #f8fafc;
+}
+
+.dark-theme .brand-tagline {
+  color: #cbd5e1;
+}
+
+.dark-theme .welcome-text h2 {
+  color: #f8fafc;
+}
+
+.dark-theme .welcome-text p {
+  color: #cbd5e1;
+}
+
+.dark-theme .form-label {
+  color: #f1f5f9;
+}
+
+.dark-theme .form-input {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #f8fafc;
+}
+
+.dark-theme .form-input:focus {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: #667eea;
+}
+
+.dark-theme .form-input::placeholder {
+  color: #94a3b8;
+}
+
+.dark-theme .input-icon {
+  color: #94a3b8;
+}
+
+.dark-theme .checkbox-text {
+  color: #cbd5e1;
+}
+
+.dark-theme .forgot-link {
+  color: #93c5fd;
+}
+
+.dark-theme .forgot-link:hover {
+  color: #60a5fa;
+}
+
+.dark-theme .social-button {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #cbd5e1;
+}
+
+.dark-theme .social-button:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.dark-theme .divider span {
+  color: #94a3b8;
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.dark-theme .test-accounts-toggle {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #cbd5e1;
+}
+
+.dark-theme .test-accounts-list h4 {
+  color: #f8fafc;
+}
+
+.dark-theme .test-accounts-note {
+  background: rgba(15, 23, 42, 0.6);
+  color: #cbd5e1;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+.dark-theme .test-account-card {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(100, 116, 139, 0.4);
+}
+
+.dark-theme .account-email {
+  color: #f8fafc;
 }
 </style>
