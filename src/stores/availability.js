@@ -238,6 +238,9 @@ export const useAvailabilityStore = defineStore('availability', {
 
     // Save availability from form data
     async saveAvailabilityFromForm() {
+      console.log('saveAvailabilityFromForm called')
+      console.log('Form data:', this.availabilityForm)
+      
       const availabilityData = []
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
       
@@ -258,6 +261,7 @@ export const useAvailabilityStore = defineStore('availability', {
         }
       })
 
+      console.log('Processed availability data:', availabilityData)
       return await this.saveAvailability(availabilityData)
     },
 

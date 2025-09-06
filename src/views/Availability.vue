@@ -18,7 +18,7 @@
 
     <!-- Success/Error Messages -->
     <div v-if="message" class="alert" :class="`alert-${messageType}`">
-      <i class="fas" :class="messageType === 'success' ? 'fa-check-circle' : messageType === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'"></i>
+      <i class="fas" :class="messageType === 'success' ? 'fa-check-circle' : messageType === 'error' ? 'fa-exclamation-triangle' : messageType === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'"></i>
       {{ message }}
     </div>
 
@@ -247,36 +247,45 @@ export default {
         }
       } catch (error) {
         console.error('Error loading availability data:', error)
-        showMessage('Failed to load your availability data', 'error')
+        showMessage('⚠️ Failed to load your availability data. Please refresh the page.', 'error')
       }
     }
 
     const saveAll = async () => {
       try {
-        // Show immediate feedback
-        showMessage('Saving your availability...', 'info')
+        console.log('Save button clicked!')
+        console.log('Current availability form data:', availability.value)
+        
+        // Show immediate feedback with loading state
+        showMessage('💾 Saving your availability settings...', 'info')
         
         // Validate that at least one day is selected
         const hasAvailableDay = Object.values(availability.value).some(day => day.available)
+        console.log('Has available day:', hasAvailableDay)
+        
         if (!hasAvailableDay) {
-          showMessage('Please select at least one available day before saving.', 'error')
+          showMessage('⚠️ Please select at least one available day before saving your preferences.', 'error')
           return
         }
 
+        console.log('Calling saveAvailabilityFromForm...')
         // Save availability from form
         await availabilityStore.saveAvailabilityFromForm()
+        console.log('saveAvailabilityFromForm completed successfully')
 
         // Save preferences if they exist
         if (availabilityStore.preferences) {
+          console.log('Saving preferences:', availabilityStore.preferences)
           await availabilityStore.saveWorkerPreferences(availabilityStore.preferences)
         }
 
-        // Show professional success message
-        showMessage('🎉 Great! Your availability has been saved successfully. You can now receive shift assignments during your available hours.', 'success')
+        // Show professional success message with status
+        showMessage('✅ Excellent! Your availability has been saved successfully. You\'re all set to receive shift assignments during your available hours.', 'success')
 
       } catch (error) {
         console.error('Error saving availability:', error)
-        showMessage(availabilityStore.error || 'Unable to save your availability at the moment. Please check your internet connection and try again.', 'error')
+        console.error('Error details:', error.response?.data)
+        showMessage('❌ ' + (availabilityStore.error || error.response?.data?.error?.message || 'Unable to save your availability at the moment. Please check your internet connection and try again.'), 'error')
       }
     }
 
@@ -289,10 +298,10 @@ export default {
             proficiency_level: newSkill.value.level
           })
           newSkill.value = { name: '', level: 'intermediate' }
-          showMessage('Skill added successfully!', 'success')
+          showMessage('🏆 Skill added successfully to your profile!', 'success')
         } catch (error) {
           console.error('Error adding skill:', error)
-          showMessage('Failed to add skill', 'error')
+          showMessage('❌ Failed to add skill to your profile', 'error')
         }
       }
     }
@@ -300,10 +309,10 @@ export default {
     const removeSkill = async (skill) => {
       try {
         await availabilityStore.deleteWorkerSkill(skill.id)
-        showMessage('Skill removed successfully!', 'success')
+        showMessage('🗑️ Skill removed successfully from your profile!', 'success')
       } catch (error) {
         console.error('Error removing skill:', error)
-        showMessage('Failed to remove skill', 'error')
+        showMessage('❌ Failed to remove skill from your profile', 'error')
       }
     }
 
@@ -312,7 +321,7 @@ export default {
         try {
           // Note: This would need to be implemented in the store/service
           // For now, we'll just show a message
-          showMessage('Location preference feature coming soon!', 'info')
+          showMessage('🚧 Location preferences feature coming soon!', 'warning')
           newLocation.value = ''
         } catch (error) {
           console.error('Error adding location:', error)
@@ -324,7 +333,7 @@ export default {
     const removeLocation = async (location) => {
       try {
         // Note: This would need to be implemented in the store/service
-        showMessage('Location preference feature coming soon!', 'info')
+        showMessage('🚧 Location preferences feature coming soon!', 'warning')
       } catch (error) {
         console.error('Error removing location:', error)
         showMessage('Failed to remove location preference', 'error')
@@ -476,6 +485,12 @@ export default {
   background: rgba(59, 130, 246, 0.1);
   color: #2563eb;
   border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.alert-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 /* Grid Layout */

@@ -23,7 +23,7 @@ import { useAuthStore } from '../stores/auth'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-567187485284.us-central1.run.app/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ const api = axios.create({
 // Login function to get real JWT tokens
 export const login = async (email, password) => {
   try {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-567187485284.us-central1.run.app/api/v1'
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
     const response = await axios.post(`${baseURL}/auth/login`, {
       email,
       password
@@ -87,7 +87,7 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refresh_token')
         if (refreshToken) {
-          const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://das-crm-backend-567187485284.us-central1.run.app/api/v1'
+          const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
           const response = await axios.post(
             `${baseURL}/auth/refresh`,
             { refresh_token: refreshToken },

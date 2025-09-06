@@ -2,7 +2,7 @@
   <div class="container-fluid">
     <!-- Add glassmorphism background overlay -->
     <div class="page-overlay"></div>
-    <div class="page-header">
+    <div class="page-header" v-if="canCreateShifts">
       <div class="page-header-shimmer" v-if="isLoading"></div>
       <div class="header-content">
         <h1>
@@ -189,8 +189,9 @@
       <div v-else-if="filteredShifts.length === 0 && !searchQuery" class="empty-state">
         <i class="fas fa-calendar-alt"></i>
         <h3>No Shifts Scheduled</h3>
-        <p>Get started by scheduling your first shift</p>
-        <button @click="showAddModal = true" class="btn btn-shift">
+        <p v-if="canCreateShifts">Get started by scheduling your first shift</p>
+        <p v-else>No shifts have been assigned to you yet</p>
+        <button v-if="canCreateShifts" @click="showAddModal = true" class="btn btn-shift">
           <i class="fas fa-plus"></i>
           Schedule First Shift
         </button>
@@ -1009,6 +1010,10 @@ export default {
     // Permission checking
     canCancelShifts() {
       return this.user && (this.user.role === 'admin' || this.user.role === 'manager')
+    },
+    
+    canCreateShifts() {
+      return this.user && this.user.role !== 'care_worker'
     },
 
     criticalShifts() {
@@ -2742,8 +2747,8 @@ export default {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
   margin-bottom: 2rem;
 }
 
@@ -2752,7 +2757,7 @@ export default {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(226, 232, 240, 0.6);
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   display: flex;
@@ -4352,16 +4357,73 @@ export default {
 
   /* Stats Row Mobile */
   .stats-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+    font-size: 1rem;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .stat-icon i {
+    font-size: 1.1rem;
+  }
+
+  .stat-number {
+    font-size: 1.875rem;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+  }
+}
+
+/* Medium screens - tablets */
+@media (max-width: 992px) and (min-width: 769px) {
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
   }
 
   .stat-card {
     padding: 1rem;
   }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+    min-height: auto;
+  }
+
+  .stat-icon {
+    width: 45px;
+    height: 45px;
+  }
+
+  .stat-icon i {
+    font-size: 1rem;
+  }
 
   .stat-number {
     font-size: 1.75rem;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    line-height: 1.3;
   }
 
   /* Participant Cards Mobile */
