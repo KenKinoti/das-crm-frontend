@@ -67,7 +67,13 @@ export const PERMISSIONS = {
   MANAGE_ORGANIZATIONS: 'manage_organizations',
   MANAGE_ALL_USERS: 'manage_all_users',
   VIEW_SYSTEM_LOGS: 'view_system_logs',
-  MANAGE_DATABASE: 'manage_database'
+  MANAGE_DATABASE: 'manage_database',
+  
+  // Worker Availability
+  VIEW_OWN_AVAILABILITY: 'view_own_availability',
+  MANAGE_OWN_AVAILABILITY: 'manage_own_availability',
+  VIEW_ALL_AVAILABILITY: 'view_all_availability',
+  MANAGE_ALL_AVAILABILITY: 'manage_all_availability'
 }
 
 // Define manager permissions first
@@ -136,11 +142,12 @@ export const ROLE_PERMISSIONS = {
   ],
   
   [ROLES.CARE_WORKER]: [
-    PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_SCHEDULING,
     PERMISSIONS.VIEW_OWN_SCHEDULE,
     PERMISSIONS.COMPLETE_SHIFTS,
-    PERMISSIONS.VIEW_SETTINGS
+    PERMISSIONS.VIEW_SETTINGS,
+    PERMISSIONS.MANAGE_OWN_AVAILABILITY,
+    PERMISSIONS.VIEW_OWN_AVAILABILITY
   ],
   
   // Legacy admin role - treat as manager
@@ -165,7 +172,7 @@ export const ROLE_NAVIGATION = {
   ],
   
   [ROLES.CARE_WORKER]: [
-    'dashboard', 'scheduling', 'settings'
+    'availability', 'scheduling', 'settings'
   ],
   
   [ROLES.ADMIN]: MANAGER_NAVIGATION

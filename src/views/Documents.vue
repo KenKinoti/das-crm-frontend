@@ -932,12 +932,11 @@ export default {
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.25rem;
   min-height: 100vh;
 }
 
 [data-theme="dark"] .page-container {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #f3f4f6;
 }
 
@@ -1120,7 +1119,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .page-header h1 {
@@ -1210,8 +1209,8 @@ export default {
 .cloud-storage-status {
   background: white;
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
   box-shadow: var(--shadow-sm);
   border-left: 4px solid var(--primary-500);
 }
@@ -1360,8 +1359,8 @@ export default {
 .provider-section {
   border: 1px solid #e5e7eb;
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .provider-header {
@@ -1464,12 +1463,12 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .stat-card {
   background: var(--white);
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-soft);
   display: flex;
@@ -1568,7 +1567,7 @@ export default {
   background: var(--white);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-soft);
-  padding: 2rem;
+  padding: 1.25rem;
 }
 
 [data-theme="dark"] .content-card {
@@ -1586,7 +1585,7 @@ export default {
 .document-card {
   border: 1px solid #e2e8f0;
   border-radius: var(--border-radius);
-  padding: 1.5rem;
+  padding: 1.25rem;
   transition: all 0.3s ease;
   background: white;
 }
@@ -1797,7 +1796,7 @@ export default {
 
 .empty-state p {
   color: var(--text-medium);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 [data-theme="dark"] .empty-state p {
@@ -1840,7 +1839,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -1868,7 +1867,7 @@ export default {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .form-row {

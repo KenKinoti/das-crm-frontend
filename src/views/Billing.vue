@@ -15,7 +15,7 @@
           <i class="fas fa-dollar-sign"></i>
         </div>
         <div class="stat-content">
-          <div class="stat-number">${{ totalRevenue.toFixed(2) }}</div>
+          <div class="stat-number">${{ (totalRevenue || 0).toFixed(2) }}</div>
           <div class="stat-label">Total Revenue</div>
         </div>
       </div>
@@ -24,7 +24,7 @@
           <i class="fas fa-clock"></i>
         </div>
         <div class="stat-content">
-          <div class="stat-number">${{ pendingRevenue.toFixed(2) }}</div>
+          <div class="stat-number">${{ (pendingRevenue || 0).toFixed(2) }}</div>
           <div class="stat-label">Pending Revenue</div>
         </div>
       </div>
@@ -33,7 +33,7 @@
           <i class="fas fa-exclamation-triangle"></i>
         </div>
         <div class="stat-content">
-          <div class="stat-number">{{ overdueBills.length }}</div>
+          <div class="stat-number">{{ (overdueBills || []).length }}</div>
           <div class="stat-label">Overdue Invoices</div>
         </div>
       </div>
@@ -42,7 +42,7 @@
           <i class="fas fa-file-invoice"></i>
         </div>
         <div class="stat-content">
-          <div class="stat-number">{{ bills.length }}</div>
+          <div class="stat-number">{{ (bills || []).length }}</div>
           <div class="stat-label">Total Invoices</div>
         </div>
       </div>
@@ -176,7 +176,7 @@
             </button>
             <button 
               v-if="bill.status === 'pending' || bill.status === 'overdue'" 
-              @click="markAsPaid(bill)" 
+              @click="markBillAsPaid(bill)" 
               class="btn-small btn-success"
             >
               <i class="fas fa-check"></i>
@@ -295,10 +295,10 @@
 import { mapState, mapActions, mapGetters } from 'pinia'
 import { useBillingStore } from '../stores/billing'
 import { useParticipantsStore } from '../stores/participants'
-import { showViewModal, showEditModal } from '../utils/errorHandler'
+import { showSuccessNotification, showErrorNotification } from '../utils/notifications'
 
 export default {
-  name: 'Billing',
+  name: 'BillingPage',
   data() {
     return {
       filteredBills: [],
@@ -345,11 +345,15 @@ export default {
         this.filterBills()
       } catch (error) {
         console.error('Error loading data:', error)
-        this.showErrorMessage('Failed to load data. Please refresh the page.')
+        showErrorNotification(error, 'Failed to load data')
       }
     },
 
     filterBills() {
+      if (!Array.isArray(this.bills)) {
+        this.filteredBills = []
+        return
+      }
       let filtered = [...this.bills]
       
       if (this.searchQuery) {
@@ -416,30 +420,30 @@ export default {
         await this.createBill(invoiceData)
         this.filterBills()
         this.closeModal()
-        this.showSuccessMessage('Invoice created successfully!')
+        showSuccessNotification('Invoice created successfully!')
         
       } catch (error) {
         console.error('Error creating invoice:', error)
-        this.showErrorMessage('Error creating invoice. Please try again.')
+        showErrorNotification(error, 'Error creating invoice')
       } finally {
         this.isCreating = false
       }
     },
 
-    async markAsPaid(bill) {
+    async markBillAsPaid(bill) {
       if (confirm(`Mark invoice #${bill.invoice_number || bill.id} as paid?`)) {
         try {
           const paymentData = {
             payment_date: new Date().toISOString(),
-            payment_method: 'manual', // Could be expanded to show a form
+            payment_method: 'manual',
             status: 'paid'
           }
           await this.markAsPaid(bill.id, paymentData)
           this.filterBills()
-          this.showSuccessMessage('Invoice marked as paid!')
+          showSuccessNotification('Invoice marked as paid!')
         } catch (error) {
           console.error('Error marking as paid:', error)
-          this.showErrorMessage('Error marking invoice as paid. Please try again.')
+          showErrorNotification(error, 'Error marking invoice as paid')
         }
       }
     },
@@ -457,10 +461,10 @@ export default {
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
         
-        this.showSuccessMessage('Invoice downloaded successfully!')
+        showSuccessNotification('Invoice downloaded successfully!')
       } catch (error) {
         console.error('Error downloading invoice:', error)
-        this.showErrorMessage('Error downloading invoice. Please try again.')
+        showErrorNotification(error, 'Error downloading invoice')
       }
     },
 
@@ -470,12 +474,12 @@ export default {
       const amount = parseFloat(bill.total_amount || 0).toFixed(2)
       const period = this.formatDateRange(bill.service_period_start, bill.service_period_end)
       
-      const details = `👤 Participant: ${participant}\n💰 Amount: $${amount}\n📊 Status: ${status}\n📅 Issue Date: ${this.formatDate(bill.issue_date)}\n📅 Due Date: ${this.formatDate(bill.due_date)}\n📅 Service Period: ${period}${bill.description ? '\n📝 Description: ' + bill.description : ''}`
-      showViewModal(details, `📄 Invoice #${bill.invoice_number || bill.id}`)
+      const details = `Participant: ${participant}\nAmount: $${amount}\nStatus: ${status}\nIssue Date: ${this.formatDate(bill.issue_date)}\nDue Date: ${this.formatDate(bill.due_date)}\nService Period: ${period}${bill.description ? '\nDescription: ' + bill.description : ''}`
+      alert(`Invoice #${bill.invoice_number || bill.id}\n\n${details}`)
     },
 
     editBill(bill) {
-      showEditModal(`Edit functionality for invoice #${bill.invoice_number || bill.id} will be available soon! This feature will allow you to modify billing details and update invoice information.`, 'Edit Invoice')
+      alert(`Edit functionality for invoice #${bill.invoice_number || bill.id} will be available soon! This feature will allow you to modify billing details and update invoice information.`)
     },
 
     async deleteBill(bill) {
@@ -483,10 +487,10 @@ export default {
         try {
           await this.deleteBill(bill.id)
           this.filterBills()
-          this.showSuccessMessage('Invoice deleted successfully!')
+          showSuccessNotification('Invoice deleted successfully!')
         } catch (error) {
           console.error('Error deleting invoice:', error)
-          this.showErrorMessage('Error deleting invoice. Please try again.')
+          showErrorNotification(error, 'Error deleting invoice')
         }
       }
     },
@@ -555,27 +559,6 @@ export default {
       return `${this.formatDate(startDate)} - ${this.formatDate(endDate)}`
     },
 
-    showSuccessMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'success-notification'
-      notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
-    },
-    
-    showErrorMessage(message) {
-      const notification = document.createElement('div')
-      notification.className = 'error-notification'
-      notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
-      document.body.appendChild(notification)
-      
-      setTimeout(() => {
-        notification.remove()
-      }, 3000)
-    },
 
     clearFilters() {
       this.searchQuery = ''
@@ -596,12 +579,11 @@ export default {
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.25rem;
   min-height: 100vh;
 }
 
 [data-theme="dark"] .page-container {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #f3f4f6;
 }
 
@@ -609,7 +591,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   padding: 1.5rem 2rem;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
@@ -653,7 +635,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .stat-card {
@@ -661,7 +643,7 @@ export default {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
@@ -766,7 +748,7 @@ export default {
   background: var(--white);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-soft);
-  padding: 2rem;
+  padding: 1.25rem;
 }
 
 [data-theme="dark"] .content-card {
@@ -784,7 +766,7 @@ export default {
 .billing-card {
   border: 1px solid #e2e8f0;
   border-radius: var(--border-radius);
-  padding: 1.5rem;
+  padding: 1.25rem;
   transition: all 0.3s ease;
   background: white;
 }
@@ -977,7 +959,7 @@ export default {
 
 .empty-state p {
   color: var(--text-medium);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 /* Modal styles */
@@ -1014,7 +996,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -1042,7 +1024,7 @@ export default {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .form-row {
@@ -1232,8 +1214,8 @@ export default {
 .filters-section {
   background: white;
   border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   border: 1px solid #e2e8f0;
 }

@@ -53,5 +53,20 @@ export const usersService = {
     } catch (error) {
       throw error
     }
+  },
+
+  async getSupportedTimezones() {
+    try {
+      const response = await api.get('/users/timezones')
+      return response
+    } catch (error) {
+      throw error
+    }
   }
+}
+
+// Export individual functions and default export
+export const userService = {
+  updateUser: (id, data) => usersService.update(id, data),
+  getSupportedTimezones: () => usersService.getSupportedTimezones()
 }

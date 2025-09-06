@@ -60,6 +60,29 @@
         </div>
       </div>
 
+      <!-- User Preferences -->
+      <div class="settings-card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-user-cog"></i>
+            User Preferences
+          </h3>
+        </div>
+        <div class="card-content">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Your Timezone</label>
+              <select v-model="userForm.timezone">
+                <option v-for="tz in availableTimezones" :key="tz" :value="tz">
+                  {{ tz.replace('Australia/', '') }}
+                </option>
+              </select>
+              <small class="form-help">This affects how dates and times are displayed throughout the system</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- System Preferences -->
       <div class="settings-card">
         <div class="card-header">
@@ -71,7 +94,7 @@
         <div class="card-content">
           <div class="form-row">
             <div class="form-group">
-              <label>Timezone</label>
+              <label>Default Timezone</label>
               <select v-model="systemForm.timezone">
                 <option value="Australia/Melbourne">Australia/Melbourne</option>
                 <option value="Australia/Sydney">Australia/Sydney</option>
@@ -80,6 +103,7 @@
                 <option value="Australia/Adelaide">Australia/Adelaide</option>
                 <option value="UTC">UTC</option>
               </select>
+              <small class="form-help">Default timezone for new users</small>
             </div>
             <div class="form-group">
               <label>Currency</label>
@@ -340,12 +364,14 @@ import { mapState, mapActions, mapGetters } from 'pinia'
 import { useOrganizationStore } from '../stores/organization'
 import { useAuthStore } from '../stores/auth'
 import { showErrorNotification, showSuccessNotification, showInfoModal } from '../utils/errorHandler'
+import { userService } from '../services/users'
 
 export default {
   name: 'Settings',
   data() {
     return {
       isSaving: false,
+      availableTimezones: [],
       systemStats: {
         total_users: 0,
         total_participants: 0
@@ -358,6 +384,9 @@ export default {
         website: '',
         abn: '',
         registration_number: ''
+      },
+      userForm: {
+        timezone: 'Australia/Adelaide'
       },
       systemForm: {
         timezone: 'Australia/Melbourne',
@@ -385,7 +414,7 @@ export default {
   },
   computed: {
     ...mapState(useOrganizationStore, ['organization', 'isLoading', 'error']),
-    ...mapState(useAuthStore, ['token']),
+    ...mapState(useAuthStore, ['token', 'user']),
     ...mapGetters(useOrganizationStore, [
       'organizationName', 'organizationEmail', 'organizationPhone', 'organizationAddress',
       'timezone', 'currency', 'dateFormat', 'timeFormat', 'taxRate', 'paymentTerms',
@@ -405,6 +434,7 @@ export default {
     async loadSettings() {
       try {
         await this.fetchOrganization()
+        await this.loadAvailableTimezones()
         this.populateForms()
         await this.loadSystemStats()
       } catch (error) {
@@ -439,6 +469,11 @@ export default {
         website: this.organization.website || '',
         abn: this.organization.abn || '',
         registration_number: this.organization.registration_number || ''
+      }
+      
+      // Populate user form
+      this.userForm = {
+        timezone: this.user?.timezone || 'Australia/Adelaide'
       }
       
       // Populate system form
@@ -484,6 +519,38 @@ export default {
       }
     },
     
+    async loadAvailableTimezones() {
+      try {
+        const response = await userService.getSupportedTimezones()
+        if (response.success) {
+          this.availableTimezones = response.data
+        } else {
+          // Fallback timezones
+          this.availableTimezones = [
+            'Australia/Adelaide',
+            'Australia/Brisbane', 
+            'Australia/Darwin',
+            'Australia/Hobart',
+            'Australia/Melbourne',
+            'Australia/Perth',
+            'Australia/Sydney'
+          ]
+        }
+      } catch (error) {
+        console.error('Error loading timezones:', error)
+        // Fallback timezones
+        this.availableTimezones = [
+          'Australia/Adelaide',
+          'Australia/Brisbane', 
+          'Australia/Darwin',
+          'Australia/Hobart',
+          'Australia/Melbourne',
+          'Australia/Perth',
+          'Australia/Sydney'
+        ]
+      }
+    },
+    
     async saveAllSettings() {
       if (!this.validateSettingsForm()) {
         return
@@ -491,7 +558,10 @@ export default {
       
       this.isSaving = true
       try {
-        // Validate and prepare organization data
+        // First update user timezone
+        await this.saveUserTimezone()
+        
+        // Then update organization settings
         const organizationData = {
           ...this.organizationForm,
           name: this.organizationForm.name.trim(),
@@ -546,6 +616,26 @@ export default {
         return false
       }
       return true
+    },
+    
+    async saveUserTimezone() {
+      if (this.user && this.userForm.timezone !== this.user.timezone) {
+        try {
+          const response = await userService.updateUser(this.user.id, {
+            timezone: this.userForm.timezone
+          })
+          
+          if (response.success) {
+            // Update the user in the auth store
+            const authStore = useAuthStore()
+            authStore.user = { ...this.user, timezone: this.userForm.timezone }
+            localStorage.setItem('current_user', JSON.stringify(authStore.user))
+          }
+        } catch (error) {
+          console.error('Error updating user timezone:', error)
+          throw error
+        }
+      }
     },
 
     isValidEmail(email) {

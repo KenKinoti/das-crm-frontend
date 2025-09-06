@@ -538,7 +538,7 @@ export default {
 
 .stat-card {
   background: white;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
@@ -663,11 +663,11 @@ export default {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 2.5rem;
+  padding: 1.25rem;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-top: 0;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.25rem;
   position: relative;
   overflow: visible;
 }
@@ -693,7 +693,7 @@ export default {
   font-size: 1.6rem;
   font-weight: 700;
   color: #1f2937;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -713,7 +713,7 @@ export default {
 
 /* Quick Actions Sections */
 .actions-section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .actions-section:last-child {
@@ -738,8 +738,8 @@ export default {
 
 .actions-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.75rem;
   width: 100%;
   overflow: visible;
 }
@@ -754,9 +754,9 @@ export default {
   flex-direction: row;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.25rem 1.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
   text-decoration: none;
   color: #374151;
@@ -767,7 +767,9 @@ export default {
   -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  min-height: 80px;
+  min-height: 88px;
+  min-width: 240px;
+  flex-shrink: 0;
 }
 
 /* Action Button Variants */
@@ -900,7 +902,7 @@ export default {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  padding: 2.5rem;
+  padding: 1.25rem;
   border-radius: 20px;
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.1),
@@ -1218,7 +1220,7 @@ export default {
   }
   
   .actions-section {
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
   }
   
   .actions-subtitle {
@@ -1285,7 +1287,7 @@ export default {
   }
   
   .actions-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   
   .actions-subtitle {

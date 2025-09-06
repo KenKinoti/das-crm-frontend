@@ -17,14 +17,17 @@ export const useBillingStore = defineStore('billing', {
 
   getters: {
     paidBills: (state) => {
+      if (!Array.isArray(state.bills)) return []
       return state.bills.filter(bill => bill.status === 'paid')
     },
 
     unpaidBills: (state) => {
+      if (!Array.isArray(state.bills)) return []
       return state.bills.filter(bill => bill.status === 'pending' || bill.status === 'overdue')
     },
 
     overdueBills: (state) => {
+      if (!Array.isArray(state.bills)) return []
       return state.bills.filter(bill => {
         if (bill.status !== 'pending') return false
         return new Date(bill.due_date) < new Date()
@@ -32,12 +35,14 @@ export const useBillingStore = defineStore('billing', {
     },
 
     totalRevenue: (state) => {
+      if (!Array.isArray(state.bills)) return 0
       return state.bills
         .filter(bill => bill.status === 'paid')
         .reduce((total, bill) => total + parseFloat(bill.total_amount || 0), 0)
     },
 
     pendingRevenue: (state) => {
+      if (!Array.isArray(state.bills)) return 0
       return state.bills
         .filter(bill => bill.status === 'pending' || bill.status === 'overdue')
         .reduce((total, bill) => total + parseFloat(bill.total_amount || 0), 0)
@@ -51,10 +56,12 @@ export const useBillingStore = defineStore('billing', {
       
       try {
         const response = await billingService.getAll(params)
-        this.bills = response.data.bills || response.data
+        const bills = response.data.bills || response.data || []
+        this.bills = Array.isArray(bills) ? bills : []
         this.pagination = response.data.pagination || this.pagination
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to fetch billing records'
+        this.bills = [] // Ensure bills is always an array even on error
         throw error
       } finally {
         this.isLoading = false

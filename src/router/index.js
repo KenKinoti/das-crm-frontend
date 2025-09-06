@@ -16,6 +16,7 @@ const Profile = () => import('../views/Profile.vue')
 const SuperAdmin = () => import('../views/SuperAdmin.vue')
 const CarePlans = () => import('../views/CarePlans.vue')
 const Database = () => import('../views/Database.vue')
+const Availability = () => import('../views/Availability.vue')
 
 const routes = [
   {
@@ -27,16 +28,39 @@ const routes = [
   {
     path: '/',
     redirect: to => {
+      // Check if user is authenticated and get their role
+      const storedUser = localStorage.getItem('current_user')
+      let userRole = null
+      
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser)
+          userRole = user.role
+        } catch (error) {
+          console.error('Error parsing stored user:', error)
+        }
+      }
+      
       // If user has a stored last route, redirect there
       const lastRoute = localStorage.getItem('lastRoute')
-      return lastRoute || '/dashboard'
+      
+      // Default redirects based on role
+      let defaultRoute = '/dashboard'
+      if (userRole === 'care_worker') {
+        defaultRoute = '/availability'
+      }
+      
+      return lastRoute || defaultRoute
     }
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: true,
+      requiredRoles: ['super_admin', 'admin', 'manager', 'support_coordinator']
+    }
   },
   {
     path: '/participants',
@@ -103,6 +127,15 @@ const routes = [
     name: 'Database',
     component: Database,
     meta: { requiresAuth: true, requiresSuperAdmin: true }
+  },
+  {
+    path: '/availability',
+    name: 'Availability',
+    component: Availability,
+    meta: { 
+      requiresAuth: true,
+      requiredRoles: ['care_worker']
+    }
   }
 ]
 
@@ -178,6 +211,23 @@ router.beforeEach(async (to, from, next) => {
       console.log('Super admin required, redirecting to dashboard')
       next('/dashboard')
       return
+    }
+    
+    // Check for role-based permissions
+    if (to.meta.requiredRoles && Array.isArray(to.meta.requiredRoles)) {
+      const userRole = authStore.user?.role
+      const hasRequiredRole = to.meta.requiredRoles.includes(userRole)
+      
+      if (!hasRequiredRole) {
+        console.log(`Role access denied. Required: ${to.meta.requiredRoles.join(', ')}, User role: ${userRole}`)
+        // Redirect care workers to scheduling page instead of dashboard
+        if (userRole === 'care_worker') {
+          next('/scheduling')
+        } else {
+          next('/participants')
+        }
+        return
+      }
     }
     
     console.log('✅ Auth guard passed, proceeding to:', to.path)

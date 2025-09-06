@@ -1093,16 +1093,6 @@ export default {
   },
   async mounted() {
     await this.loadParticipants()
-    
-    // Listen for organization changes from header
-    this.$root.$on('organization-changed', () => {
-      this.filterParticipants()
-    })
-  },
-  
-  beforeDestroy() {
-    // Clean up event listener
-    this.$root.$off('organization-changed')
   }
 }
 </script>

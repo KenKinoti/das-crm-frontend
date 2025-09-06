@@ -3,6 +3,7 @@
     <!-- Add glassmorphism background overlay -->
     <div class="page-overlay"></div>
     <div class="page-header">
+      <div class="page-header-shimmer" v-if="isLoading"></div>
       <div class="header-content">
         <h1>
           <i class="fas fa-calendar-alt"></i>
@@ -958,8 +959,8 @@ export default {
       searchQuery: '',
       statusFilter: '',
       dateFilter: '',
-      currentView: 'grid',
-      filtersMinimized: false,
+      currentView: 'list',
+      filtersMinimized: true,
       showAddModal: false,
       showEditModal: false,
       showViewModal: false,
@@ -1743,7 +1744,8 @@ export default {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: this.user?.timezone || 'Australia/Adelaide'
       })
     },
 
@@ -1752,7 +1754,8 @@ export default {
       return date.toLocaleTimeString('en-AU', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: this.user?.timezone || 'Australia/Adelaide'
       })
     },
 
@@ -1833,9 +1836,11 @@ export default {
     getUrgencyLevel(shift) {
       if (shift.status !== 'scheduled') return 'normal'
       
+      // Get current time in user's timezone
       const now = new Date()
+      const userNow = new Date(now.toLocaleString("sv-SE", {timeZone: this.user?.timezone || "Australia/Adelaide"}))
       const shiftStart = new Date(shift.start_time)
-      const daysUntilStart = (shiftStart - now) / (1000 * 60 * 60 * 24)
+      const daysUntilStart = (shiftStart - userNow) / (1000 * 60 * 60 * 24)
       
       // Critical if shift starts within 2 days
       if (daysUntilStart <= 2 && daysUntilStart > 0) {
@@ -1865,9 +1870,11 @@ export default {
     
     getUrgencyText(shift) {
       const urgency = this.getUrgencyLevel(shift)
+      // Get current time in user's timezone
       const now = new Date()
+      const userNow = new Date(now.toLocaleString("sv-SE", {timeZone: this.user?.timezone || "Australia/Adelaide"}))
       const shiftStart = new Date(shift.start_time)
-      const daysUntilStart = Math.ceil((shiftStart - now) / (1000 * 60 * 60 * 24))
+      const daysUntilStart = Math.ceil((shiftStart - userNow) / (1000 * 60 * 60 * 24))
       
       if (urgency === 'critical') {
         return daysUntilStart === 1 ? 'Tomorrow' : `${daysUntilStart} days left`
@@ -1879,9 +1886,13 @@ export default {
     },
     
     getTimeUntilShift(shift) {
+      // Use Intl API for proper timezone handling
       const now = new Date()
       const shiftStart = new Date(shift.start_time)
-      const diffMs = shiftStart - now
+      
+      // Get current time in user's timezone
+      const userNow = new Date(now.toLocaleString("sv-SE", {timeZone: this.user?.timezone || "Australia/Adelaide"}))
+      const diffMs = shiftStart - userNow
       
       if (diffMs < 0) return 'Starting now'
       
@@ -2111,49 +2122,62 @@ export default {
   align-items: center;
   margin-bottom: 2rem;
   padding: 1.5rem 2rem;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.6);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(10px);
 }
 
 [data-theme="dark"] .page-header {
-  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
-  border: 1px solid rgba(75, 85, 99, 0.3);
+  background: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .header-content h1 {
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.25rem 0;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
-[data-theme="dark"] .header-content h1 {
-  color: #f3f4f6;
-}
 
 .header-content h1 i {
-  color: #3b82f6;
-  font-size: 2rem;
+  color: #667eea;
+  -webkit-text-fill-color: #667eea;
+  font-size: 1.5rem;
 }
 
 .header-content p {
-  font-size: 1rem;
-  color: #64748b;
-  margin: 0.5rem 0 0 0;
+  font-size: 1.1rem;
+  color: rgba(107, 114, 128, 0.8);
+  margin: 0;
+  font-weight: 500;
 }
 
-[data-theme="dark"] .header-content p {
-  color: #9ca3af;
+.page-header-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* Filters Section */
@@ -2379,70 +2403,39 @@ export default {
 
 /* ETA Alert Card */
 .eta-alert-card {
-  background: linear-gradient(135deg, 
-    #fee2e2 0%, 
-    #fecaca 25%, 
-    #fee2e2 50%, 
-    #fecaca 75%, 
-    #fee2e2 100%);
-  background-size: 400% 400%;
-  border: 3px solid transparent;
-  background-clip: padding-box;
-  border-radius: 20px;
-  margin-bottom: 2rem;
+  background: linear-gradient(145deg, #ffffff 0%, #fef7f7 100%);
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
   position: relative;
   overflow: hidden;
   box-shadow: 
-    0 10px 40px rgba(239, 68, 68, 0.2),
-    0 4px 15px rgba(239, 68, 68, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  animation: etaBackgroundShift 8s ease-in-out infinite, etaPulse 3s infinite;
+    0 4px 20px rgba(239, 68, 68, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-.eta-alert-card::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(45deg, 
-    #ef4444, #dc2626, #b91c1c, #ef4444, #dc2626);
-  background-size: 300% 300%;
-  border-radius: 22px;
-  z-index: -1;
-  animation: etaBorderGlow 4s ease-in-out infinite;
-}
-
-.eta-alert-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(ellipse at top right, 
-    rgba(239, 68, 68, 0.1) 0%, 
-    transparent 50%),
-    radial-gradient(ellipse at bottom left, 
-    rgba(220, 38, 38, 0.05) 0%, 
-    transparent 50%);
-  border-radius: 20px;
-  pointer-events: none;
+.eta-alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 30px rgba(239, 68, 68, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left-color: #dc2626;
 }
 
 .eta-card-header {
   display: flex;
   align-items: center;
-  padding: 1.5rem 2rem 1rem;
+  padding: 1.25rem 1.5rem 1rem;
   gap: 1rem;
 }
 
 .eta-icon {
-  width: 60px;
-  height: 60px;
-  background: #ef4444;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2453,27 +2446,30 @@ export default {
 
 .eta-title h3 {
   margin: 0;
-  color: #7f1d1d;
-  font-size: 1.25rem;
-  font-weight: 700;
+  color: #dc2626;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .eta-title p {
   margin: 0.25rem 0 0;
-  color: #991b1b;
-  font-size: 0.875rem;
-  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
 .eta-shifts-list {
-  padding: 0 2rem 1.5rem;
+  padding: 0 1.5rem 1.25rem;
 }
 
 .eta-shift-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 0.875rem;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 12px;
   margin-bottom: 0.75rem;
@@ -2526,11 +2522,11 @@ export default {
 }
 
 .btn-eta-start {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: #dc2626;
   color: white;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 7px;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -2541,55 +2537,57 @@ export default {
 }
 
 .btn-eta-start:hover {
-  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
 }
 
 .eta-more {
   text-align: center;
-  padding: 0.75rem;
-  color: #7f1d1d;
-  font-weight: 600;
-  font-size: 0.875rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
-  border: 1px dashed #ef4444;
+  padding: 0.5rem 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 0.8rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 /* New ETA Badge Layout */
 .eta-shift-badge {
   background: rgba(255, 255, 255, 0.95);
-  border: 2px solid rgba(239, 68, 68, 0.2);
-  border-radius: 12px;
-  margin-bottom: 0.75rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
   transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .eta-shift-badge:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(249, 250, 251, 0.98);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(209, 213, 219, 0.8);
 }
 
 .eta-badge-content {
   display: flex;
   align-items: center;
-  padding: 1rem;
-  gap: 1rem;
+  padding: 0.75rem;
+  gap: 0.75rem;
 }
 
 .eta-countdown-badge {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #ef4444;
   color: white;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   text-align: center;
   min-width: 80px;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+  border: none;
 }
 
 .eta-shift-info {
@@ -2602,7 +2600,7 @@ export default {
 .eta-time {
   font-weight: 600;
   color: #374151;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
 }
 
 .eta-details-row {
@@ -2612,9 +2610,9 @@ export default {
 }
 
 .eta-badge {
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 500;
   display: inline-block;
 }
@@ -2750,10 +2748,10 @@ export default {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(226, 232, 240, 0.6);
   padding: 1.5rem;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -4255,10 +4253,26 @@ export default {
     flex-direction: column;
     gap: 1rem;
     align-items: stretch;
+    padding: 1rem;
   }
 
   .filters-section {
     flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+
+  .filters-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .filters-title {
+    font-size: 0.9rem;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    gap: 0.75rem;
     align-items: stretch;
   }
 
@@ -4268,14 +4282,119 @@ export default {
 
   .filter-controls {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .filter-controls select,
+  .filter-controls input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .view-toggle {
+    order: -1;
+    justify-content: center;
+    margin-bottom: 0.75rem;
   }
 
   .shifts-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0.5rem;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  /* ETA Badge Mobile Styles */
+  .eta-alert-card {
+    margin-bottom: 1rem;
+    border-radius: 8px;
+  }
+
+  .eta-card-header {
+    padding: 1rem;
+  }
+
+  .eta-shifts-list {
+    padding: 0 1rem 1rem;
+  }
+
+  .eta-badge-content {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .eta-countdown-badge {
+    order: -1;
+    align-self: center;
+    min-width: 60px;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .eta-shift-info {
+    text-align: center;
+  }
+
+  .eta-details-row {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-eta-start {
+    align-self: center;
+    min-width: 100px;
+  }
+
+  /* Stats Row Mobile */
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-number {
+    font-size: 1.75rem;
+  }
+
+  /* Participant Cards Mobile */
+  .participant-card {
+    margin-bottom: 1rem;
+  }
+
+  .participant-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .participant-info h3 {
+    font-size: 1rem;
+  }
+
+  .detail-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .participant-actions {
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    min-width: 44px;
+    padding: 0.5rem;
   }
 
   .modal-actions {
@@ -4304,6 +4423,13 @@ export default {
   overflow: hidden;
 }
 
+[data-theme="dark"] .shifts-list-view {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+}
+
 .list-header {
   display: grid;
   grid-template-columns: 1fr 1.5fr 1.2fr 1fr 1.2fr 100px 120px;
@@ -4313,6 +4439,12 @@ export default {
   padding: 1rem;
   font-weight: 600;
   color: var(--text-dark);
+}
+
+[data-theme="dark"] .list-header {
+  background: linear-gradient(145deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.9) 100%);
+  border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+  color: #f8fafc;
 }
 
 .header-cell {
@@ -4337,6 +4469,16 @@ export default {
   transform: translateX(4px);
 }
 
+[data-theme="dark"] .shift-row {
+  border-bottom: 1px solid rgba(75, 85, 99, 0.15);
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .shift-row:hover {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.8) 0%, rgba(55, 65, 81, 0.6) 100%);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
 .shift-row.shift-urgent {
   border-left: 4px solid #fbbf24;
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, transparent 100%);
@@ -4345,6 +4487,16 @@ export default {
 .shift-row.shift-critical {
   border-left: 4px solid #ef4444;
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .shift-row.shift-urgent {
+  border-left-color: #fbbf24;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .shift-row.shift-critical {
+  border-left-color: #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, transparent 100%);
 }
 
 .shift-row.urgent {
@@ -4362,6 +4514,10 @@ export default {
   color: var(--text-dark);
 }
 
+[data-theme="dark"] .row-cell {
+  color: #f3f4f6;
+}
+
 .time-cell {
   display: flex;
   flex-direction: column;
@@ -4376,6 +4532,14 @@ export default {
 .time-date {
   font-size: 0.8rem;
   color: var(--text-light);
+}
+
+[data-theme="dark"] .time-main {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .time-date {
+  color: #9ca3af;
 }
 
 .participant-cell,
@@ -4426,6 +4590,18 @@ export default {
   display: flex;
   gap: 0.25rem;
   justify-content: flex-end;
+}
+
+[data-theme="dark"] .actions-cell .btn-small {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .actions-cell .btn-small:hover {
+  background: rgba(55, 65, 81, 1);
+  border-color: rgba(96, 165, 250, 0.4);
+  transform: translateY(-1px);
 }
 
 .btn-mini {
@@ -4536,42 +4712,74 @@ export default {
 /* Dynamic color classes for split components */
 .stat-card.days-component.high-activity {
   border-left: 4px solid #059669;
-  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.9) 0%, rgba(240, 253, 244, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.days-component.high-activity {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(6, 78, 59, 0.2) 100%);
 }
 
 .stat-card.days-component.moderate-activity {
   border-left: 4px solid #d97706;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.9) 0%, rgba(254, 243, 199, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.days-component.moderate-activity {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(120, 53, 15, 0.2) 100%);
 }
 
 .stat-card.days-component.low-activity {
   border-left: 4px solid #2563eb;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(219, 234, 254, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.days-component.low-activity {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(30, 58, 138, 0.2) 100%);
 }
 
 .stat-card.days-component.minimal-activity {
   border-left: 4px solid #dc2626;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.9) 0%, rgba(254, 226, 226, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.days-component.minimal-activity {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(127, 29, 29, 0.2) 100%);
 }
 
 .stat-card.scheduled-component.high-scheduled {
   border-left: 4px solid #059669;
-  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.9) 0%, rgba(240, 253, 244, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.scheduled-component.high-scheduled {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(6, 78, 59, 0.2) 100%);
 }
 
 .stat-card.scheduled-component.moderate-scheduled {
   border-left: 4px solid #7c3aed;
-  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  background: linear-gradient(135deg, rgba(250, 245, 255, 0.9) 0%, rgba(243, 232, 255, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.scheduled-component.moderate-scheduled {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(88, 28, 135, 0.2) 100%);
 }
 
 .stat-card.scheduled-component.low-scheduled {
   border-left: 4px solid #d97706;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.9) 0%, rgba(254, 243, 199, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.scheduled-component.low-scheduled {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(120, 53, 15, 0.2) 100%);
 }
 
 .stat-card.scheduled-component.minimal-scheduled {
   border-left: 4px solid #dc2626;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.9) 0%, rgba(254, 226, 226, 0.95) 100%);
+}
+
+[data-theme="dark"] .stat-card.scheduled-component.minimal-scheduled {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(127, 29, 29, 0.2) 100%);
 }
 
 /* Searchable Dropdown Styles */
@@ -5110,17 +5318,12 @@ export default {
 
 /* Dark Theme Critical Shifts ETA Card */
 [data-theme="dark"] .eta-alert-card {
-  background: linear-gradient(135deg, 
-    rgba(220, 38, 38, 0.15) 0%, 
-    rgba(185, 28, 28, 0.1) 25%, 
-    rgba(220, 38, 38, 0.15) 50%, 
-    rgba(185, 28, 28, 0.1) 75%, 
-    rgba(220, 38, 38, 0.15) 100%);
-  border: 3px solid rgba(248, 113, 113, 0.3);
+  background: linear-gradient(145deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.9) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  border-left: 4px solid #ef4444;
   box-shadow: 
-    0 20px 60px rgba(239, 68, 68, 0.3),
-    0 8px 25px rgba(220, 38, 38, 0.2),
-    inset 0 1px 0 rgba(248, 113, 113, 0.2);
+    0 4px 20px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="dark"] .eta-alert-card::before {
@@ -5145,30 +5348,28 @@ export default {
 }
 
 [data-theme="dark"] .eta-title h3 {
-  color: #fca5a5;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="dark"] .eta-title p {
   color: #f87171;
 }
 
+[data-theme="dark"] .eta-title p {
+  color: #9ca3af;
+}
+
 [data-theme="dark"] .eta-shift-badge {
-  background: rgba(15, 23, 42, 0.8);
-  border: 2px solid rgba(248, 113, 113, 0.3);
-  backdrop-filter: blur(10px);
+  background: rgba(31, 41, 55, 0.8);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="dark"] .eta-shift-badge:hover {
-  background: rgba(15, 23, 42, 0.95);
-  border-color: rgba(248, 113, 113, 0.5);
-  box-shadow: 0 8px 25px rgba(248, 113, 113, 0.2);
+  background: rgba(31, 41, 55, 0.95);
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] .eta-countdown-badge {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-  color: #fef2f2;
-  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.4);
+  background: #ef4444;
+  color: white;
 }
 
 [data-theme="dark"] .eta-time {
@@ -5194,21 +5395,19 @@ export default {
 }
 
 [data-theme="dark"] .btn-eta-start {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-  color: #fef2f2;
-  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.3);
+  background: #dc2626;
+  color: white;
 }
 
 [data-theme="dark"] .btn-eta-start:hover {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 6px 20px rgba(248, 113, 113, 0.4);
+  background: #b91c1c;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
 }
 
 [data-theme="dark"] .eta-more {
-  color: #fca5a5;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px dashed rgba(248, 113, 113, 0.4);
-  backdrop-filter: blur(5px);
+  color: #9ca3af;
+  background: rgba(31, 41, 55, 0.8);
+  border: 1px solid rgba(75, 85, 99, 0.5);
 }
 
 /* Dark theme pulse animation adjustments */
@@ -5294,6 +5493,105 @@ export default {
   border-top: 1px solid rgba(75, 85, 99, 0.3);
   padding-top: 1rem;
   margin-top: 1rem;
+}
+
+/* Action Buttons Light Theme */
+.action-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  color: #64748b;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  backdrop-filter: blur(5px);
+}
+
+.action-btn:hover {
+  background: rgba(248, 250, 252, 0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.view-btn {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+}
+
+.action-btn.view-btn:hover {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.action-btn.edit-btn {
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.action-btn.edit-btn:hover {
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: #f59e0b;
+  color: #d97706;
+}
+
+.action-btn.delete-btn {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.action-btn.delete-btn:hover {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.action-btn.schedule-btn {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.action-btn.schedule-btn:hover {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.08) 100%);
+  border-color: #22c55e;
+  color: #16a34a;
+}
+
+.action-btn.approve-btn {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.action-btn.approve-btn:hover {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%);
+  border-color: #10b981;
+  color: #059669;
+}
+
+/* Action Button Containers */
+.participant-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+[data-theme="dark"] .participant-actions {
+  border-top-color: rgba(75, 85, 99, 0.3);
 }
 
 [data-theme="dark"] .action-btn {
@@ -5393,4 +5691,6 @@ export default {
   border-color: rgba(107, 114, 128, 0.4);
   opacity: 0.8;
 }
+
+
 </style>

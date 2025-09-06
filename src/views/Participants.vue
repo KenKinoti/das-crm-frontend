@@ -1177,7 +1177,7 @@ export default {
 
 /* Page Container */
 .participants-container {
-  padding: 1.5rem;
+  padding: 1.25rem;
   background: var(--background, #fafafa);
   min-height: 100vh;
   border: none;
@@ -1193,10 +1193,10 @@ export default {
 /* Enhanced Page Header */
 .page-header-enhanced {
   background: var(--white);
-  padding: 2rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-soft);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .header-content {
@@ -1275,13 +1275,13 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .stat-card-enhanced {
   background: var(--white);
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-soft);
   border: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
@@ -1341,10 +1341,10 @@ export default {
 .search-filter-bar {
   background: var(--white);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-soft);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
   gap: 2rem;
@@ -1539,13 +1539,13 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .stat-card {
   background: white;
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
@@ -2383,7 +2383,7 @@ input:checked + .slider:hover {
 
 /* Updated search styling to match scheduling page */
 .filters-section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .filters-row {
@@ -2526,7 +2526,7 @@ input:checked + .slider:hover {
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem 0;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
   flex-wrap: wrap;
   gap: 1rem;

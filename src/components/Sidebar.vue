@@ -28,6 +28,12 @@
           Staff
         </a>
       </div>
+      <div v-if="visibleNavigation.includes('availability')" class="nav-item">
+        <a href="#" class="nav-link" :class="{ active: currentPage === 'availability' }" @click.prevent="navigate('availability')">
+          <i class="fas fa-clock nav-icon"></i>
+          My Availability
+        </a>
+      </div>
       <div v-if="visibleNavigation.includes('scheduling')" class="nav-item">
         <a href="#" class="nav-link" :class="{ active: currentPage === 'scheduling' }" @click.prevent="navigate('scheduling')">
           <i class="fas fa-calendar-alt nav-icon"></i>
@@ -123,7 +129,13 @@ export default {
       this.$emit('navigate', page)
     },
     goToDashboard() {
-      this.$emit('navigate', 'dashboard')
+      // Only navigate to dashboard if user has permission
+      if (this.permissionsStore.canViewDashboard) {
+        this.$emit('navigate', 'dashboard')
+      } else {
+        // Redirect care workers to their main page (scheduling)
+        this.$emit('navigate', 'scheduling')
+      }
     }
   }
 }

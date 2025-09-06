@@ -1,7 +1,8 @@
 <template>
-  <div class="participants-container">
+  <div class="care-plans-container">
     <!-- Header -->
     <div class="page-header">
+      <div class="page-header-shimmer" v-if="isLoading"></div>
       <div class="header-content">
         <h1>
           <i class="fas fa-clipboard-list"></i>
@@ -59,21 +60,21 @@
     </div>
 
     <!-- Search and Filters -->
-    <div class="filters-section">
-      <div class="filters-row">
+    <div class="search-filters-section">
+      <div class="search-row">
         <div class="search-box">
           <i class="fas fa-search"></i>
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="Search care plans..." 
-            class="form-input"
+            placeholder="Search care plans, participants, or plan IDs..." 
+            class="search-input"
             @input="filterPlans"
           />
         </div>
         
-        <div class="filter-controls">
-          <select v-model="statusFilter" @change="filterPlans" class="form-select">
+        <div class="inline-filters">
+          <select v-model="statusFilter" @change="filterPlans" class="filter-select">
             <option value="">All Status</option>
             <option value="active">Active Plans</option>
             <option value="pending_approval">Pending Approval</option>
@@ -82,30 +83,28 @@
             <option value="cancelled">Cancelled Plans</option>
           </select>
           
-          <select v-model="participantFilter" @change="filterPlans" class="form-select">
+          <select v-model="participantFilter" @change="filterPlans" class="filter-select">
             <option value="">All Participants</option>
             <option v-for="participant in participants" :key="participant.id" :value="participant.id">
               {{ participant.first_name }} {{ participant.last_name }}
             </option>
           </select>
           
-          <button @click="clearFilters" class="btn btn-outline-elegant" title="Clear">
+          <button @click="clearFilters" class="clear-btn" title="Clear filters">
             <i class="fas fa-times"></i>
-            Clear
           </button>
           
-          <!-- View Toggle -->
           <div class="view-toggle">
             <button 
               @click="currentView = 'list'" 
-              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              :class="['view-btn', { active: currentView === 'list' }]"
               title="List View"
             >
               <i class="fas fa-list"></i>
             </button>
             <button 
               @click="currentView = 'grid'" 
-              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
+              :class="['view-btn', { active: currentView === 'grid' }]"
               title="Grid View"
             >
               <i class="fas fa-th"></i>
@@ -182,10 +181,10 @@
             <button @click="editCarePlan(plan)" class="action-btn edit-btn" title="Edit Plan">
               <i class="fas fa-edit"></i>
             </button>
-            <button v-if="plan.status === 'pending_approval'" @click="approveCarePlan(plan)" class="action-btn approve-btn" title="Approve Plan">
+            <button v-if="plan.status === 'pending_approval'" @click="approvePlan(plan)" class="action-btn approve-btn" title="Approve Plan">
               <i class="fas fa-check"></i>
             </button>
-            <button @click="deleteCarePlan(plan)" class="action-btn delete-btn" title="Delete Plan">
+            <button @click="confirmDeleteModal(plan)" class="action-btn delete-btn" title="Delete Plan">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -248,10 +247,10 @@
               <button @click="editCarePlan(plan)" class="action-btn edit-btn" title="Edit Plan">
                 <i class="fas fa-edit"></i>
               </button>
-              <button v-if="plan.status === 'pending_approval'" @click="approveCarePlan(plan)" class="action-btn approve-btn" title="Approve">
+              <button v-if="plan.status === 'pending_approval'" @click="approvePlan(plan)" class="action-btn approve-btn" title="Approve">
                 <i class="fas fa-check"></i>
               </button>
-              <button @click="deleteCarePlan(plan)" class="action-btn delete-btn" title="Delete Plan">
+              <button @click="confirmDeleteModal(plan)" class="action-btn delete-btn" title="Delete Plan">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -694,7 +693,7 @@
               <i class="fas fa-edit"></i>
               Edit
             </button>
-            <button @click="deleteCarePlan(selectedCarePlan); closeViewModal()" class="btn btn-delete">
+            <button @click="confirmDeleteModal(selectedCarePlan); closeViewModal()" class="btn btn-delete">
               <i class="fas fa-trash"></i>
               Delete
             </button>
@@ -908,7 +907,7 @@ export default {
     },
     
     calculateProgress(plan) {
-      if (!plan.goals?.length) return 0
+      if (!plan.goals || !Array.isArray(plan.goals) || plan.goals.length === 0) return 0
       const completedGoals = plan.goals.filter(goal => goal.status === 'completed').length
       return Math.round((completedGoals / plan.goals.length) * 100)
     },
@@ -998,7 +997,7 @@ export default {
       this.showEditModal = true
     },
     
-    deleteCarePlan(plan) {
+    confirmDeleteModal(plan) {
       this.carePlanToDelete = plan
       this.showDeleteModal = true
     },
@@ -1079,7 +1078,7 @@ export default {
       }
     },
     
-    async approveCarePlan(plan) {
+    async approvePlan(plan) {
       try {
         await this.approveCarePlan(plan.id)
         showSuccessNotification(`Care plan #${plan.id} has been approved successfully!`)
@@ -1129,103 +1128,279 @@ export default {
 /* Import all the styles from Participants page */
 @import url('../assets/styles/participants-common.css');
 
-/* Enhanced Search Section - Responsive and Clean */
-.filters-section {
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+/* Care Plans Container - No Background Override */
+.care-plans-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+/* Page Header Dark Theme Enhancement */
+.page-header {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
   backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .filters-section {
-  background: linear-gradient(145deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%);
-  border: 1px solid rgba(75, 85, 99, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+[data-theme="dark"] .page-header {
+  background: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.filters-row {
+.header-content h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.25rem 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
-  padding: 0.25rem 0;
 }
 
-/* Search Box - Enhanced */
+.header-content h1 i {
+  color: #667eea;
+  -webkit-text-fill-color: #667eea;
+  font-size: 1.5rem;
+}
+
+.header-content p {
+  font-size: 1.1rem;
+  color: rgba(107, 114, 128, 0.8);
+  margin: 0;
+  font-weight: 500;
+}
+
+.page-header-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Stats Cards Light Theme */
+.stat-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Stats Cards Dark Theme */
+[data-theme="dark"] .stat-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.9) 100%);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .stat-card .stat-number {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .stat-card .stat-label {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .stat-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Enhanced Search Section - Clean and Modern */
+.search-filters-section {
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 20px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .search-filters-section {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: nowrap;
+}
+
+/* Beautiful Search Box */
 .search-box {
   position: relative;
-  flex: 1 1 auto;
-  min-width: 200px;
+  flex: 1;
+  min-width: 300px;
+  max-width: 500px;
 }
 
 .search-box i {
   position: absolute;
-  left: 1rem;
+  left: 1.125rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #64748b;
-  font-size: 0.9rem;
+  color: #6b7280;
+  font-size: 1rem;
   z-index: 2;
 }
 
 [data-theme="dark"] .search-box i {
-  color: #94a3b8;
+  color: #9ca3af;
 }
 
-.form-input {
+.search-input {
   width: 100%;
-  padding: 0.875rem 1rem 0.875rem 2.75rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 500;
-  color: #1e293b;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 0.875rem 1.25rem 0.875rem 3rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.3s ease;
+  font-weight: 400;
+  color: #1f2937;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="dark"] .form-input {
-  background: rgba(55, 65, 81, 0.9);
-  border-color: rgba(75, 85, 99, 0.5);
-  color: #f3f4f6;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+[data-theme="dark"] .search-input {
+  background: rgba(55, 65, 81, 0.95);
+  border-color: rgba(75, 85, 99, 0.4);
+  color: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.form-input:focus {
+.search-input:focus {
   outline: none;
   border-color: #3b82f6;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08), 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="dark"] .form-input:focus {
-  background: rgba(55, 65, 81, 0.98);
+[data-theme="dark"] .search-input:focus {
+  background: rgba(55, 65, 81, 1);
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08), 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
-.form-input::placeholder {
-  color: #94a3b8;
+.search-input::placeholder {
+  color: #9ca3af;
   font-weight: 400;
 }
 
-[data-theme="dark"] .form-input::placeholder {
+[data-theme="dark"] .search-input::placeholder {
   color: #6b7280;
 }
 
-/* Filter Controls - Enhanced */
-.filter-controls {
+/* Inline Filters - Beautiful and Compact */
+.inline-filters {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-shrink: 0;
-  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 0.75rem 2.25rem 0.75rem 0.875rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  min-width: 120px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.875rem;
+  color: #374151;
+}
+
+[data-theme="dark"] .filter-select {
+  background: rgba(55, 65, 81, 0.95);
+  border-color: rgba(75, 85, 99, 0.4);
+  color: #f3f4f6;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.clear-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  border: 1.5px solid #f87171;
+  background: rgba(254, 242, 242, 0.8);
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+}
+
+[data-theme="dark"] .clear-btn {
+  background: rgba(127, 29, 29, 0.2);
+  border-color: #f87171;
+  color: #fca5a5;
+}
+
+.clear-btn:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #b91c1c;
+  transform: scale(1.05);
+}
+
+[data-theme="dark"] .clear-btn:hover {
+  background: rgba(127, 29, 29, 0.3);
+  border-color: #dc2626;
+  color: #f87171;
 }
 
 .form-select {
@@ -1312,78 +1487,74 @@ export default {
   background: linear-gradient(145deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
 }
 
-/* View Toggle - Enhanced */
+/* Compact View Toggle */
 .view-toggle {
   display: flex;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 [data-theme="dark"] .view-toggle {
-  background: rgba(55, 65, 81, 0.9);
-  border-color: rgba(75, 85, 99, 0.5);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: rgba(55, 65, 81, 0.95);
+  border-color: rgba(75, 85, 99, 0.4);
 }
 
-.view-btn-elegant {
-  padding: 0.875rem 1rem;
+.view-btn {
+  width: 2.5rem;
+  height: 2.5rem;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: #6b7280;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
   font-size: 0.875rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  min-width: 2.75rem;
 }
 
-[data-theme="dark"] .view-btn-elegant {
+[data-theme="dark"] .view-btn {
   color: #9ca3af;
 }
 
-.view-btn-elegant:hover:not(.active) {
-  background: rgba(59, 130, 246, 0.1);
+.view-btn:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.08);
   color: #3b82f6;
-  transform: translateY(-1px);
 }
 
-.view-btn-elegant.active {
-  background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%);
+.view-btn.active {
+  background: #3b82f6;
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-  transform: translateY(-1px);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .filters-section {
+  .search-filters-section {
     padding: 1rem;
   }
   
-  .filters-row {
-    gap: 0.5rem;
+  .search-row {
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
   
   .search-box {
-    min-width: 160px;
-    flex: 1 1 auto;
+    min-width: 100%;
+    order: 1;
   }
   
-  .form-select {
-    min-width: 100px;
-    max-width: 140px;
+  .inline-filters {
+    flex-wrap: wrap;
+    order: 2;
+    width: 100%;
+    gap: 0.5rem;
   }
   
-  .btn-outline-elegant {
-    padding: 0.875rem 0.75rem;
-    white-space: nowrap;
+  .filter-select {
+    flex: 1;
+    min-width: 110px;
   }
 }
 
@@ -1401,6 +1572,18 @@ export default {
   .filter-controls {
     flex: 1 1 100%;
     justify-content: space-between;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .filter-dropdowns {
+    width: 100%;
+  }
+  
+  .filter-actions {
+    width: 100%;
+    justify-content: space-between;
   }
   
   .form-select {
@@ -1408,6 +1591,103 @@ export default {
     min-width: 90px;
     max-width: none;
   }
+}
+
+/* Content Cards Dark Theme */
+.content-card {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .content-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+/* Participant Cards Light Theme */
+.participant-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.participant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Participant Cards Dark Theme Enhancement */
+[data-theme="dark"] .participant-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.9) 100%);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .participant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .participant-card h3 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .participant-card .participant-ndis,
+[data-theme="dark"] .participant-card .detail-row span {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .participant-avatar {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* List View Dark Theme */
+[data-theme="dark"] .participants-list .list-header {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border-bottom: 2px solid rgba(71, 85, 105, 0.3);
+}
+
+[data-theme="dark"] .participants-list .header-cell {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .participants-list .list-row {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.9) 100%);
+  border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+[data-theme="dark"] .participants-list .list-row:hover {
+  background: linear-gradient(135deg, rgba(51, 65, 85, 0.9) 0%, rgba(71, 85, 105, 0.9) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .participants-list .list-cell {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .user-info .name {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .user-info .email {
+  color: #94a3b8;
 }
 
 /* Care Plans specific styles */
@@ -1511,30 +1791,65 @@ export default {
   text-align: right;
 }
 
-/* Status badge colors */
+/* Status badge colors - Enhanced Dark Theme */
 .status-badge.active {
   background: rgba(16, 185, 129, 0.1);
   color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+[data-theme="dark"] .status-badge.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .status-badge.warning {
   background: rgba(245, 158, 11, 0.1);
   color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="dark"] .status-badge.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .status-badge.draft {
   background: rgba(107, 114, 128, 0.1);
   color: #4b5563;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+[data-theme="dark"] .status-badge.draft {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+  border: 1px solid rgba(107, 114, 128, 0.3);
 }
 
 .status-badge.expired {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="dark"] .status-badge.expired {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .status-badge.cancelled {
   background: rgba(156, 163, 175, 0.1);
   color: #6b7280;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+[data-theme="dark"] .status-badge.cancelled {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.3);
 }
 
 /* Plan type badge */
@@ -1567,11 +1882,154 @@ export default {
   color: #94a3b8;
 }
 
+/* Action Buttons Light Theme */
+.action-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  color: #64748b;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  backdrop-filter: blur(5px);
+}
+
+.action-btn:hover {
+  background: rgba(248, 250, 252, 0.95);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.view-btn:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.action-btn.edit-btn:hover {
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.action-btn.delete-btn:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
 /* Approve button */
 .action-btn.approve-btn:hover {
   border-color: #10b981;
   color: #10b981;
   background: rgba(16, 185, 129, 0.05);
+}
+
+/* Action Buttons Containers */
+.participant-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Action Buttons Dark Theme Enhancement */
+[data-theme="dark"] .action-btn {
+  background: rgba(51, 65, 85, 0.8);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  color: #cbd5e1;
+  transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .action-btn:hover {
+  background: rgba(71, 85, 105, 0.9);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #e2e8f0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .action-btn.edit-btn:hover {
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+}
+
+[data-theme="dark"] .action-btn.delete-btn:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="dark"] .action-btn.approve-btn:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+/* Modal Dark Theme Enhancement */
+[data-theme="dark"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 20px;
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+[data-theme="dark"] .modal-content {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(51, 65, 85, 0.98) 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .modal-header {
+  border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+[data-theme="dark"] .modal-header h3 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .close-btn {
+  color: #94a3b8;
+  background: rgba(51, 65, 85, 0.5);
+}
+
+[data-theme="dark"] .close-btn:hover {
+  color: #e2e8f0;
+  background: rgba(71, 85, 105, 0.8);
+}
+
+[data-theme="dark"] .form-section h4 {
+  color: #e2e8f0;
+  border-bottom-color: rgba(71, 85, 105, 0.3);
+}
+
+[data-theme="dark"] .goal-item {
+  background: rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(71, 85, 105, 0.3);
 }
 
 /* View modal specific styles */
@@ -1585,6 +2043,12 @@ export default {
   border-radius: 8px;
   color: #64748b;
   line-height: 1.6;
+}
+
+[data-theme="dark"] .description-text {
+  background: rgba(51, 65, 85, 0.5);
+  color: #cbd5e1;
+  border: 1px solid rgba(71, 85, 105, 0.3);
 }
 
 .goals-display {
@@ -1637,6 +2101,106 @@ export default {
   font-size: 0.875rem;
   line-height: 1.5;
   margin: 0;
+}
+
+/* Form Inputs Dark Theme */
+[data-theme="dark"] .form-input,
+[data-theme="dark"] textarea.form-input {
+  background: rgba(51, 65, 85, 0.8);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] textarea.form-input:focus {
+  background: rgba(51, 65, 85, 0.95);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .form-label {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .form-input::placeholder,
+[data-theme="dark"] textarea.form-input::placeholder {
+  color: #6b7280;
+}
+
+/* Goals Display Dark Theme */
+[data-theme="dark"] .goal-display-item {
+  background: rgba(51, 65, 85, 0.5);
+  border-left-color: #3b82f6;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+[data-theme="dark"] .goal-title {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .goal-description {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .goal-category-badge {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+/* Detail Sections Dark Theme */
+[data-theme="dark"] .detail-section h4 {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .detail-item .label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .detail-item .value {
+  color: #cbd5e1;
+}
+
+/* Pagination Dark Theme */
+[data-theme="dark"] .pagination-container {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagination-btn {
+  background: rgba(51, 65, 85, 0.8);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagination-btn:hover:not(:disabled) {
+  background: rgba(71, 85, 105, 0.9);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .pagination-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-color: #3b82f6;
+  color: white;
+}
+
+[data-theme="dark"] .pagination-btn:disabled {
+  background: rgba(31, 41, 55, 0.5);
+  border-color: rgba(55, 65, 81, 0.3);
+  color: #4b5563;
+}
+
+/* Empty State Dark Theme */
+[data-theme="dark"] .empty-state {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .empty-state h3 {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .empty-state i {
+  color: #6b7280;
 }
 
 /* Mobile Responsive Design */

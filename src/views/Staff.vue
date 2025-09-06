@@ -2,6 +2,7 @@
   <div class="participants-container">
     <!-- Header -->
     <div class="page-header">
+      <div class="page-header-shimmer" v-if="isLoading"></div>
       <div class="header-content">
         <h1>
           <i class="fas fa-user-nurse"></i>
@@ -1067,19 +1068,35 @@ export default {
 /* Import all the styles from Participants page */
 @import url('../assets/styles/participants-common.css');
 
+/* Override the background from common CSS */
+.participants-container {
+  background: none !important;
+}
+
+/* Override list header styling to match page theme */
+.list-header {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1f2937 !important;
+}
+
+[data-theme="dark"] .list-header {
+  background: rgba(31, 41, 55, 0.95) !important;
+  color: #f3f4f6 !important;
+}
+
 /* Enhanced Search Section - Responsive and Clean */
 .filters-section {
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(226, 232, 240, 0.8);
   backdrop-filter: blur(10px);
 }
 
 [data-theme="dark"] .filters-section {
-  background: linear-gradient(145deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%);
+  background: rgba(31, 41, 55, 0.95);
   border: 1px solid rgba(75, 85, 99, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
@@ -1354,44 +1371,70 @@ export default {
 }
 
 [data-theme="dark"] .participants-container {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #f3f4f6;
 }
 
 .page-header {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 12px;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
 }
 
 [data-theme="dark"] .page-header {
-  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
-  border: 1px solid rgba(75, 85, 99, 0.3);
+  background: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .header-content h1 {
-  color: #1f2937;
-  font-size: 2.25rem;
-  font-weight: 700;
-  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-[data-theme="dark"] .header-content h1 {
-  color: #f3f4f6;
+.header-content h1 i {
+  color: #667eea;
+  -webkit-text-fill-color: #667eea;
+  font-size: 1.5rem;
 }
+
 
 .header-content p {
-  color: #6b7280;
-  margin: 0.5rem 0 0 0;
+  font-size: 1.1rem;
+  color: rgba(107, 114, 128, 0.8);
+  margin: 0;
+  font-weight: 500;
 }
 
-[data-theme="dark"] .header-content p {
-  color: #9ca3af;
+.page-header-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* Stats Overview */
@@ -1399,14 +1442,14 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .stat-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   display: flex;
@@ -1415,7 +1458,7 @@ export default {
 }
 
 [data-theme="dark"] .stat-card {
-  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  background: rgba(31, 41, 55, 0.95);
   border: 1px solid rgba(75, 85, 99, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
@@ -1448,11 +1491,11 @@ export default {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  padding: 2rem;
+  padding: 1.25rem;
 }
 
 [data-theme="dark"] .content-card {
-  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  background: rgba(31, 41, 55, 0.95);
   border: 1px solid rgba(75, 85, 99, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
@@ -1541,7 +1584,7 @@ export default {
 
 .delete-confirmation h4 {
   font-size: 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   color: var(--text-dark);
 }
 
@@ -1606,7 +1649,7 @@ export default {
 .detail-section {
   background: rgba(0, 0, 0, 0.02);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .detail-section h4 {
@@ -1691,7 +1734,7 @@ export default {
   }
   
   .content-card {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
   
   /* List view mobile improvements */
