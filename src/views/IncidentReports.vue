@@ -72,7 +72,7 @@
             type="text" 
             placeholder="Search incident reports..." 
             class="form-input"
-            @input="filterItems"
+            @input="applyFilters"
           />
         </div>
         
@@ -427,6 +427,9 @@ export default {
       } catch (error) {
         console.error('Error loading incident reports:', error)
         showErrorNotification(error, 'Failed to load incident reports')
+        // Set empty state to prevent UI issues
+        incidentReports.value = []
+        pagination.value = null
       } finally {
         loading.value = false
       }
@@ -450,16 +453,30 @@ export default {
     }
 
     const refreshData = async () => {
-      await Promise.all([
-        loadIncidentReports(),
-        loadStats(),
-        loadParticipants()
-      ])
+      try {
+        // Load essential data first (incident reports)
+        await loadIncidentReports()
+        
+        // Load secondary data in parallel but don't block main content
+        Promise.all([
+          loadStats().catch(err => console.warn('Stats loading failed:', err)),
+          loadParticipants().catch(err => console.warn('Participants loading failed:', err))
+        ])
+      } catch (error) {
+        console.error('Error refreshing data:', error)
+      }
     }
 
+    // Debounced filter application to prevent excessive API calls
+    let filterTimeout = null
     const applyFilters = () => {
-      filters.value.page = 1
-      loadIncidentReports()
+      if (filterTimeout) {
+        clearTimeout(filterTimeout)
+      }
+      filterTimeout = setTimeout(() => {
+        filters.value.page = 1
+        loadIncidentReports()
+      }, 300)
     }
 
     const changePage = (page) => {
@@ -552,9 +569,11 @@ export default {
       return statusItem?.count || 0
     }
     
-    // New methods for search and filtering
-    const filterItems = () => {
-      // This is handled by computed property filteredIncidentReports
+    // Cleanup function for debouncing
+    const cleanup = () => {
+      if (filterTimeout) {
+        clearTimeout(filterTimeout)
+      }
     }
     
     const clearFilters = () => {
@@ -606,8 +625,8 @@ export default {
       editReport,
       handleReportCreated,
       handleReportUpdated,
-      filterItems,
       clearFilters,
+      cleanup,
       
       // Utilities
       formatDate,

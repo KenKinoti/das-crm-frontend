@@ -2060,5 +2060,4 @@ export default {
 [data-theme="dark"] .file-size {
   color: #9ca3af;
 }
-}
 </style>

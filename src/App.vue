@@ -196,7 +196,14 @@ export default {
         console.log('🔄 App mounted: Restoring last route:', lastRoute)
         this.$router.push(lastRoute)
       } else if (storedToken) {
-        this.$router.push('/dashboard')
+        // Set default landing page based on user role
+        if (this.authStore.user?.role === 'support_coordinator') {
+          this.$router.push('/care-plans')
+        } else if (this.authStore.user?.role === 'care_worker') {
+          this.$router.push('/scheduling')
+        } else {
+          this.$router.push('/dashboard')
+        }
       } else {
         this.$router.push('/login')
       }

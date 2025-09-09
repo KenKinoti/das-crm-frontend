@@ -50,6 +50,8 @@ const routes = [
       let defaultRoute = '/dashboard'
       if (userRole === 'care_worker') {
         defaultRoute = '/availability'
+      } else if (userRole === 'support_coordinator') {
+        defaultRoute = '/care-plans'
       }
       
       return lastRoute || defaultRoute
@@ -61,7 +63,7 @@ const routes = [
     component: Dashboard,
     meta: { 
       requiresAuth: true,
-      requiredRoles: ['super_admin', 'admin', 'manager', 'support_coordinator']
+      requiredRoles: ['super_admin', 'admin', 'manager']
     }
   },
   {
@@ -237,9 +239,11 @@ router.beforeEach(async (to, from, next) => {
       
       if (!hasRequiredRole) {
         console.log(`Role access denied. Required: ${to.meta.requiredRoles.join(', ')}, User role: ${userRole}`)
-        // Redirect care workers to scheduling page instead of dashboard
+        // Redirect to appropriate page based on role
         if (userRole === 'care_worker') {
           next('/scheduling')
+        } else if (userRole === 'support_coordinator') {
+          next('/care-plans')
         } else {
           next('/participants')
         }
@@ -256,7 +260,16 @@ router.beforeEach(async (to, from, next) => {
   if (to.name === 'Login') {
     // If already authenticated, redirect away from login
     if (authStore.token && authStore.user) {
-      const lastRoute = localStorage.getItem('lastRoute') || '/dashboard'
+      let defaultRoute = '/dashboard'
+      const userRole = authStore.user?.role
+      
+      if (userRole === 'care_worker') {
+        defaultRoute = '/availability'
+      } else if (userRole === 'support_coordinator') {
+        defaultRoute = '/care-plans'
+      }
+      
+      const lastRoute = localStorage.getItem('lastRoute') || defaultRoute
       console.log('Already authenticated, redirecting to:', lastRoute)
       next(lastRoute)
       return

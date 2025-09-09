@@ -5,6 +5,10 @@ export const participantsService = {
     return api.get('/participants', { params })
   },
 
+  getParticipants(params = {}) {
+    return api.get('/participants', { params })
+  },
+
   getById(id) {
     return api.get(`/participants/${id}`)
   },
@@ -23,3 +27,7 @@ export const participantsService = {
     return api.delete(`/participants/${id}`)
   }
 }
+
+// Export as default as well for compatibility
+const participantsAPI = participantsService
+export default participantsAPI

@@ -1,80 +1,92 @@
 <template>
-  <div class="care-plans-container">
-    <!-- Header -->
+  <div class="container-fluid">
+    <!-- Add glassmorphism background overlay -->
+    <div class="page-overlay"></div>
+    
+    <!-- Page Header -->
     <div class="page-header">
-      <div class="page-header-shimmer" v-if="isLoading"></div>
       <div class="header-content">
         <h1>
           <i class="fas fa-clipboard-list"></i>
-          Care Plans Management
+          Care Plans
         </h1>
         <p>Manage participant care plans, approvals, and service objectives</p>
       </div>
-      <button @click="showAddModal = true" class="btn btn-primary">
+      <button 
+        class="btn btn-shift"
+        @click="showAddModal = true"
+      >
         <i class="fas fa-plus"></i>
         Create Care Plan
       </button>
     </div>
 
-    <!-- Stats Overview -->
-    <div class="stats-overview">
-      <div class="stat-card info">
-        <div class="stat-icon info-icon">
+    <!-- Stats Row -->
+    <div class="stats-row-inline" v-if="stats">
+      <div class="stat-card-inline">
+        <div class="stat-icon-ribbon primary">
           <i class="fas fa-clipboard-check"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ activePlans.length }}</h3>
-          <p>Active Plans</p>
+        <div class="stat-content-small">
+          <div class="stat-number-small">{{ activePlans.length }}</div>
+          <div class="stat-label-small">Active Plans</div>
         </div>
       </div>
-      
-      <div class="stat-card warning">
-        <div class="stat-icon warning-icon">
+      <div class="stat-card-inline">
+        <div class="stat-icon-ribbon warning">
           <i class="fas fa-clock"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ pendingApproval.length }}</h3>
-          <p>Pending Approval</p>
+        <div class="stat-content-small">
+          <div class="stat-number-small">{{ pendingApproval.length }}</div>
+          <div class="stat-label-small">Pending Approval</div>
         </div>
       </div>
-      
-      <div class="stat-card info">
-        <div class="stat-icon info-icon">
+      <div class="stat-card-inline">
+        <div class="stat-icon-ribbon info">
           <i class="fas fa-calendar-alt"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ expiringPlans.length }}</h3>
-          <p>Expiring Soon</p>
+        <div class="stat-content-small">
+          <div class="stat-number-small">{{ expiringPlans.length }}</div>
+          <div class="stat-label-small">Expiring Soon</div>
         </div>
       </div>
-      
-      <div class="stat-card success">
-        <div class="stat-icon success-icon">
+      <div class="stat-card-inline">
+        <div class="stat-icon-ribbon success">
           <i class="fas fa-chart-line"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ completionRate }}%</h3>
-          <p>Completion Rate</p>
+        <div class="stat-content-small">
+          <div class="stat-number-small">{{ completionRate }}%</div>
+          <div class="stat-label-small">Completion Rate</div>
         </div>
       </div>
     </div>
 
     <!-- Search and Filters -->
-    <div class="search-filters-section">
-      <div class="search-row">
+    <div class="filters-section" :class="{ minimized: filtersMinimized }">
+      <div class="filters-header">
+        <h4 class="filters-title">
+          <i class="fas fa-search"></i>
+          Search & Filters
+        </h4>
+        <button @click="filtersMinimized = !filtersMinimized" class="btn-minimize" :title="filtersMinimized ? 'Expand Filters' : 'Minimize Filters'">
+          <i :class="filtersMinimized ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
+        </button>
+      </div>
+      <div v-show="!filtersMinimized" class="filters-row">
         <div class="search-box">
           <i class="fas fa-search"></i>
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="Search care plans, participants, or plan IDs..." 
-            class="search-input"
+            placeholder="Search care plans..." 
+            class="form-input"
             @input="filterPlans"
           />
         </div>
         
-        <div class="inline-filters">
-          <select v-model="statusFilter" @change="filterPlans" class="filter-select">
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+          <select v-model="statusFilter" @change="filterPlans" class="form-select">
             <option value="">All Status</option>
             <option value="active">Active Plans</option>
             <option value="pending_approval">Pending Approval</option>
@@ -83,31 +95,33 @@
             <option value="cancelled">Cancelled Plans</option>
           </select>
           
-          <select v-model="participantFilter" @change="filterPlans" class="filter-select">
+          <select v-model="participantFilter" @change="filterPlans" class="form-select">
             <option value="">All Participants</option>
             <option v-for="participant in participants" :key="participant.id" :value="participant.id">
               {{ participant.first_name }} {{ participant.last_name }}
             </option>
           </select>
           
-          <button @click="clearFilters" class="clear-btn" title="Clear filters">
+          <button @click="clearFilters" class="btn btn-outline-elegant" title="Clear">
             <i class="fas fa-times"></i>
+            Clear
           </button>
           
+          <!-- View Toggle -->
           <div class="view-toggle">
             <button 
-              @click="currentView = 'list'" 
-              :class="['view-btn', { active: currentView === 'list' }]"
-              title="List View"
-            >
-              <i class="fas fa-list"></i>
-            </button>
-            <button 
               @click="currentView = 'grid'" 
-              :class="['view-btn', { active: currentView === 'grid' }]"
+              :class="['view-btn-elegant', { active: currentView === 'grid' }]"
               title="Grid View"
             >
               <i class="fas fa-th"></i>
+            </button>
+            <button 
+              @click="currentView = 'list'" 
+              :class="['view-btn-elegant', { active: currentView === 'list' }]"
+              title="List View"
+            >
+              <i class="fas fa-list"></i>
             </button>
           </div>
         </div>
@@ -718,6 +732,7 @@ export default {
       statusFilter: '',
       participantFilter: '',
       currentView: 'grid',
+      filtersMinimized: true,
       showAddModal: false,
       showEditModal: false,
       showDeleteModal: false,
@@ -746,6 +761,16 @@ export default {
     ...mapState(useCarePlansStore, ['carePlans', 'isLoading']),
     ...mapGetters(useCarePlansStore, ['activePlans', 'pendingApproval']),
     ...mapState(useParticipantsStore, { participants: 'participants' }),
+    
+    // Stats object for template compatibility
+    stats() {
+      return {
+        active_plans: this.activePlans.length,
+        pending_approval: this.pendingApproval.length,
+        expiring_soon: this.expiringPlans.length,
+        completion_rate: this.completionRate
+      }
+    },
     
     // Expiring plans (within next month)
     expiringPlans() {
@@ -1125,6 +1150,677 @@ export default {
 </script>
 
 <style scoped>
+/* Import shared styles for consistent layout */
+@import url('../assets/styles/participants-common.css');
+
+.container-fluid {
+  position: relative;
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+.page-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(249, 250, 251, 0.95) 0%, 
+    rgba(243, 244, 246, 0.9) 50%, 
+    rgba(249, 250, 251, 0.95) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="dark"] .page-overlay {
+  background: linear-gradient(135deg, 
+    rgba(17, 24, 39, 0.95) 0%, 
+    rgba(31, 41, 55, 0.9) 50%, 
+    rgba(17, 24, 39, 0.95) 100%);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .page-header {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+}
+
+.header-content h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+[data-theme="dark"] .header-content h1 {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-content h1 i {
+  color: #667eea;
+  -webkit-text-fill-color: #667eea;
+  font-size: 1.5rem;
+}
+
+[data-theme="dark"] .header-content h1 i {
+  color: #8b5cf6;
+  -webkit-text-fill-color: #8b5cf6;
+}
+
+.header-content p {
+  font-size: 1.1rem;
+  color: rgba(107, 114, 128, 0.8);
+  margin: 0;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .header-content p {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+
+/* Filters Section - Exact Care Notes Design */
+.filters-section {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .filters-section {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filters-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[data-theme="dark"] .filters-title {
+  color: #f3f4f6;
+}
+
+.btn-minimize {
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.btn-minimize:hover {
+  background: rgba(107, 114, 128, 0.2);
+  border-color: rgba(107, 114, 128, 0.5);
+  color: #374151;
+}
+
+[data-theme="dark"] .btn-minimize {
+  background: rgba(55, 65, 81, 0.5);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .btn-minimize:hover {
+  background: rgba(55, 65, 81, 0.7);
+  border-color: rgba(75, 85, 99, 0.7);
+  color: #d1d5db;
+}
+
+.filters-section.minimized {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.filters-section.minimized .filters-header {
+  margin-bottom: 0;
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.25rem 0;
+  transition: all 0.3s ease;
+}
+
+.search-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 0.9rem;
+  z-index: 2;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #374151;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+[data-theme="dark"] .form-input {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #f1f5f9;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .form-input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  background: rgba(30, 41, 59, 0.95);
+}
+
+[data-theme="dark"] .search-box i {
+  color: #94a3b8;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.form-select {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #374151;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  min-width: 96px;
+  max-width: 96px;
+  backdrop-filter: blur(10px);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+[data-theme="dark"] .form-select {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #f1f5f9;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .form-select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  background: rgba(30, 41, 59, 0.95);
+}
+
+[data-theme="dark"] .form-select option {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.view-toggle {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.view-btn-elegant {
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  padding: 0.65rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-btn-elegant:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.view-btn-elegant.active {
+  background: #667eea;
+  color: white;
+}
+
+[data-theme="dark"] .view-toggle {
+  border-color: rgba(100, 116, 139, 0.4);
+  background: rgba(30, 41, 59, 0.8);
+}
+
+[data-theme="dark"] .view-btn-elegant {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .view-btn-elegant:hover {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+[data-theme="dark"] .view-btn-elegant.active {
+  background: #8b5cf6;
+  color: white;
+}
+
+/* Stats Row - Grid Layout to match scheduling page */
+.stats-row-inline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card-inline {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(10px);
+  min-height: 80px;
+}
+
+.stat-card-inline:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .stat-card-inline {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.8) 100%);
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+}
+
+[data-theme="dark"] .stat-card-inline:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+/* Ribbon-style stat icons to match scheduling page */
+.stat-icon-ribbon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-icon-ribbon.primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.stat-icon-ribbon.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.stat-icon-ribbon.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.stat-icon-ribbon.info {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.stat-content-small {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-number-small {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+  margin-bottom: 0.125rem;
+}
+
+[data-theme="dark"] .stat-number-small {
+  color: #f1f5f9;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label-small {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .stat-label-small {
+  color: #94a3b8;
+}
+
+/* Stats Row - Original Grid Layout (keep for reference) */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(10px);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .stat-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.8) 100%);
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+[data-theme="dark"] .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.stat-icon.success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.stat-icon.warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.stat-icon.info {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1f2937;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .stat-number {
+  color: #f1f5f9;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .stat-label {
+  color: #94a3b8;
+}
+
+/* Content Card */
+.content-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .content-card {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Loading and Empty States */
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+}
+
+[data-theme="dark"] .loading-state,
+[data-theme="dark"] .empty-state {
+  color: #94a3b8;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-left-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+[data-theme="dark"] .loading-spinner {
+  border-color: rgba(75, 85, 99, 0.3);
+  border-left-color: #8b5cf6;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-state i {
+  font-size: 4rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+[data-theme="dark"] .empty-state i {
+  color: #64748b;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+[data-theme="dark"] .empty-state h3 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .empty-state p {
+  color: #94a3b8;
+}
+
+/* Buttons */
+.btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.btn-shift {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
+}
+
+.btn-shift:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-outline-elegant {
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+}
+
+.btn-outline-elegant:hover {
+  background: rgba(107, 114, 128, 0.1);
+  color: #374151;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+/* Dark Theme Buttons */
+[data-theme="dark"] .btn-shift {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+}
+
+[data-theme="dark"] .btn-shift:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+  box-shadow: 0 8px 28px rgba(139, 92, 246, 0.5);
+}
+
+[data-theme="dark"] .btn-outline-elegant {
+  background: rgba(55, 65, 81, 0.5);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-outline-elegant:hover {
+  background: rgba(55, 65, 81, 0.7);
+  border-color: rgba(75, 85, 99, 0.7);
+  color: #d1d5db;
+  transform: translateY(-1px);
+}
+
 /* Import all the styles from Participants page */
 @import url('../assets/styles/participants-common.css');
 
@@ -1236,6 +1932,27 @@ export default {
   color: #cbd5e1;
 }
 
+/* Dark theme ribbon icon styles */
+[data-theme="dark"] .stat-icon-ribbon {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+[data-theme="dark"] .stat-icon-ribbon.primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+[data-theme="dark"] .stat-icon-ribbon.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+[data-theme="dark"] .stat-icon-ribbon.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+[data-theme="dark"] .stat-icon-ribbon.info {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
 [data-theme="dark"] .stat-icon {
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
@@ -1270,8 +1987,8 @@ export default {
 .search-box {
   position: relative;
   flex: 1;
-  min-width: 300px;
-  max-width: 500px;
+  min-width: 240px;
+  max-width: 400px;
 }
 
 .search-box i {
@@ -1404,7 +2121,7 @@ export default {
 }
 
 .form-select {
-  padding: 0.875rem 2.5rem 0.875rem 1rem;
+  padding: 0.65rem 2.5rem 0.65rem 0.75rem;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -1412,8 +2129,8 @@ export default {
   backdrop-filter: blur(10px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
-  min-width: 120px;
-  max-width: 180px;
+  min-width: 96px;
+  max-width: 96px;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
@@ -1452,7 +2169,7 @@ export default {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
   border: 2px solid #e2e8f0;
   color: #64748b;
-  padding: 0.875rem 1.125rem;
+  padding: 0.65rem 1rem;
   border-radius: 12px;
   font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2201,6 +2918,39 @@ export default {
 
 [data-theme="dark"] .empty-state i {
   color: #6b7280;
+}
+
+/* Stats Row Responsive - Match Scheduling Page */
+@media (max-width: 992px) and (min-width: 769px) {
+  .stats-row-inline {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-row-inline {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .stat-card-inline {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-row-inline {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .stat-card-inline {
+    padding: 0.75rem 1rem;
+  }
+  .stat-icon-ribbon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
 }
 
 /* Mobile Responsive Design */

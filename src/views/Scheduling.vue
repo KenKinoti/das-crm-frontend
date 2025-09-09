@@ -2204,10 +2204,11 @@ export default {
 }
 
 .filters-header {
-  display: flex;
-  justify-content: space-between;
+  display: flex !important;
+  justify-content: space-between !important;
   align-items: center;
   margin-bottom: 1rem;
+  width: 100%;
 }
 
 .filters-title {
@@ -2236,6 +2237,8 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
 }
 
 .btn-minimize:hover {
@@ -2280,8 +2283,8 @@ export default {
 .search-box {
   position: relative;
   flex: 1 1 auto;
-  min-width: 200px;
-  max-width: 300px;
+  min-width: 160px;
+  max-width: 240px;
 }
 
 .search-box i {
@@ -2300,7 +2303,7 @@ export default {
 
 .form-input {
   width: 100%;
-  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  padding: 0.65rem 0.75rem 0.65rem 2.75rem;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -2325,7 +2328,7 @@ export default {
 }
 
 .form-select {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 2.5rem 0.65rem 0.75rem;
   border: 2px solid rgba(0, 0, 0, 0.08);
   border-radius: 10px;
   font-size: 0.875rem;
@@ -2333,13 +2336,22 @@ export default {
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
   font-weight: 500;
-  min-width: 140px;
+  min-width: 96px;
+  max-width: 96px;
+  cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  padding-right: 40px;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
+[data-theme="dark"] .form-select {
+  background: rgba(55, 65, 81, 0.9);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .form-select:focus {
@@ -2350,11 +2362,17 @@ export default {
   transform: translateY(-1px);
 }
 
+[data-theme="dark"] .form-select:focus {
+  background-color: rgba(55, 65, 81, 0.98);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .btn-outline-elegant {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
   border: 2px solid rgba(0, 0, 0, 0.08);
   color: #4a5568;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 1rem;
   border-radius: 10px;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -2380,7 +2398,7 @@ export default {
 }
 
 .view-btn-elegant {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.8rem;
   border: none;
   background: transparent;
   color: #6b7280;
@@ -2888,13 +2906,31 @@ export default {
 /* Filter controls now use global styles for consistency */
 .filter-controls input,
 .filter-controls select {
-  padding: 6px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  min-width: 120px;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
+  padding: 0.65rem 2.5rem 0.65rem 0.75rem;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  min-width: 96px;
+  max-width: 96px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
   margin: 0;
+}
+
+[data-theme="dark"] .filter-controls select {
+  background: rgba(55, 65, 81, 0.9);
+  border-color: rgba(75, 85, 99, 0.5);
+  color: #f3f4f6;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .view-toggle {

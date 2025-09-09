@@ -10,6 +10,15 @@ export const usersService = {
     }
   },
 
+  async getUsers(params = {}) {
+    try {
+      const response = await api.get('/users', { params })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
   async getById(id) {
     try {
       const response = await api.get(`/users/${id}`)
@@ -70,3 +79,7 @@ export const userService = {
   updateUser: (id, data) => usersService.update(id, data),
   getSupportedTimezones: () => usersService.getSupportedTimezones()
 }
+
+// Export as default for compatibility
+const usersAPI = usersService
+export default usersAPI

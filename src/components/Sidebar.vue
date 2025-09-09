@@ -141,11 +141,14 @@ export default {
       this.$emit('navigate', page)
     },
     goToDashboard() {
-      // Only navigate to dashboard if user has permission
+      // Navigate to appropriate landing page based on role
       if (this.permissionsStore.canViewDashboard) {
         this.$emit('navigate', 'dashboard')
+      } else if (this.permissionsStore.isSupportCoordinator) {
+        // Support coordinators default to care plans
+        this.$emit('navigate', 'care-plans')
       } else {
-        // Redirect care workers to their main page (scheduling)
+        // Care workers and others go to scheduling
         this.$emit('navigate', 'scheduling')
       }
     }
