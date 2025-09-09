@@ -15,8 +15,10 @@ const Settings = () => import('../views/Settings.vue')
 const Profile = () => import('../views/Profile.vue')
 const SuperAdmin = () => import('../views/SuperAdmin.vue')
 const CarePlans = () => import('../views/CarePlans.vue')
+const CareNotes = () => import('../views/CareNotes.vue')
 const Database = () => import('../views/Database.vue')
 const Availability = () => import('../views/Availability.vue')
+const IncidentReports = () => import('../views/IncidentReports.vue')
 
 const routes = [
   {
@@ -105,6 +107,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/care-notes',
+    name: 'CareNotes',
+    component: CareNotes,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: Settings,
@@ -135,6 +143,15 @@ const routes = [
     meta: { 
       requiresAuth: true,
       requiredRoles: ['care_worker']
+    }
+  },
+  {
+    path: '/incident-reports',
+    name: 'IncidentReports',
+    component: IncidentReports,
+    meta: { 
+      requiresAuth: true,
+      requiredRoles: ['support_coordinator', 'admin', 'manager', 'care_worker']
     }
   }
 ]

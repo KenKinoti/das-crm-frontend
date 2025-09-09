@@ -73,7 +73,19 @@ export const PERMISSIONS = {
   VIEW_OWN_AVAILABILITY: 'view_own_availability',
   MANAGE_OWN_AVAILABILITY: 'manage_own_availability',
   VIEW_ALL_AVAILABILITY: 'view_all_availability',
-  MANAGE_ALL_AVAILABILITY: 'manage_all_availability'
+  MANAGE_ALL_AVAILABILITY: 'manage_all_availability',
+  
+  // Incident Reports
+  VIEW_INCIDENT_REPORTS: 'view_incident_reports',
+  CREATE_INCIDENT_REPORTS: 'create_incident_reports',
+  EDIT_INCIDENT_REPORTS: 'edit_incident_reports',
+  REVIEW_INCIDENT_REPORTS: 'review_incident_reports',
+
+  // Care Notes
+  VIEW_CARE_NOTES: 'view_care_notes',
+  CREATE_CARE_NOTES: 'create_care_notes',
+  EDIT_CARE_NOTES: 'edit_care_notes',
+  DELETE_CARE_NOTES: 'delete_care_notes'
 }
 
 // Define manager permissions first
@@ -111,7 +123,15 @@ const MANAGER_PERMISSIONS = [
   PERMISSIONS.EXPORT_REPORTS,
   PERMISSIONS.VIEW_SETTINGS,
   PERMISSIONS.EDIT_SETTINGS,
-  PERMISSIONS.EDIT_ORGANIZATION_SETTINGS
+  PERMISSIONS.EDIT_ORGANIZATION_SETTINGS,
+  PERMISSIONS.VIEW_INCIDENT_REPORTS,
+  PERMISSIONS.CREATE_INCIDENT_REPORTS,
+  PERMISSIONS.EDIT_INCIDENT_REPORTS,
+  PERMISSIONS.REVIEW_INCIDENT_REPORTS,
+  PERMISSIONS.VIEW_CARE_NOTES,
+  PERMISSIONS.CREATE_CARE_NOTES,
+  PERMISSIONS.EDIT_CARE_NOTES,
+  PERMISSIONS.DELETE_CARE_NOTES
 ]
 
 // Define permissions for each role
@@ -138,7 +158,14 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CANCEL_SHIFTS,
     PERMISSIONS.VIEW_DOCUMENTS,
     PERMISSIONS.VIEW_REPORTS,
-    PERMISSIONS.VIEW_SETTINGS
+    PERMISSIONS.VIEW_SETTINGS,
+    PERMISSIONS.VIEW_INCIDENT_REPORTS,
+    PERMISSIONS.CREATE_INCIDENT_REPORTS,
+    PERMISSIONS.EDIT_INCIDENT_REPORTS,
+    PERMISSIONS.REVIEW_INCIDENT_REPORTS,
+    PERMISSIONS.VIEW_CARE_NOTES,
+    PERMISSIONS.CREATE_CARE_NOTES,
+    PERMISSIONS.EDIT_CARE_NOTES
   ],
   
   [ROLES.CARE_WORKER]: [
@@ -147,7 +174,12 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.COMPLETE_SHIFTS,
     PERMISSIONS.VIEW_SETTINGS,
     PERMISSIONS.MANAGE_OWN_AVAILABILITY,
-    PERMISSIONS.VIEW_OWN_AVAILABILITY
+    PERMISSIONS.VIEW_OWN_AVAILABILITY,
+    PERMISSIONS.VIEW_INCIDENT_REPORTS,
+    PERMISSIONS.CREATE_INCIDENT_REPORTS,
+    PERMISSIONS.VIEW_CARE_NOTES,
+    PERMISSIONS.CREATE_CARE_NOTES,
+    PERMISSIONS.EDIT_CARE_NOTES
   ],
   
   // Legacy admin role - treat as manager
@@ -156,23 +188,23 @@ export const ROLE_PERMISSIONS = {
 
 // Define manager navigation first
 const MANAGER_NAVIGATION = [
-  'dashboard', 'participants', 'staff', 'scheduling', 'care-plans', 'documents', 'billing', 'reports', 'settings'
+  'dashboard', 'participants', 'staff', 'scheduling', 'care-plans', 'care-notes', 'documents', 'billing', 'reports', 'incident-reports', 'settings'
 ]
 
 // Navigation items that should be visible for each role
 export const ROLE_NAVIGATION = {
   [ROLES.SUPER_ADMIN]: [
-    'dashboard', 'participants', 'staff', 'scheduling', 'care-plans', 'documents', 'billing', 'reports', 'settings', 'superadmin'
+    'dashboard', 'participants', 'staff', 'scheduling', 'care-plans', 'care-notes', 'documents', 'billing', 'reports', 'incident-reports', 'settings', 'superadmin'
   ],
   
   [ROLES.MANAGER]: MANAGER_NAVIGATION,
   
   [ROLES.SUPPORT_COORDINATOR]: [
-    'dashboard', 'participants', 'scheduling', 'care-plans', 'documents', 'reports', 'settings'
+    'dashboard', 'participants', 'scheduling', 'care-plans', 'care-notes', 'documents', 'reports', 'incident-reports', 'settings'
   ],
   
   [ROLES.CARE_WORKER]: [
-    'availability', 'scheduling', 'settings'
+    'availability', 'scheduling', 'care-notes', 'incident-reports', 'settings'
   ],
   
   [ROLES.ADMIN]: MANAGER_NAVIGATION

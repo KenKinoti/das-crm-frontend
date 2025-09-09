@@ -170,6 +170,34 @@ export const usePermissionsStore = defineStore('permissions', {
       return this.permissionService?.isCareWorker() || false
     },
     
+    // Incident Reports permissions
+    canViewIncidentReports() {
+      return this.permissionService?.hasPermission(PERMISSIONS.VIEW_INCIDENT_REPORTS) || false
+    },
+    canCreateIncidentReports() {
+      return this.permissionService?.hasPermission(PERMISSIONS.CREATE_INCIDENT_REPORTS) || false
+    },
+    canEditIncidentReports() {
+      return this.permissionService?.hasPermission(PERMISSIONS.EDIT_INCIDENT_REPORTS) || false
+    },
+    canReviewIncidentReports() {
+      return this.permissionService?.hasPermission(PERMISSIONS.REVIEW_INCIDENT_REPORTS) || false
+    },
+    
+    // Care Notes permissions
+    canViewCareNotes() {
+      return this.permissionService?.hasPermission(PERMISSIONS.VIEW_CARE_NOTES) || false
+    },
+    canCreateCareNotes() {
+      return this.permissionService?.hasPermission(PERMISSIONS.CREATE_CARE_NOTES) || false
+    },
+    canEditCareNotes() {
+      return this.permissionService?.hasPermission(PERMISSIONS.EDIT_CARE_NOTES) || false
+    },
+    canDeleteCareNotes() {
+      return this.permissionService?.hasPermission(PERMISSIONS.DELETE_CARE_NOTES) || false
+    },
+    
     // Navigation visibility
     visibleNavigation() {
       return this.permissionService?.getVisibleNavigation() || []

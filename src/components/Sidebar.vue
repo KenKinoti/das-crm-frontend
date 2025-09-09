@@ -46,6 +46,12 @@
           Care Plans
         </a>
       </div>
+      <div v-if="visibleNavigation.includes('care-notes')" class="nav-item">
+        <a href="#" class="nav-link" :class="{ active: currentPage === 'care-notes' || currentPage === 'carenotes' }" @click.prevent="navigate('care-notes')">
+          <i class="fas fa-sticky-note nav-icon"></i>
+          Care Notes
+        </a>
+      </div>
       <div v-if="visibleNavigation.includes('documents')" class="nav-item">
         <a href="#" class="nav-link" :class="{ active: currentPage === 'documents' }" @click.prevent="navigate('documents')">
           <i class="fas fa-file-medical nav-icon"></i>
@@ -62,6 +68,12 @@
         <a href="#" class="nav-link" :class="{ active: currentPage === 'reports' }" @click.prevent="navigate('reports')">
           <i class="fas fa-chart-bar nav-icon"></i>
           Reports
+        </a>
+      </div>
+      <div v-if="visibleNavigation.includes('incident-reports')" class="nav-item">
+        <a href="#" class="nav-link" :class="{ active: currentPage === 'incident-reports' }" @click.prevent="navigate('incident-reports')">
+          <i class="fas fa-exclamation-triangle nav-icon"></i>
+          Incident Reports
         </a>
       </div>
       <div v-if="visibleNavigation.includes('settings')" class="nav-item">
