@@ -208,8 +208,15 @@ export default {
     selectOrganization(organization) {
       this.orgContextStore.setCurrentOrganization(organization)
       this.showOrgDropdown = false
-      // Optionally emit event for parent components to react to org change
+      
+      // Emit event for parent components to react to org change
       this.$emit('organization-changed', organization)
+      
+      // Trigger a page reload to refresh all data with new organization filter
+      // This ensures all components get updated data
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
     },
     
     handleSearch() {

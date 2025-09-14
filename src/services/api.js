@@ -20,6 +20,7 @@
 
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
+import { useOrganizationContextStore } from '../stores/organizationContext'
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -59,13 +60,33 @@ export const login = async (email, password) => {
   }
 }
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and organization filtering
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // Add organization filtering for super admin
+    try {
+      const authStore = useAuthStore()
+      const orgContextStore = useOrganizationContextStore()
+      
+      // Only add organization filter for super admins when they have selected a specific org
+      if (authStore.isSuperAdmin && orgContextStore.currentOrgId) {
+        // Add organization_id as a query parameter for GET requests
+        if (config.method === 'get') {
+          config.params = config.params || {}
+          config.params.organization_id = orgContextStore.currentOrgId
+        }
+        // Add organization_id as a header for all requests
+        config.headers['X-Organization-ID'] = orgContextStore.currentOrgId
+      }
+    } catch (error) {
+      console.warn('Error adding organization filter to request:', error)
+    }
+    
     return config
   },
   (error) => {
