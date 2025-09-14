@@ -466,6 +466,14 @@ export default {
     })
     console.log('🚀 LOGIN DEBUG: Available test emails:', ['admin@dasyin.com.au', 'kennedy@dasyin.com.au', 'manager@dasyin.com.au', 'coordinator@dasyin.com.au'])
     
+    // Check if user was redirected due to inactivity
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('reason') === 'inactivity') {
+      this.error = 'Your session expired due to inactivity. Please sign in again.'
+      // Remove the query parameter from URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+    
     // Initialize theme from localStorage or default to light
     const savedTheme = localStorage.getItem('theme') || 'light'
     this.isDarkMode = savedTheme === 'dark'

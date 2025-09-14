@@ -69,6 +69,9 @@
       @cancel="handleModalCancel"
       @close="handleModalClose"
     />
+
+    <!-- Inactivity Warning Component -->
+    <InactivityWarning />
   </div>
 </template>
 
@@ -76,6 +79,7 @@
 import Sidebar from './components/Sidebar.vue'
 import Header from './components/Header.vue'
 import ModalNotification from './components/ModalNotification.vue'
+import InactivityWarning from './components/InactivityWarning.vue'
 import { useAuthStore } from './stores/auth'
 import { useModalStore } from './stores/modal'
 
@@ -84,7 +88,8 @@ export default {
   components: {
     Sidebar,
     Header,
-    ModalNotification
+    ModalNotification,
+    InactivityWarning
   },
   data() {
     return {
@@ -162,6 +167,36 @@ export default {
     },
     handleModalClose() {
       this.modalStore.closeModal(null)
+    },
+
+    // Handle user activity to reset inactivity timer
+    handleUserActivity() {
+      if (this.authStore.isAuthenticated) {
+        this.authStore.resetInactivityTimer()
+      }
+    },
+
+    // Throttled version of handleUserActivity to avoid excessive calls
+    throttledActivityHandler: null,
+
+    // Throttle utility function
+    throttle(func, delay) {
+      let timeoutId
+      let lastExecTime = 0
+      return function (...args) {
+        const currentTime = Date.now()
+        
+        if (currentTime - lastExecTime > delay) {
+          func.apply(this, args)
+          lastExecTime = currentTime
+        } else {
+          clearTimeout(timeoutId)
+          timeoutId = setTimeout(() => {
+            func.apply(this, args)
+            lastExecTime = Date.now()
+          }, delay - (currentTime - lastExecTime))
+        }
+      }
     }
   },
   watch: {
@@ -212,6 +247,15 @@ export default {
 
     console.log('🚀 App mounted on route:', this.$route.path)
 
+    // Set up throttled activity handler for performance
+    this.throttledActivityHandler = this.throttle(this.handleUserActivity, 1000)
+    
+    // Add event listeners for user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    activityEvents.forEach(event => {
+      document.addEventListener(event, this.throttledActivityHandler, true)
+    })
+
     const handleResize = () => {
       this.windowWidth = window.innerWidth
       if (window.innerWidth <= 1024) {
@@ -223,6 +267,21 @@ export default {
     
     window.addEventListener('resize', handleResize)
     handleResize()
+  },
+
+  beforeUnmount() {
+    // Clean up event listeners
+    if (this.throttledActivityHandler) {
+      const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, this.throttledActivityHandler, true)
+      })
+    }
+    
+    // Clear any inactivity timers
+    if (this.authStore) {
+      this.authStore.clearInactivityTimer()
+    }
   }
 }
 </script>

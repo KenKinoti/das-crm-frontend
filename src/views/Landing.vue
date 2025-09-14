@@ -4,7 +4,9 @@
     <nav class="navbar">
       <div class="nav-container">
         <div class="nav-logo">
-          <img src="/logo.svg" alt="DASYIN CRM" class="logo-img">
+          <div class="logo-icon">
+            <i class="fas fa-heart-pulse"></i>
+          </div>
           <span class="logo-text">DASYIN CRM</span>
         </div>
         <div class="nav-links">
@@ -17,6 +19,16 @@
           <span></span>
           <span></span>
           <span></span>
+        </div>
+      </div>
+      
+      <!-- Mobile Menu -->
+      <div class="mobile-menu" :class="{ 'open': mobileMenuOpen }">
+        <div class="mobile-menu-content">
+          <a href="#features" class="mobile-nav-link" @click="closeMobileMenu">Features</a>
+          <a href="#benefits" class="mobile-nav-link" @click="closeMobileMenu">Benefits</a>
+          <a href="#pricing" class="mobile-nav-link" @click="closeMobileMenu">Pricing</a>
+          <button @click="goToLogin" class="mobile-btn-login">Login</button>
         </div>
       </div>
     </nav>
@@ -449,7 +461,9 @@
         <div class="footer-content">
           <div class="footer-brand">
             <div class="footer-logo">
-              <img src="/logo.svg" alt="DASYIN CRM" class="logo-img">
+              <div class="logo-icon">
+                <i class="fas fa-heart-pulse"></i>
+              </div>
               <span class="logo-text">DASYIN CRM</span>
             </div>
           </div>
@@ -478,7 +492,33 @@
         
         <div class="footer-bottom">
           <div class="footer-partners">
-            <img src="https://dasyin.com/wp-content/uploads/2025/07/Google_Cloud_Partner_outline_horizontal-300x92.png" alt="Google Cloud Partner" class="partner-logo">
+            <svg viewBox="0 0 300 92" class="partner-logo-svg">
+              <defs>
+                <linearGradient id="gcpGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#4285f4;stop-opacity:1" />
+                  <stop offset="25%" style="stop-color:#ea4335;stop-opacity:1" />
+                  <stop offset="50%" style="stop-color:#fbbc04;stop-opacity:1" />
+                  <stop offset="75%" style="stop-color:#34a853;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#4285f4;stop-opacity:1" />
+                </linearGradient>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.1)"/>
+                </filter>
+              </defs>
+              <rect x="3" y="3" width="294" height="86" fill="white" stroke="url(#gcpGradient)" stroke-width="3" rx="8" filter="url(#shadow)"/>
+              <g transform="translate(25, 18)">
+                <!-- Google Cloud icon with enhanced visibility -->
+                <circle cx="12" cy="12" r="5" fill="#4285f4" stroke="white" stroke-width="1"/>
+                <circle cx="24" cy="12" r="5" fill="#ea4335" stroke="white" stroke-width="1"/>
+                <circle cx="36" cy="12" r="5" fill="#fbbc04" stroke="white" stroke-width="1"/>
+                <circle cx="18" cy="25" r="5" fill="#34a853" stroke="white" stroke-width="1"/>
+                <circle cx="30" cy="25" r="5" fill="#4285f4" stroke="white" stroke-width="1"/>
+                
+                <!-- Enhanced text with better contrast -->
+                <text x="60" y="20" font-family="Google Sans, Roboto, Arial, sans-serif" font-size="18" font-weight="600" fill="#1a73e8">Google Cloud</text>
+                <text x="60" y="38" font-family="Google Sans, Roboto, Arial, sans-serif" font-size="16" font-weight="500" fill="#202124">Partner</text>
+              </g>
+            </svg>
           </div>
           <div class="footer-copyright">
             <p>Design By DASYIN. All Rights Reserved.</p>
@@ -511,6 +551,9 @@ export default {
     },
     toggleMobileMenu() {
       this.mobileMenuOpen = !this.mobileMenuOpen
+    },
+    closeMobileMenu() {
+      this.mobileMenuOpen = false
     }
   }
 }
@@ -587,10 +630,12 @@ html:has(.landing-page) {
   left: 0;
   right: 0;
   width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   z-index: 1000;
+  padding: 1.2rem 0;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
 }
 
 .nav-container {
@@ -609,15 +654,31 @@ html:has(.landing-page) {
   gap: 0.5rem;
 }
 
-.logo-img {
-  width: 32px;
-  height: 32px;
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logo-icon i {
+  color: white;
+  font-size: 20px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .logo-text {
   font-weight: 700;
-  font-size: 1.25rem;
-  color: #046BD2;
+  font-size: 1.5rem;
+  color: #1e293b;
+  text-shadow: none;
+  letter-spacing: -0.01em;
 }
 
 .nav-links {
@@ -665,6 +726,61 @@ html:has(.landing-page) {
   background: #1e293b;
   margin: 3px 0;
   transition: 0.3s;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 280px;
+  height: 100vh;
+  background: white;
+  box-shadow: -2px 0 20px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease;
+  z-index: 1001;
+}
+
+.mobile-menu.open {
+  right: 0;
+}
+
+.mobile-menu-content {
+  padding: 100px 30px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mobile-nav-link {
+  color: #1e293b;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  transition: color 0.3s ease;
+}
+
+.mobile-nav-link:hover {
+  color: #4f46e5;
+}
+
+.mobile-btn-login {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.mobile-btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
 }
 
 /* Hero Section */
@@ -740,21 +856,23 @@ html:has(.landing-page) {
 }
 
 .btn-secondary {
-  background: transparent;
-  color: #046BD2;
-  border: 2px solid #046BD2;
+  background: white;
+  color: #4f46e5;
+  border: 2px solid #4f46e5;
   padding: 0.75rem 2rem;
   border-radius: 0.5rem;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 
 .btn-secondary:hover {
-  background: #046BD2;
+  background: #4f46e5;
   color: white;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
 }
 
 .btn-secondary.large {
@@ -816,7 +934,7 @@ html:has(.landing-page) {
 .bg-shape {
   position: absolute;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(4, 107, 210, 0.1) 0%, rgba(4, 92, 180, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
 }
 
 .shape-1 {
@@ -1310,10 +1428,11 @@ html:has(.landing-page) {
 /* CTA Section */
 .cta {
   position: relative;
-  background: linear-gradient(135deg, #046BD2 0%, #045CB4 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 8rem 0;
   text-align: center;
   overflow: hidden;
+  border-top: 1px solid #e2e8f0;
 }
 
 .cta-content {
@@ -1325,13 +1444,13 @@ html:has(.landing-page) {
 .cta-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: white;
+  color: #1e293b;
   margin-bottom: 1rem;
 }
 
 .cta-subtitle {
   font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: #475569;
   margin-bottom: 2rem;
   max-width: 600px;
   margin-left: auto;
@@ -1393,10 +1512,31 @@ html:has(.landing-page) {
   margin-bottom: 0.5rem;
 }
 
+.footer-logo .logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.footer-logo .logo-icon i {
+  color: white;
+  font-size: 20px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 .footer-logo .logo-text {
-  color: #046BD2;
+  color: #1e293b;
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
+  text-shadow: none;
+  letter-spacing: -0.01em;
 }
 
 .footer-links {
@@ -1443,14 +1583,19 @@ html:has(.landing-page) {
   margin-bottom: 1.5rem;
 }
 
-.partner-logo {
-  height: 40px;
-  opacity: 0.8;
-  transition: opacity 0.3s ease;
+.partner-logo-svg {
+  height: 60px;
+  width: auto;
+  opacity: 1;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  filter: brightness(1.1) contrast(1.2);
 }
 
-.partner-logo:hover {
+.partner-logo-svg:hover {
   opacity: 1;
+  transform: scale(1.08);
+  filter: brightness(1.2) contrast(1.3);
 }
 
 .footer-copyright p {
@@ -1469,41 +1614,85 @@ html:has(.landing-page) {
     display: flex;
   }
   
+  .hero {
+    padding: 6rem 0 4rem;
+  }
+  
   .hero-container {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 3rem;
   }
   
   .hero-title {
-    font-size: 2rem;
+    font-size: 2.2rem;
+    line-height: 1.2;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
   }
   
   .hero-actions {
     flex-direction: column;
     align-items: center;
+    gap: 1rem;
+  }
+  
+  .hero-actions .btn-primary,
+  .hero-actions .btn-secondary {
+    width: 100%;
+    max-width: 300px;
   }
   
   .hero-stats {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 1.5rem;
+    margin-top: 3rem;
   }
   
   .benefits-content {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 2rem;
   }
   
   .features-grid {
     grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .feature-card {
+    text-align: center;
+  }
+  
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .pricing-card {
+    max-width: 400px;
+    margin: 0 auto;
   }
   
   .cta-actions {
     flex-direction: column;
     align-items: center;
+    gap: 1rem;
+  }
+  
+  .cta-actions .btn-primary,
+  .cta-actions .btn-secondary {
+    width: 100%;
+    max-width: 300px;
   }
   
   .footer-links {
-    gap: 3rem;
+    gap: 2rem;
+    flex-direction: column;
+    text-align: center;
   }
   
   .footer-section {
@@ -1517,18 +1706,78 @@ html:has(.landing-page) {
   }
   
   .nav-container {
-    padding: 1rem;
+    padding: 0.8rem 1rem;
+  }
+  
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .logo-icon i {
+    font-size: 18px;
+  }
+  
+  .logo-text {
+    font-size: 1.3rem;
   }
   
   .hero {
-    padding: 6rem 0 3rem;
+    padding: 5rem 0 3rem;
+  }
+  
+  .hero-title {
+    font-size: 1.8rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem;
   }
   
   .section-title {
-    font-size: 2rem;
+    font-size: 1.8rem;
+  }
+  
+  .cta {
+    padding: 4rem 0;
   }
   
   .cta-title {
+    font-size: 1.8rem;
+  }
+  
+  .feature-card {
+    padding: 1.5rem;
+  }
+  
+  .feature-icon {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .feature-title {
+    font-size: 1.3rem;
+  }
+  
+  .pricing-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .mobile-menu {
+    width: 100%;
+    right: -100%;
+  }
+  
+  .mobile-menu-content {
+    padding: 80px 20px 20px;
+  }
+  
+  .hero-stats {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .stat-number {
     font-size: 2rem;
   }
 }

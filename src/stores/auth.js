@@ -8,7 +8,11 @@ export const useAuthStore = defineStore('auth', {
     refreshToken: null,
     isLoading: false,
     error: null,
-    _initializing: false
+    _initializing: false,
+    inactivityTimer: null,
+    inactivityWarning: false,
+    inactivityTimeout: 5 * 60 * 1000, // 5 minutes in milliseconds
+    warningTimeout: 30 * 1000 // 30 seconds warning before logout
   }),
 
   getters: {
@@ -79,6 +83,9 @@ export const useAuthStore = defineStore('auth', {
           }
           localStorage.setItem('current_user', JSON.stringify(this.user))
           
+          // Start inactivity timer after successful login
+          this.startInactivityTimer()
+          
           console.log('✅ Backend login successful:', { user: this.user, token: this.token })
           return response
         } else {
@@ -93,8 +100,13 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async logout() {
+    async logout(reason = 'manual') {
       try {
+        console.log(`🚪 Logout initiated: ${reason}`)
+        
+        // Clear inactivity timer
+        this.clearInactivityTimer()
+        
         // Call API logout if we have a valid JWT token
         if (this.token && this.isValidJWT(this.token)) {
           await authService.logout()
@@ -108,13 +120,66 @@ export const useAuthStore = defineStore('auth', {
         this.refreshToken = null
         this.user = null
         this.error = null
+        this.inactivityWarning = false
         
         // Clear localStorage
         localStorage.removeItem('auth_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('current_user')
         localStorage.removeItem('user_data')
+        
+        // If logout was due to inactivity, redirect to login
+        if (reason === 'inactivity' && window.location.pathname !== '/login') {
+          window.location.href = '/login?reason=inactivity'
+        }
       }
+    },
+
+    // Start inactivity timer
+    startInactivityTimer() {
+      console.log('⏰ Starting inactivity timer (5 minutes)')
+      this.clearInactivityTimer()
+      
+      this.inactivityTimer = setTimeout(() => {
+        this.showInactivityWarning()
+      }, this.inactivityTimeout - this.warningTimeout)
+    },
+
+    // Clear inactivity timer
+    clearInactivityTimer() {
+      if (this.inactivityTimer) {
+        clearTimeout(this.inactivityTimer)
+        this.inactivityTimer = null
+        this.inactivityWarning = false
+      }
+    },
+
+    // Show inactivity warning
+    showInactivityWarning() {
+      console.log('⚠️ Showing inactivity warning')
+      this.inactivityWarning = true
+      
+      // Final countdown - logout in 30 seconds
+      setTimeout(() => {
+        if (this.inactivityWarning) {
+          this.logout('inactivity')
+        }
+      }, this.warningTimeout)
+    },
+
+    // Reset inactivity timer on user activity
+    resetInactivityTimer() {
+      if (this.isAuthenticated) {
+        this.inactivityWarning = false
+        this.startInactivityTimer()
+      }
+    },
+
+    // Dismiss inactivity warning and reset timer
+    dismissInactivityWarning() {
+      console.log('✅ Inactivity warning dismissed by user')
+      this.inactivityWarning = false
+      this.startInactivityTimer()
     },
 
     // Helper method to validate JWT format
@@ -192,7 +257,14 @@ export const useAuthStore = defineStore('auth', {
             console.log('Auth state initialized:', { token: !!this.token, user: !!this.user })
             
             // Validate token is still valid by checking user data
-            return await this.getCurrentUser()
+            const isValid = await this.getCurrentUser()
+            
+            // Start inactivity timer if authentication is valid
+            if (isValid) {
+              this.startInactivityTimer()
+            }
+            
+            return isValid
           } catch (error) {
             console.error('Error parsing stored user:', error)
             this.logout()
@@ -201,7 +273,14 @@ export const useAuthStore = defineStore('auth', {
         }
         
         // If we have a token but no user, try to get user data
-        return await this.getCurrentUser()
+        const isValid = await this.getCurrentUser()
+        
+        // Start inactivity timer if authentication is valid
+        if (isValid) {
+          this.startInactivityTimer()
+        }
+        
+        return isValid
       } finally {
         this._initializing = false
       }
