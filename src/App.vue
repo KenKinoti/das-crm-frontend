@@ -102,8 +102,8 @@ export default {
       return useModalStore()
     },
     isAuthenticated() {
-      // Show authenticated layout when user is authenticated and not on login page
-      return this.authStore.isAuthenticated && this.$route.path !== '/login'
+      // Show authenticated layout when user is authenticated and not on login or landing page
+      return this.authStore.isAuthenticated && this.$route.path !== '/login' && this.$route.path !== '/landing'
     },
     pageTitle() {
       const titles = {

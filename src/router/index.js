@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 
 // Lazy load components for better performance
+const Landing = () => import('../views/Landing.vue')
 const Login = () => import('../views/Login.vue')
 const Dashboard = () => import('../views/Dashboard.vue')
 const Participants = () => import('../views/ParticipantsFixed.vue')
@@ -22,6 +23,12 @@ const IncidentReports = () => import('../views/IncidentReports.vue')
 
 const routes = [
   {
+    path: '/landing',
+    name: 'Landing',
+    component: Landing,
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: Login,
@@ -32,29 +39,33 @@ const routes = [
     redirect: to => {
       // Check if user is authenticated and get their role
       const storedUser = localStorage.getItem('current_user')
+      const storedToken = localStorage.getItem('auth_token')
       let userRole = null
       
-      if (storedUser) {
+      if (storedUser && storedToken) {
         try {
           const user = JSON.parse(storedUser)
           userRole = user.role
+          
+          // If user has a stored last route, redirect there
+          const lastRoute = localStorage.getItem('lastRoute')
+          
+          // Default redirects based on role
+          let defaultRoute = '/dashboard'
+          if (userRole === 'care_worker') {
+            defaultRoute = '/availability'
+          } else if (userRole === 'support_coordinator') {
+            defaultRoute = '/care-plans'
+          }
+          
+          return lastRoute || defaultRoute
         } catch (error) {
           console.error('Error parsing stored user:', error)
         }
       }
       
-      // If user has a stored last route, redirect there
-      const lastRoute = localStorage.getItem('lastRoute')
-      
-      // Default redirects based on role
-      let defaultRoute = '/dashboard'
-      if (userRole === 'care_worker') {
-        defaultRoute = '/availability'
-      } else if (userRole === 'support_coordinator') {
-        defaultRoute = '/care-plans'
-      }
-      
-      return lastRoute || defaultRoute
+      // If not authenticated, show landing page
+      return '/landing'
     }
   },
   {
